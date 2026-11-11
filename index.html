@@ -449,6 +449,18 @@
               |> group()
         `;
 
+        // Full detail-page data (3-phase values, portal reading time, next check)
+        const ISOLAR_DETAIL_FLUX_QUERY = `
+            from(bucket: "${INFLUX_BUCKET}")
+              |> range(start: -30d)
+              |> filter(fn: (r) => r._measurement == "isolarcloud_detail")
+              |> filter(fn: (r) => ${ISOLAR_SOURCES.map(s => `r.device_name == "${s.device}"`).join(" or ")})
+              |> filter(fn: (r) => r._field != "status")
+              |> last()
+              |> keep(columns: ["_time", "_value", "_field", "device_name"])
+              |> group()
+        `;
+
         let barChart, doughnutChart;
 
         // ---------- Build meter cards ----------
@@ -474,6 +486,8 @@
         }
 
         function isolarCardHtml(s, j) {
+            const row = (label, id, dflt, hidden = false) =>
+                `<div class="meter-row" id="isl-row-${id}-${j}"${hidden ? ' style="display:none;"' : ''}><span>${label}</span><span id="isl-${id}-${j}">${dflt}</span></div>`;
             return `
                 <div class="card meter-card offline" id="isl-card-${j}" style="border-left-color: ${s.color};">
                     <div class="card-header" style="margin-bottom: 4px;">
@@ -484,12 +498,26 @@
                         <span class="status-badge badge-offline" id="isl-badge-${j}">Offline</span>
                     </div>
                     <div class="meter-kw" id="isl-kw-${j}">-- kW</div>
-                    <div class="meter-row"><span>Reactive power</span><span id="isl-q-${j}">-- kvar</span></div>
-                    <div class="meter-row"><span>Feed-in power</span><span id="isl-fi-${j}">-- kW</span></div>
-                    <div class="meter-row"><span>Voltage phase A</span><span id="isl-v-${j}">-- V</span></div>
-                    <div class="meter-row"><span>Power factor (P/S)</span><span id="isl-pf-${j}">--</span></div>
-                    <div class="meter-row"><span>Data age (portal)</span><span id="isl-age-${j}">--</span></div>
-                    <div class="meter-notes"><span class="source-tag" title="Read from the Sungrow iSolarCloud portal, which updates about every 5 minutes. Energy counters and per-phase currents are not available from this source.">iSolarCloud · ~5 min updates</span></div>
+                    <div class="phase-bars" title="Current per phase">
+                        <div class="phase-bar"><div id="isl-bar-${j}-1" style="width:0%; background:${PHASE_COLORS[0]};"></div></div>
+                        <div class="phase-bar"><div id="isl-bar-${j}-2" style="width:0%; background:${PHASE_COLORS[1]};"></div></div>
+                        <div class="phase-bar"><div id="isl-bar-${j}-3" style="width:0%; background:${PHASE_COLORS[2]};"></div></div>
+                    </div>
+                    ${row('Current L1/L2/L3', 'i', '-- A')}
+                    ${row('Voltage L-N (avg)', 'v', '-- V')}
+                    ${row('Voltage L-L (avg)', 'vll', '-- V')}
+                    ${row('Reactive power', 'q', '-- kvar')}
+                    ${row('Apparent power', 's', '-- kVA')}
+                    ${row('Power factor', 'pf', '--')}
+                    ${row('Frequency', 'hz', '-- Hz')}
+                    ${row('Energy import', 'imp', '-- kWh', true)}
+                    ${row('Energy export', 'exp', '-- kWh', true)}
+                    <div class="isl-timing" style="border-top: 1px dashed #e2e8f0; margin-top: 4px; padding-top: 6px; display: flex; flex-direction: column; gap: 4px;">
+                        ${row('Portal reading time', 'measured', '--')}
+                        ${row('Next portal reading', 'nextread', '--')}
+                        ${row('Next check by logger', 'nextcheck', '--')}
+                    </div>
+                    <div class="meter-notes" id="isl-notes-${j}"><span class="source-tag" title="Read from the Sungrow iSolarCloud portal. The portal gets a new reading from the Logger1000 about every 5 minutes; the logger checks the portal every minute, so the values here match the iSolarCloud page.">iSolarCloud · same values as portal</span></div>
                     <div class="last-seen" id="isl-seen-${j}">Last update: --</div>
                 </div>`;
         }
@@ -562,6 +590,7 @@
 
             fetchInfluxData();
             setInterval(fetchInfluxData, REFRESH_MS);
+            setInterval(updateIsolarCounters, 1000);
 
             function updatePktClock() {
                 document.getElementById('pkt-clock').innerText = formatPkt(new Date()) + ' PKT';
@@ -587,11 +616,12 @@
         async function fetchInfluxData() {
             try {
                 // iSolarCloud query failing must not break the meter dashboard
-                const [csvText, isolarCsv] = await Promise.all([
+                const [csvText, isolarCsv, isolarDetailCsv] = await Promise.all([
                     queryInflux(FLUX_QUERY),
-                    queryInflux(ISOLAR_FLUX_QUERY).catch(err => { console.error("iSolarCloud query:", err); return null; })
+                    queryInflux(ISOLAR_FLUX_QUERY).catch(err => { console.error("iSolarCloud query:", err); return null; }),
+                    queryInflux(ISOLAR_DETAIL_FLUX_QUERY).catch(err => { console.error("iSolarCloud detail query:", err); return null; })
                 ]);
-                parseAndRender(csvText, isolarCsv);
+                parseAndRender(csvText, isolarCsv, isolarDetailCsv);
                 document.getElementById('db-status').innerText = "Connected";
                 document.getElementById('db-status').style.color = "var(--primary)";
             } catch (err) {
@@ -610,7 +640,7 @@
 
         const fmt = (v, d = 2) => v.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
 
-        function parseAndRender(csvData, isolarCsv) {
+        function parseAndRender(csvData, isolarCsv, isolarDetailCsv) {
             const lines = csvData.split(/\r?\n/);
             const values = {};    // values[key][field] = number
             const lastTime = {};  // lastTime[key] = Date
@@ -738,7 +768,7 @@
             document.getElementById('meters-offline-list').innerText =
                 offlineNames.length ? `Offline: ${offlineNames.join(', ')}` : 'All meters reporting';
 
-            renderIsolar(isolarCsv, groupTotals.generation);
+            renderIsolar(isolarCsv, isolarDetailCsv, groupTotals.generation);
 
             [['generation', 'gen'], ['distribution', 'dist']].forEach(([g, id]) => {
                 const t = groupTotals[g];
@@ -757,7 +787,9 @@
         }
 
         // ---------- iSolarCloud cards (KE, Genset) ----------
-        function renderIsolar(csvData, gt) {
+        const isolarTiming = [];   // per card: { measuredAt, nextCheck, portalIntervalMs }
+
+        function parseIsolarCsv(csvData) {
             const values = {}, lastTime = {};
             let header = [];
             (csvData || '').split(/\r?\n/).forEach(line => {
@@ -767,23 +799,51 @@
                 if (header.length === 0 || parts.length !== header.length) return;
                 const dev = parts[header.indexOf('device_name')];
                 const time = new Date(parts[header.indexOf('_time')]);
+                const v = parseFloat(parts[header.indexOf('_value')]);
+                if (isNaN(v)) return;
                 if (!values[dev]) values[dev] = {};
-                values[dev][parts[header.indexOf('_field')]] = parseFloat(parts[header.indexOf('_value')]);
+                values[dev][parts[header.indexOf('_field')]] = v;
                 if (!lastTime[dev] || time > lastTime[dev]) lastTime[dev] = time;
             });
+            return { values, lastTime };
+        }
+
+        const findKey = (d, re) => Object.keys(d).find(k => re.test(k));
+
+        function renderIsolar(listCsv, detailCsv, gt) {
+            const list = parseIsolarCsv(listCsv), detail = parseIsolarCsv(detailCsv);
 
             ISOLAR_SOURCES.forEach((s, j) => {
-                const d = values[s.device] || {};
-                const seen = lastTime[s.device];
+                const det = detail.values[s.device] || {};
+                const d = { ...(list.values[s.device] || {}), ...det };   // detail page wins
+                const seenList = list.lastTime[s.device], seenDet = detail.lastTime[s.device];
+                const seen = [seenList, seenDet].filter(Boolean).sort((a, b) => b - a)[0];
                 const fresh = Boolean(seen && (Date.now() - seen.getTime()) < ONLINE_WINDOW_MS);
                 const online = fresh && d.online === 1;
                 const card = document.getElementById(`isl-card-${j}`);
                 const badge = document.getElementById(`isl-badge-${j}`);
+                const set = (id, txt) => document.getElementById(`isl-${id}-${j}`).innerText = txt;
                 const num = (v, unit, dec = 2) => (v === undefined || isNaN(v)) ? `-- ${unit}` : `${fmt(v, dec)} ${unit}`;
+                const avg = arr => { const a = arr.filter(x => x !== undefined); return a.length ? a.reduce((x, y) => x + y, 0) / a.length : undefined; };
 
                 gt.count++;
                 document.getElementById(`isl-seen-${j}`).innerText =
                     seen ? `Last update: ${formatPkt(seen)} PKT` : 'Last update: no data yet';
+
+                // timing (kept even when offline, so the counters still run)
+                isolarTiming[j] = {
+                    measuredAt: d.measured_at_ms ? new Date(d.measured_at_ms) : null,
+                    nextCheck: (fresh && d.next_check_ms) ? new Date(d.next_check_ms) : null,
+                    portalIntervalMs: (d.portal_interval_s || 300) * 1000
+                };
+
+                // energy counters, if the detail page provides them
+                const impKey = findKey(det, /(import|purchas|bought|consum).*_kwh$/);
+                const expKey = findKey(det, /(export|feed|sold).*_kwh$/);
+                document.getElementById(`isl-row-imp-${j}`).style.display = impKey ? '' : 'none';
+                document.getElementById(`isl-row-exp-${j}`).style.display = expKey ? '' : 'none';
+                if (impKey) { set('imp', num(d[impKey], 'kWh')); gt.imp += d[impKey] || 0; }
+                if (expKey) { set('exp', num(d[expKey], 'kWh')); gt.exp += d[expKey] || 0; }
 
                 if (online) {
                     gt.online++;
@@ -795,23 +855,63 @@
                     const kwEl = document.getElementById(`isl-kw-${j}`);
                     kwEl.innerText = `${fmt(p)} kW`;
                     kwEl.classList.toggle('negative', p < 0);
-                    document.getElementById(`isl-q-${j}`).innerText = num(q, 'kvar');
-                    document.getElementById(`isl-fi-${j}`).innerText = num(d.feed_in_power_kw, 'kW');
-                    document.getElementById(`isl-v-${j}`).innerText = num(d.phase_a_voltage_v, 'V', 1);
-                    const sKva = (q !== undefined) ? Math.hypot(p, q) : 0;
-                    document.getElementById(`isl-pf-${j}`).innerText = sKva > 0.2 ? (p / sKva).toFixed(2) : '--';
-                    document.getElementById(`isl-age-${j}`).innerText =
-                        d.data_age_s !== undefined ? `${Math.round(d.data_age_s)} s` : '--';
+
+                    const cur = [d.phase_a_current_a, d.phase_b_current_a, d.phase_c_current_a];
+                    set('i', cur.some(x => x !== undefined) ? cur.map(x => x === undefined ? '--' : x.toFixed(2)).join(' / ') + ' A' : '-- A');
+                    const maxI = Math.max(...cur.map(x => x || 0), 1);
+                    cur.forEach((x, ph) => document.getElementById(`isl-bar-${j}-${ph + 1}`).style.width = `${Math.min(100, ((x || 0) / maxI) * 100)}%`);
+
+                    const vln = avg([d.phase_a_voltage_v, d.phase_b_voltage_v, d.phase_c_voltage_v]);
+                    const vll = avg([d.a_b_line_voltage_v, d.b_c_line_voltage_v, d.c_a_line_voltage_v]);
+                    set('v', num(vln, 'V', 1));
+                    set('vll', num(vll, 'V', 1));
+                    set('q', num(q, 'kvar'));
+                    const sKva = d.apparent_power_kva !== undefined ? d.apparent_power_kva
+                               : (q !== undefined ? Math.hypot(p, q) : undefined);
+                    set('s', num(sKva, 'kVA'));
+                    const pf = d.pf !== undefined ? d.pf : (sKva > 0.2 ? p / sKva : undefined);
+                    set('pf', pf === undefined ? '--' : pf.toFixed(2));
+                    set('hz', num(d.frequency_hz, 'Hz'));
                 } else {
                     card.classList.add('offline');
                     badge.innerText = "Offline";
                     badge.className = "status-badge badge-offline";
-                    ['kw', 'fi'].forEach(k => document.getElementById(`isl-${k}-${j}`).innerText = '-- kW');
-                    document.getElementById(`isl-q-${j}`).innerText = '-- kvar';
-                    document.getElementById(`isl-v-${j}`).innerText = '-- V';
-                    document.getElementById(`isl-pf-${j}`).innerText = '--';
-                    document.getElementById(`isl-age-${j}`).innerText = fresh ? 'device offline in portal' : '--';
-                    document.getElementById(`isl-kw-${j}`).classList.remove('negative');
+                    const kwEl = document.getElementById(`isl-kw-${j}`);
+                    kwEl.innerText = '-- kW';
+                    kwEl.classList.remove('negative');
+                    set('i', fresh ? 'device offline in portal' : '-- A');
+                    [['v', 'V'], ['vll', 'V'], ['q', 'kvar'], ['s', 'kVA'], ['hz', 'Hz']].forEach(([id, u]) => set(id, `-- ${u}`));
+                    set('pf', '--');
+                    [1, 2, 3].forEach(ph => document.getElementById(`isl-bar-${j}-${ph}`).style.width = '0%');
+                }
+            });
+            updateIsolarCounters();
+        }
+
+        // Runs every second: portal reading time, next portal reading, next logger check
+        function updateIsolarCounters() {
+            const mmss = ms => { const t = Math.max(0, Math.round(ms / 1000)); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`; };
+            const hhmm = d => d.toLocaleTimeString('en-GB', { timeZone: 'Asia/Karachi', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+            ISOLAR_SOURCES.forEach((s, j) => {
+                const t = isolarTiming[j];
+                const el = id => document.getElementById(`isl-${id}-${j}`);
+                if (!el('measured')) return;
+                if (!t || !t.measuredAt) {
+                    el('measured').innerText = '--';
+                    el('nextread').innerText = '--';
+                } else {
+                    const now = Date.now();
+                    el('measured').innerText = `${hhmm(t.measuredAt)} PKT (${mmss(now - t.measuredAt)} ago)`;
+                    const next = new Date(t.measuredAt.getTime() + t.portalIntervalMs);
+                    el('nextread').innerText = next > now
+                        ? `~${hhmm(next)} PKT (in ${mmss(next - now)})`
+                        : `due now (expected ${hhmm(next)} PKT)`;
+                }
+                if (!t || !t.nextCheck) {
+                    el('nextcheck').innerText = '--';
+                } else {
+                    const left = t.nextCheck - Date.now();
+                    el('nextcheck').innerText = left > 0 ? `in ${mmss(left)}` : 'checking now...';
                 }
             });
         }
