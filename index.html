@@ -193,6 +193,24 @@
                         display: flex; flex-wrap: wrap; gap: 10px 22px; align-items: center; font-size: 0.8rem; color: #4a5568; }
         .legend-panel strong { color: var(--dark); }
 
+        /* --- Generation / Distribution sections --- */
+        .group-section { display: flex; flex-direction: column; gap: 15px; }
+        .group-total { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; padding: 0; overflow: hidden; }
+        .group-total.generation { border: 2px solid var(--success); }
+        .group-total.distribution { border: 2px solid var(--primary); }
+        .group-total > div { padding: 16px 20px; border-right: 1px solid #e2e8f0; }
+        .group-total > div:last-child { border-right: none; }
+        .group-total .gt-label { font-size: 0.8rem; color: #718096; font-weight: 600; }
+        .group-total .gt-value { font-size: 1.5rem; font-weight: 700; color: var(--dark); margin-top: 4px; }
+        .group-total .gt-value.negative { color: var(--warning); }
+        .meter-card.unassigned { border-left-color: #cbd5e0; border-style: dashed; border-left-style: solid; background: #fafbfc; }
+        .unassigned-text { font-size: 0.85rem; color: #a0aec0; line-height: 1.5; }
+        @media (max-width: 768px) {
+            .group-total { grid-template-columns: 1fr 1fr; }
+            .group-total > div:nth-child(2) { border-right: none; }
+            .group-total > div:nth-child(-n+2) { border-bottom: 1px solid #e2e8f0; }
+        }
+
 
     </style>
 </head>
@@ -263,7 +281,7 @@
                             <div class="card-icon" style="background: #efeaff;"><i class="fas fa-wave-square" style="color: var(--accent1);"></i></div>
                         </div>
                         <div class="card-value" id="sys-freq">0.0 Hz</div>
-                        <div class="card-subtext">From Janitza main master</div>
+                        <div class="card-subtext">From Metallizer (Janitza main master)</div>
                     </div>
                     <div class="card big-card secondary-accent">
                         <div class="card-header">
@@ -276,8 +294,35 @@
                 </div>
 
                 <!-- Meter Cards -->
-                <div class="section-title"><i class="fas fa-gauge-high" style="color: var(--primary);"></i> Meters <small>Janitza main master, 8 Janitza feeders via RS485 gateway, EEM 570R</small></div>
-                <div class="meters-grid" id="meters-grid"></div>
+                <!-- Generation -->
+                <div class="group-section">
+                    <div class="section-title"><i class="fas fa-solar-panel" style="color: var(--success);"></i> Generation <small>KE, Solar 1, Solar 2</small></div>
+                    <div class="card group-total generation">
+                        <div><div class="gt-label">Total generation (live)</div><div class="gt-value" id="gen-total-kw">-- kW</div></div>
+                        <div><div class="gt-label">Energy import</div><div class="gt-value" id="gen-total-imp">-- kWh</div></div>
+                        <div><div class="gt-label">Energy export</div><div class="gt-value" id="gen-total-exp">-- kWh</div></div>
+                        <div><div class="gt-label">Sources online</div><div class="gt-value" id="gen-online">-- / --</div></div>
+                    </div>
+                    <div class="meters-grid" id="grid-generation"></div>
+                </div>
+
+                <!-- Distribution -->
+                <div class="group-section">
+                    <div class="section-title"><i class="fas fa-diagram-project" style="color: var(--primary);"></i> Distribution <small>Production and utility feeders</small></div>
+                    <div class="card group-total distribution">
+                        <div><div class="gt-label">Total distribution load (live)</div><div class="gt-value" id="dist-total-kw">-- kW</div></div>
+                        <div><div class="gt-label">Energy import</div><div class="gt-value" id="dist-total-imp">-- kWh</div></div>
+                        <div><div class="gt-label">Energy export</div><div class="gt-value" id="dist-total-exp">-- kWh</div></div>
+                        <div><div class="gt-label">Feeders online</div><div class="gt-value" id="dist-online">-- / --</div></div>
+                    </div>
+                    <div class="meters-grid" id="grid-distribution"></div>
+                </div>
+
+                <!-- Other meters (not counted in either total) -->
+                <div class="group-section" id="section-other">
+                    <div class="section-title"><i class="fas fa-gauge-high" style="color: #718096;"></i> Other Meters <small>Not counted in Generation or Distribution totals</small></div>
+                    <div class="meters-grid" id="grid-other"></div>
+                </div>
                 <div class="legend-panel">
                     <strong><i class="fas fa-circle-info" style="color: var(--warning);"></i> Indicator guide:</strong>
                     <span><span class="note note-idle"><i class="fas fa-power-off"></i> No load</span> feeder is not drawing current; tiny power readings are shown as 0.00 kW</span>
@@ -337,33 +382,29 @@
         // --- METER LIST ---
         // "tag" must match meter_name in ems_combined_logger.py.
         // "label" is only the display name: rename freely (e.g. "Main Compressor").
+        // "group": "generation" | "distribution" | "other" decides the section and which total it counts in.
         const METERS = [
-            { tag: "Janitza_Main_Master", label: "Janitza Main Master", info: "UMG 96-PQ-L · Unit 1", measurement: "janitza_umg96pql",   fields: JANITZA_FIELDS },
-            { tag: "Janitza_Unit_02",     label: "Janitza Unit 02",     info: "Gateway · Unit 2",     measurement: "janitza_feeder",     fields: JANITZA_FIELDS },
-            { tag: "Janitza_Unit_03",     label: "Janitza Unit 03",     info: "Gateway · Unit 3",     measurement: "janitza_feeder",     fields: JANITZA_FIELDS },
-            { tag: "Janitza_Unit_05",     label: "Janitza Unit 05",     info: "Gateway · Unit 5",     measurement: "janitza_feeder",     fields: JANITZA_FIELDS },
-            { tag: "Janitza_Unit_06",     label: "Janitza Unit 06",     info: "Gateway · Unit 6",     measurement: "janitza_feeder",     fields: JANITZA_FIELDS },
-            { tag: "Janitza_Unit_07",     label: "Janitza Unit 07",     info: "Gateway · Unit 7",     measurement: "janitza_feeder",     fields: JANITZA_FIELDS },
-            { tag: "Janitza_Unit_08",     label: "Janitza Unit 08",     info: "Gateway · Unit 8",     measurement: "janitza_feeder",     fields: JANITZA_FIELDS },
-            { tag: "Janitza_Unit_09",     label: "Janitza Unit 09",     info: "Gateway · Unit 9",     measurement: "janitza_feeder",     fields: JANITZA_FIELDS },
-            { tag: "Janitza_Unit_10",     label: "Janitza Unit 10",     info: "Gateway · Unit 10",    measurement: "janitza_feeder",     fields: JANITZA_FIELDS },
-            { tag: "EEM_570R",            label: "EEM 570R",            info: "192.168.10.8",         measurement: "eem570r_meter_data", fields: EEM_FIELDS }
+            // --- Generation ---
+            { group: "generation",   tag: "Janitza_Unit_09",     label: "Solar 1",     info: "Janitza Unit 9 · Gateway",     measurement: "janitza_feeder",     fields: JANITZA_FIELDS, color: '#f4a100' },
+            { group: "generation",   tag: "Janitza_Unit_10",     label: "Solar 2",     info: "Janitza Unit 10 · Gateway",    measurement: "janitza_feeder",     fields: JANITZA_FIELDS, color: '#2ca02c' },
+            // --- Distribution ---
+            { group: "distribution", tag: "Janitza_Main_Master", label: "Metallizer",  info: "Janitza Main Master · UMG 96-PQ-L", measurement: "janitza_umg96pql", fields: JANITZA_FIELDS, color: '#1f77b4' },
+            { group: "distribution", tag: "Janitza_Unit_02",     label: "Rototec",     info: "Janitza Unit 2 · Gateway",     measurement: "janitza_feeder",     fields: JANITZA_FIELDS, color: '#ff7f0e' },
+            { group: "distribution", tag: "Janitza_Unit_03",     label: "Silliting",   info: "Janitza Unit 3 · Gateway",     measurement: "janitza_feeder",     fields: JANITZA_FIELDS, color: '#17becf' },
+            { group: "distribution", tag: "Janitza_Unit_05",     label: "Holo",        info: "Janitza Unit 5 · Gateway",     measurement: "janitza_feeder",     fields: JANITZA_FIELDS, color: '#d62728' },
+            { group: "distribution", tag: "Janitza_Unit_06",     label: "Utilities",   info: "Janitza Unit 6 · Gateway",     measurement: "janitza_feeder",     fields: JANITZA_FIELDS, color: '#9467bd' },
+            { group: "distribution", tag: "Janitza_Unit_07",     label: "Bag Making",  info: "Janitza Unit 7 · Gateway",     measurement: "janitza_feeder",     fields: JANITZA_FIELDS, color: '#8c564b' },
+            { group: "distribution", tag: "Janitza_Unit_11",     label: "Mosque",      info: "Janitza Unit 11 · Gateway",    measurement: "janitza_feeder",     fields: JANITZA_FIELDS, color: '#393b79' },
+            // --- Other (not in any total) ---
+            { group: "other",        tag: "Janitza_Unit_08",     label: "Janitza Unit 08", info: "Gateway · Unit 8",         measurement: "janitza_feeder",     fields: JANITZA_FIELDS, color: '#e377c2' },
+            { group: "other",        tag: "EEM_570R",            label: "EEM 570R",    info: "192.168.10.8",                 measurement: "eem570r_meter_data", fields: EEM_FIELDS,     color: '#2c3e50' }
         ];
 
-        // One clearly different colour per meter (same order as METERS)
-        const COLORS = [
-            '#1f77b4', // Janitza Main Master - blue
-            '#ff7f0e', // Unit 02 - orange
-            '#2ca02c', // Unit 03 - green
-            '#d62728', // Unit 05 - red
-            '#9467bd', // Unit 06 - purple
-            '#8c564b', // Unit 07 - brown
-            '#e377c2', // Unit 08 - pink
-            '#17becf', // Unit 09 - teal
-            '#bcbd22', // Unit 10 - olive
-            '#2c3e50'  // EEM 570R - dark slate
+        // Generation sources without a meter yet (shown as cards, not counted in totals)
+        const UNASSIGNED_SOURCES = [
+            { label: "KE", info: "Grid supply (K-Electric)", position: 0 }
         ];
-        // Phase colours follow the Red / Yellow / Blue convention
+
         const PHASE_COLORS = ['#e53935', '#f4b400', '#1e63d6'];
 
         const meterKey = (measurement, tag) => `${measurement}|${tag}`;
@@ -393,9 +434,28 @@
 
         // ---------- Build meter cards ----------
         function buildMeterCards() {
-            const grid = document.getElementById('meters-grid');
-            grid.innerHTML = METERS.map((m, i) => `
-                <div class="card meter-card offline" id="card-${i}" style="border-left-color: ${COLORS[i % COLORS.length]};">
+            const html = { generation: [], distribution: [], other: [] };
+            METERS.forEach((m, i) => html[m.group].push(meterCardHtml(m, i)));
+            UNASSIGNED_SOURCES.forEach(u => html.generation.splice(u.position, 0, `
+                <div class="card meter-card unassigned">
+                    <div class="card-header" style="margin-bottom: 4px;">
+                        <div>
+                            <div class="meter-name">${u.label}</div>
+                            <div class="meter-unit">${u.info}</div>
+                        </div>
+                        <span class="status-badge" style="background:#edf2f7;color:#718096;">Unassigned</span>
+                    </div>
+                    <div class="meter-kw" style="color:#cbd5e0;">-- kW</div>
+                    <div class="unassigned-text">No meter assigned yet. This source is not included in the generation total.</div>
+                </div>`));
+            ['generation', 'distribution', 'other'].forEach(g =>
+                document.getElementById(`grid-${g}`).innerHTML = html[g].join(''));
+            document.getElementById('section-other').style.display = html.other.length ? '' : 'none';
+        }
+
+        function meterCardHtml(m, i) {
+            return `
+                <div class="card meter-card offline" id="card-${i}" style="border-left-color: ${m.color};">
                     <div class="card-header" style="margin-bottom: 4px;">
                         <div>
                             <div class="meter-name">${m.label}</div>
@@ -416,8 +476,7 @@
                     <div class="meter-row"><span>Power factor (P/S)</span><span id="pf-${i}">--</span></div>
                     <div class="meter-notes" id="notes-${i}"></div>
                     <div class="last-seen" id="seen-${i}">Last update: --</div>
-                </div>
-            `).join('');
+                </div>`;
         }
 
         document.addEventListener('DOMContentLoaded', function() {
@@ -448,7 +507,7 @@
                 type: 'doughnut',
                 data: {
                     labels: METERS.map(m => m.label),
-                    datasets: [{ data: METERS.map(() => 0), backgroundColor: METERS.map((_, i) => COLORS[i % COLORS.length]),
+                    datasets: [{ data: METERS.map(() => 0), backgroundColor: METERS.map(m => m.color),
                                 borderColor: '#ffffff', borderWidth: 2 }]
                 },
                 options: {
@@ -529,6 +588,9 @@
             const offlineNames = [];
             const phaseKw = [[], [], []];
             const shareKw = [];
+            const groupTotals = {};
+            ['generation', 'distribution', 'other'].forEach(g =>
+                groupTotals[g] = { w: 0, imp: 0, exp: 0, online: 0, count: 0 });
 
             METERS.forEach((m, i) => {
                 const key = meterKey(m.measurement, m.tag);
@@ -542,6 +604,10 @@
                 // Energy: last known value is shown even when offline
                 const imp = d[f.kwhImp] || 0, exp = d[f.kwhExp] || 0;
                 totalKwh += imp + exp;
+                const gt = groupTotals[m.group];
+                gt.count++;
+                gt.imp += imp;
+                gt.exp += exp;
                 document.getElementById(`imp-${i}`).innerText = seen ? `${fmt(imp)} kWh` : '-- kWh';
                 document.getElementById(`exp-${i}`).innerText = seen ? `${fmt(exp)} kWh` : '-- kWh';
                 document.getElementById(`seen-${i}`).innerText =
@@ -567,6 +633,8 @@
                     const pf = (sTotal && sTotal > MIN_S_FOR_PF_VA) ? pClean / sTotal : null;
 
                     totalLiveW += pClean;
+                    gt.w += pClean;
+                    gt.online++;
                     const kwEl = document.getElementById(`kw-${i}`);
                     kwEl.innerText = `${fmt(pClean / 1000)} kW`;
                     kwEl.classList.toggle('negative', pClean < 0);
@@ -621,6 +689,16 @@
             document.getElementById('meters-online').innerText = `${onlineCount} / ${METERS.length}`;
             document.getElementById('meters-offline-list').innerText =
                 offlineNames.length ? `Offline: ${offlineNames.join(', ')}` : 'All meters reporting';
+
+            [['generation', 'gen'], ['distribution', 'dist']].forEach(([g, id]) => {
+                const t = groupTotals[g];
+                const kwEl = document.getElementById(`${id}-total-kw`);
+                kwEl.innerText = `${fmt(t.w / 1000)} kW`;
+                kwEl.classList.toggle('negative', t.w < 0);
+                document.getElementById(`${id}-total-imp`).innerText = `${fmt(t.imp)} kWh`;
+                document.getElementById(`${id}-total-exp`).innerText = `${fmt(t.exp)} kWh`;
+                document.getElementById(`${id}-online`).innerText = `${t.online} / ${t.count}`;
+            });
 
             phaseKw.forEach((arr, ph) => barChart.data.datasets[ph].data = METERS.map((_, i) => arr[i] || 0));
             barChart.update();
