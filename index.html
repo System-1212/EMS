@@ -205,6 +205,7 @@
         .group-total .gt-value.negative { color: var(--warning); }
         .meter-card.unassigned { border-left-color: #cbd5e0; border-style: dashed; border-left-style: solid; background: #fafbfc; }
         .unassigned-text { font-size: 0.85rem; color: #a0aec0; line-height: 1.5; }
+        .source-tag { font-size: 0.68rem; font-weight: 600; color: #718096; background: #edf2f7; padding: 2px 7px; border-radius: 8px; }
         @media (max-width: 768px) {
             .group-total { grid-template-columns: 1fr 1fr; }
             .group-total > div:nth-child(2) { border-right: none; }
@@ -296,7 +297,7 @@
                 <!-- Meter Cards -->
                 <!-- Generation -->
                 <div class="group-section">
-                    <div class="section-title"><i class="fas fa-solar-panel" style="color: var(--success);"></i> Generation <small>KE, Solar 1, Solar 2</small></div>
+                    <div class="section-title"><i class="fas fa-solar-panel" style="color: var(--success);"></i> Generation <small>KE, Genset, Solar 1, Solar 2</small></div>
                     <div class="card group-total generation">
                         <div><div class="gt-label">Total generation (live)</div><div class="gt-value" id="gen-total-kw">-- kW</div></div>
                         <div><div class="gt-label">Energy import</div><div class="gt-value" id="gen-total-imp">-- kWh</div></div>
@@ -400,9 +401,17 @@
         ];
 
         // Generation sources without a meter yet (shown as cards, not counted in totals)
-        const UNASSIGNED_SOURCES = [
-            { label: "KE", info: "Grid supply (K-Electric)", position: 0 }
+        const UNASSIGNED_SOURCES = [];
+
+        // --- iSolarCloud SOURCES (written by ems_combined_logger_isolar.py) ---
+        // "device" must match device_name in measurement "isolarcloud_device".
+        // These count in the Generation total. "position" = place in the Generation row.
+        const ISOLAR_SOURCES = [
+            { device: "Grid - 1", label: "KE",     info: "Grid supply (K-Electric) · Sungrow meter", color: '#e53935', position: 0 },
+            { device: "Genset",   label: "Genset", info: "Generator · Sungrow meter",                color: '#6b7280', position: 1 }
         ];
+        const ISOLAR_FIELDS = ["meter_active_power_kw", "reactive_power_kvar", "feed_in_power_kw",
+                               "phase_a_voltage_v", "online", "data_age_s"];
 
         const PHASE_COLORS = ['#e53935', '#f4b400', '#1e63d6'];
 
@@ -429,6 +438,17 @@
         }
         const FLUX_QUERY = buildFluxQuery();
 
+        const ISOLAR_FLUX_QUERY = `
+            from(bucket: "${INFLUX_BUCKET}")
+              |> range(start: -30d)
+              |> filter(fn: (r) => r._measurement == "isolarcloud_device")
+              |> filter(fn: (r) => ${ISOLAR_SOURCES.map(s => `r.device_name == "${s.device}"`).join(" or ")})
+              |> filter(fn: (r) => ${ISOLAR_FIELDS.map(f => `r._field == "${f}"`).join(" or ")})
+              |> last()
+              |> keep(columns: ["_time", "_value", "_field", "device_name"])
+              |> group()
+        `;
+
         let barChart, doughnutChart;
 
         // ---------- Build meter cards ----------
@@ -447,9 +467,31 @@
                     <div class="meter-kw" style="color:#cbd5e0;">-- kW</div>
                     <div class="unassigned-text">No meter assigned yet. This source is not included in the generation total.</div>
                 </div>`));
+            ISOLAR_SOURCES.forEach((s, j) => html.generation.splice(s.position, 0, isolarCardHtml(s, j)));
             ['generation', 'distribution', 'other'].forEach(g =>
                 document.getElementById(`grid-${g}`).innerHTML = html[g].join(''));
             document.getElementById('section-other').style.display = html.other.length ? '' : 'none';
+        }
+
+        function isolarCardHtml(s, j) {
+            return `
+                <div class="card meter-card offline" id="isl-card-${j}" style="border-left-color: ${s.color};">
+                    <div class="card-header" style="margin-bottom: 4px;">
+                        <div>
+                            <div class="meter-name">${s.label}</div>
+                            <div class="meter-unit">${s.info}</div>
+                        </div>
+                        <span class="status-badge badge-offline" id="isl-badge-${j}">Offline</span>
+                    </div>
+                    <div class="meter-kw" id="isl-kw-${j}">-- kW</div>
+                    <div class="meter-row"><span>Reactive power</span><span id="isl-q-${j}">-- kvar</span></div>
+                    <div class="meter-row"><span>Feed-in power</span><span id="isl-fi-${j}">-- kW</span></div>
+                    <div class="meter-row"><span>Voltage phase A</span><span id="isl-v-${j}">-- V</span></div>
+                    <div class="meter-row"><span>Power factor (P/S)</span><span id="isl-pf-${j}">--</span></div>
+                    <div class="meter-row"><span>Data age (portal)</span><span id="isl-age-${j}">--</span></div>
+                    <div class="meter-notes"><span class="source-tag" title="Read from the Sungrow iSolarCloud portal, which updates about every 5 minutes. Energy counters and per-phase currents are not available from this source.">iSolarCloud · ~5 min updates</span></div>
+                    <div class="last-seen" id="isl-seen-${j}">Last update: --</div>
+                </div>`;
         }
 
         function meterCardHtml(m, i) {
@@ -528,21 +570,28 @@
             setInterval(updatePktClock, 1000);
         });
 
+        async function queryInflux(flux) {
+            const response = await fetch(`${INFLUX_URL}/api/v2/query?org=${encodeURIComponent(INFLUX_ORG)}`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Token ${INFLUX_TOKEN}`,
+                    'Content-Type': 'application/vnd.flux',
+                    'Accept': 'application/csv'
+                },
+                body: flux
+            });
+            if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+            return response.text();
+        }
+
         async function fetchInfluxData() {
             try {
-                const response = await fetch(`${INFLUX_URL}/api/v2/query?org=${encodeURIComponent(INFLUX_ORG)}`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Token ${INFLUX_TOKEN}`,
-                        'Content-Type': 'application/vnd.flux',
-                        'Accept': 'application/csv'
-                    },
-                    body: FLUX_QUERY
-                });
-                if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
-
-                const csvText = await response.text();
-                parseAndRender(csvText);
+                // iSolarCloud query failing must not break the meter dashboard
+                const [csvText, isolarCsv] = await Promise.all([
+                    queryInflux(FLUX_QUERY),
+                    queryInflux(ISOLAR_FLUX_QUERY).catch(err => { console.error("iSolarCloud query:", err); return null; })
+                ]);
+                parseAndRender(csvText, isolarCsv);
                 document.getElementById('db-status').innerText = "Connected";
                 document.getElementById('db-status').style.color = "var(--primary)";
             } catch (err) {
@@ -561,7 +610,7 @@
 
         const fmt = (v, d = 2) => v.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
 
-        function parseAndRender(csvData) {
+        function parseAndRender(csvData, isolarCsv) {
             const lines = csvData.split(/\r?\n/);
             const values = {};    // values[key][field] = number
             const lastTime = {};  // lastTime[key] = Date
@@ -689,6 +738,8 @@
             document.getElementById('meters-offline-list').innerText =
                 offlineNames.length ? `Offline: ${offlineNames.join(', ')}` : 'All meters reporting';
 
+            renderIsolar(isolarCsv, groupTotals.generation);
+
             [['generation', 'gen'], ['distribution', 'dist']].forEach(([g, id]) => {
                 const t = groupTotals[g];
                 const kwEl = document.getElementById(`${id}-total-kw`);
@@ -703,6 +754,66 @@
             barChart.update();
             doughnutChart.data.datasets[0].data = METERS.map((_, i) => shareKw[i] || 0);
             doughnutChart.update();
+        }
+
+        // ---------- iSolarCloud cards (KE, Genset) ----------
+        function renderIsolar(csvData, gt) {
+            const values = {}, lastTime = {};
+            let header = [];
+            (csvData || '').split(/\r?\n/).forEach(line => {
+                if (!line.trim() || line.startsWith('#')) return;
+                const parts = line.split(',').map(s => s.trim());
+                if (parts.includes('_field') && parts.includes('_value')) { header = parts; return; }
+                if (header.length === 0 || parts.length !== header.length) return;
+                const dev = parts[header.indexOf('device_name')];
+                const time = new Date(parts[header.indexOf('_time')]);
+                if (!values[dev]) values[dev] = {};
+                values[dev][parts[header.indexOf('_field')]] = parseFloat(parts[header.indexOf('_value')]);
+                if (!lastTime[dev] || time > lastTime[dev]) lastTime[dev] = time;
+            });
+
+            ISOLAR_SOURCES.forEach((s, j) => {
+                const d = values[s.device] || {};
+                const seen = lastTime[s.device];
+                const fresh = Boolean(seen && (Date.now() - seen.getTime()) < ONLINE_WINDOW_MS);
+                const online = fresh && d.online === 1;
+                const card = document.getElementById(`isl-card-${j}`);
+                const badge = document.getElementById(`isl-badge-${j}`);
+                const num = (v, unit, dec = 2) => (v === undefined || isNaN(v)) ? `-- ${unit}` : `${fmt(v, dec)} ${unit}`;
+
+                gt.count++;
+                document.getElementById(`isl-seen-${j}`).innerText =
+                    seen ? `Last update: ${formatPkt(seen)} PKT` : 'Last update: no data yet';
+
+                if (online) {
+                    gt.online++;
+                    const p = d.meter_active_power_kw || 0, q = d.reactive_power_kvar;
+                    gt.w += p * 1000;
+                    card.classList.remove('offline');
+                    badge.innerText = "Online";
+                    badge.className = "status-badge badge-online";
+                    const kwEl = document.getElementById(`isl-kw-${j}`);
+                    kwEl.innerText = `${fmt(p)} kW`;
+                    kwEl.classList.toggle('negative', p < 0);
+                    document.getElementById(`isl-q-${j}`).innerText = num(q, 'kvar');
+                    document.getElementById(`isl-fi-${j}`).innerText = num(d.feed_in_power_kw, 'kW');
+                    document.getElementById(`isl-v-${j}`).innerText = num(d.phase_a_voltage_v, 'V', 1);
+                    const sKva = (q !== undefined) ? Math.hypot(p, q) : 0;
+                    document.getElementById(`isl-pf-${j}`).innerText = sKva > 0.2 ? (p / sKva).toFixed(2) : '--';
+                    document.getElementById(`isl-age-${j}`).innerText =
+                        d.data_age_s !== undefined ? `${Math.round(d.data_age_s)} s` : '--';
+                } else {
+                    card.classList.add('offline');
+                    badge.innerText = "Offline";
+                    badge.className = "status-badge badge-offline";
+                    ['kw', 'fi'].forEach(k => document.getElementById(`isl-${k}-${j}`).innerText = '-- kW');
+                    document.getElementById(`isl-q-${j}`).innerText = '-- kvar';
+                    document.getElementById(`isl-v-${j}`).innerText = '-- V';
+                    document.getElementById(`isl-pf-${j}`).innerText = '--';
+                    document.getElementById(`isl-age-${j}`).innerText = fresh ? 'device offline in portal' : '--';
+                    document.getElementById(`isl-kw-${j}`).classList.remove('negative');
+                }
+            });
         }
     </script>
 </body>
