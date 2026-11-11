@@ -273,7 +273,7 @@
                             <div class="card-icon" style="background: #fff4e6;"><i class="fas fa-bolt" style="color: var(--warning);"></i></div>
                         </div>
                         <div class="card-value" id="facility-live-kw">0.00 kW</div>
-                        <div class="card-subtext">Active power, all online meters</div>
+                        <div class="card-subtext">Sum of all distribution feeders</div>
                     </div>
                     <div class="card big-card secondary-accent">
                         <div class="card-header">
@@ -389,7 +389,7 @@
             { group: "generation",   tag: "Janitza_Unit_10",     label: "Solar 2",     info: "Janitza Unit 10 · Gateway",    measurement: "janitza_feeder",     fields: JANITZA_FIELDS, color: '#2ca02c' },
             // --- Distribution ---
             { group: "distribution", tag: "Janitza_Main_Master", label: "Metallizer",  info: "Janitza Main Master · UMG 96-PQ-L", measurement: "janitza_umg96pql", fields: JANITZA_FIELDS, color: '#1f77b4' },
-            { group: "distribution", tag: "Janitza_Unit_02",     label: "Rototec",     info: "Janitza Unit 2 · Gateway",     measurement: "janitza_feeder",     fields: JANITZA_FIELDS, color: '#ff7f0e' },
+            { group: "distribution", tag: "Janitza_Unit_02",     label: "Rotomec",     info: "Janitza Unit 2 · Gateway",     measurement: "janitza_feeder",     fields: JANITZA_FIELDS, color: '#ff7f0e' },
             { group: "distribution", tag: "Janitza_Unit_03",     label: "Silliting",   info: "Janitza Unit 3 · Gateway",     measurement: "janitza_feeder",     fields: JANITZA_FIELDS, color: '#17becf' },
             { group: "distribution", tag: "Janitza_Unit_05",     label: "Holo",        info: "Janitza Unit 5 · Gateway",     measurement: "janitza_feeder",     fields: JANITZA_FIELDS, color: '#d62728' },
             { group: "distribution", tag: "Janitza_Unit_06",     label: "Utilities",   info: "Janitza Unit 6 · Gateway",     measurement: "janitza_feeder",     fields: JANITZA_FIELDS, color: '#9467bd' },
@@ -682,7 +682,7 @@
             });
 
             document.getElementById('facility-total-kwh').innerText = `${fmt(totalKwh)} kWh`;
-            document.getElementById('facility-live-kw').innerText = `${fmt(totalLiveW / 1000)} kW`;
+            document.getElementById('facility-live-kw').innerText = `${fmt(groupTotals.distribution.w / 1000)} kW`;
             document.getElementById('sys-freq').innerText = freq > 0 ? `${freq.toFixed(2)} Hz` : "0.0 Hz";
             document.getElementById('meters-online').innerText = `${onlineCount} / ${METERS.length}`;
             document.getElementById('meters-offline-list').innerText =
