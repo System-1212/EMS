@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Toyo Packaging - Advanced Energy Management System</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --primary: #3a86ff; --secondary: #4cc9f0; --accent1: #8338ec; --dark: #2b2d42;
+            --light: #f8f9fa; --gray: #e9ecef; --success: #2ecc71; --warning: #f39c12;
+            --danger: #e74c3c; --trend-orange: #ff7f50;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        body { background-color: #f5f7ff; color: var(--dark); min-height: 100vh; display: flex; flex-direction: column; }
+        
+        /* --- Container Layout --- */
+        .container { 
+            width: 100%;
+            min-height: 100vh; 
+            display: flex;
+            flex-direction: column;
+        }
+        .main-content { padding: 30px; display: flex; flex-direction: column; gap: 25px; flex: 1; }
+        
+        /* --- Header Styling --- */
+        .header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            padding: 5px 10px; 
+            background: transparent; 
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        .header-logo {
+            height: 68px;
+            width: auto;
+            object-fit: contain;
+            border-radius: 6px;
+        }
+        .header h2 { 
+            font-size: 1.6rem; 
+            color: var(--dark); 
+            font-weight: 700;
+        }
+        .header-right-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--primary);
+            background: white; 
+            padding: 10px 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.02);
+            border: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* --- Navigation Section --- */
+        .nav-section {
+            background: white;
+            padding: 20px 25px;
+            border-radius: 14px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.02);
+            border: 1px solid #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .nav-instruction {
+            font-size: 0.95rem;
+            color: #6c757d;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+        }
+        .nav-instruction i { color: var(--warning); }
+        .horizontal-menu { display: flex; flex-wrap: wrap; gap: 15px; list-style: none; }
+        .horizontal-item { flex: 1; min-width: 200px; }
+        .horizontal-item a {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            color: #4a5568;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+            border-radius: 10px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .nav-icon-box {
+            width: 34px; height: 34px; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 0.9rem; flex-shrink: 0;
+        }
+        
+        .icon-dashboard { background: linear-gradient(135deg, #3a86ff, #00b4d8); }
+        .icon-harmonics { background: linear-gradient(135deg, #8338ec, #ff007f); }
+        .icon-power { background: linear-gradient(135deg, #ff9f1c, #ff6b6b); }
+        .icon-alerts { background: linear-gradient(135deg, #e74c3c, #ff5252); }
+        .icon-reporting { background: linear-gradient(135deg, #2ecc71, #00b56c); }
+
+        .horizontal-item a:hover, .horizontal-item.active a {
+            background-color: #f0f7ff;
+            color: var(--primary);
+            border: 2px solid var(--primary);
+        }
+
+        /* --- Cards & Grid Layout --- */
+        .dashboard-cards { display: flex; flex-direction: column; gap: 20px; }
+        
+        .top-cards-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 15px; }
+        
+        .meters-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 15px;
+        }
+
+        .card { 
+            background: white; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 20px rgba(0,0,0,0.03); 
+            padding: 20px; 
+            border: 1px solid #e2e8f0; 
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .card.big-card { padding: 25px; border: 2px solid var(--primary); }
+        .card.big-card.secondary-accent { border: 2px solid var(--accent1); }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .card-title { font-size: 0.95rem; font-weight: 600; color: #6c757d; }
+        .card-value { font-size: 1.8rem; font-weight: 700; color: var(--dark); }
+        .card-subtext { font-size: 0.85rem; color: #718096; margin-top: 5px; }
+        .card-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+
+        .status-badge {
+            font-size: 0.75rem;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: bold;
+        }
+        .badge-online { background: #e6ffec; color: var(--success); }
+        .badge-offline { background: #fff5e6; color: var(--warning); }
+
+        .charts-row { display: grid; grid-template-columns: 1.5fr 1fr; gap: 20px; }
+        .chart-container { background: white; border-radius: 12px; padding: 25px; box-shadow: 0 4px 20px rgba(0,0,0,0.03); border: 1px solid #e2e8f0; }
+        .chart-title { font-size: 1.2rem; font-weight: 600; margin-bottom: 20px; }
+        .chart-box { height: 300px; position: relative; width: 100%; }
+        .footer { text-align: center; padding: 20px; color: #6c757d; font-size: 0.9rem; border-top: 1px solid #e0e7ff; margin-top: auto; }
+
+        @media (max-width: 992px) { 
+            .header { flex-direction: column; gap: 15px; align-items: flex-start; }
+            .charts-row, .top-cards-row { grid-template-columns: 1fr; } 
+        }
+        .live-power { font-size: 0.9rem; font-weight: 600; color: var(--primary); margin-top: 6px; }
+        .last-seen { font-size: 0.75rem; color: #a0aec0; margin-top: 4px; }
+            .section-title { font-size: 1.1rem; font-weight: 700; color: var(--dark); display: flex; align-items: center; gap: 10px; }
+        .section-title small { font-weight: 500; color: #a0aec0; font-size: 0.85rem; }
+        .meter-card { border-left: 5px solid var(--primary); gap: 6px; }
+        .meter-card.offline { opacity: 0.6; }
+        .meter-name { font-size: 0.95rem; font-weight: 700; color: var(--dark); }
+        .meter-unit { font-size: 0.75rem; color: #a0aec0; font-weight: 500; }
+        .meter-kw { font-size: 1.6rem; font-weight: 700; color: var(--dark); }
+        .meter-kw.negative { color: var(--warning); }
+        .meter-row { display: flex; justify-content: space-between; font-size: 0.82rem; color: #4a5568; }
+        .meter-row span:first-child { color: #a0aec0; }
+        .phase-bars { display: flex; gap: 4px; margin-top: 4px; }
+        .phase-bar { flex: 1; height: 6px; border-radius: 3px; background: #edf2f7; overflow: hidden; }
+        .phase-bar > div { height: 100%; border-radius: 3px; transition: width 0.4s; }
+        .last-seen { font-size: 0.72rem; color: #a0aec0; }
+        .charts-row.wide { grid-template-columns: 1.6fr 1fr; }
+        .meter-notes { display: flex; flex-wrap: wrap; gap: 6px; min-height: 0; }
+        .note { font-size: 0.72rem; font-weight: 600; padding: 3px 8px; border-radius: 10px;
+                display: inline-flex; align-items: center; gap: 5px; cursor: help; }
+        .note-reverse  { background: #fff4e6; color: #d97706; }
+        .note-reactive { background: #e8f1ff; color: #1e63d6; }
+        .note-energy   { background: #fdecec; color: #c62828; }
+        .note-idle     { background: #f1f5f9; color: #64748b; }
+        .legend-panel { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 18px;
+                        display: flex; flex-wrap: wrap; gap: 10px 22px; align-items: center; font-size: 0.8rem; color: #4a5568; }
+        .legend-panel strong { color: var(--dark); }
+
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <main class="main-content">
+
+            <header class="header">
+                <div class="header-left">
+                    <img src="data:image/png;base64,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" alt="Toyo Packaging Logo" class="header-logo">
+                    <h2>Advanced Energy Management System</h2>
+                </div>
+                <div class="header-right-title">
+                    <i class="fas fa-cloud"></i> <span id="db-status">Cloud Syncing...</span><span id="pkt-clock" style="font-size:0.8rem;font-weight:600;color:#94a3b8;margin-left:8px;">-- PKT</span>
+                </div>
+            </header>
+
+            <section class="nav-section">
+                <div class="nav-instruction">
+                    <i class="fas fa-circle-info"></i>
+                    <span><strong>Quick Navigation:</strong> Switch between analytics pages and reporting tools.</span>
+                </div>
+                <ul class="horizontal-menu">
+                    <li class="horizontal-item active">
+                        <a href="#">
+                            <div class="nav-icon-box icon-dashboard"><i class="fas fa-chart-pie"></i></div>
+                            <span>Main Dashboard</span>
+                        </a>
+                    </li>
+                    <li class="horizontal-item">
+                        <a href="TOU.html">
+                            <div class="nav-icon-box icon-alerts"><i class="fas fa-bell"></i></div>
+                            <span>TOU</span>
+                        </a>
+                    </li>
+                    <li class="horizontal-item">
+                        <a href="rep.html">
+                            <div class="nav-icon-box icon-reporting"><i class="fas fa-file-invoice-dollar"></i></div>
+                            <span>Reporting</span>
+                        </a>
+                    </li>
+                </ul>
+            </section>
+
+            <div class="dashboard-cards">
+                <!-- Top Summary Cards -->
+                <div class="top-cards-row">
+                    <div class="card big-card">
+                        <div class="card-header">
+                            <div class="card-title">Total Energy of Facility (Cumulative)</div>
+                            <div class="card-icon" style="background: #e3f2fd;"><i class="fas fa-calculator" style="color: var(--primary);"></i></div>
+                        </div>
+                        <div class="card-value" id="facility-total-kwh">0.00 kWh</div>
+                        <div class="card-subtext">Import + export, sum of all meters</div>
+                    </div>
+                    <div class="card big-card">
+                        <div class="card-header">
+                            <div class="card-title">Total Live Load</div>
+                            <div class="card-icon" style="background: #fff4e6;"><i class="fas fa-bolt" style="color: var(--warning);"></i></div>
+                        </div>
+                        <div class="card-value" id="facility-live-kw">0.00 kW</div>
+                        <div class="card-subtext">Active power, all online meters</div>
+                    </div>
+                    <div class="card big-card secondary-accent">
+                        <div class="card-header">
+                            <div class="card-title">Grid Frequency</div>
+                            <div class="card-icon" style="background: #efeaff;"><i class="fas fa-wave-square" style="color: var(--accent1);"></i></div>
+                        </div>
+                        <div class="card-value" id="sys-freq">0.0 Hz</div>
+                        <div class="card-subtext">From Janitza main master</div>
+                    </div>
+                    <div class="card big-card secondary-accent">
+                        <div class="card-header">
+                            <div class="card-title">Meters Online</div>
+                            <div class="card-icon" style="background: #e6ffec;"><i class="fas fa-network-wired" style="color: var(--success);"></i></div>
+                        </div>
+                        <div class="card-value" id="meters-online">0 / 0</div>
+                        <div class="card-subtext" id="meters-offline-list">Waiting for data...</div>
+                    </div>
+                </div>
+
+                <!-- Meter Cards -->
+                <div class="section-title"><i class="fas fa-gauge-high" style="color: var(--primary);"></i> Meters <small>Janitza main master, 8 Janitza feeders via RS485 gateway, EEM 570R</small></div>
+                <div class="meters-grid" id="meters-grid"></div>
+                <div class="legend-panel">
+                    <strong><i class="fas fa-circle-info" style="color: var(--warning);"></i> Indicator guide:</strong>
+                    <span><span class="note note-idle"><i class="fas fa-power-off"></i> No load</span> feeder is not drawing current; tiny power readings are shown as 0.00 kW</span>
+                    <span><span class="note note-reverse"><i class="fas fa-right-left"></i> Reverse power</span> power flows back through the meter (export). If this feeder should only consume, check the CT direction / S1-S2 wiring</span>
+                    <span><span class="note note-reactive"><i class="fas fa-wave-square"></i> Mostly reactive</span> current is mostly reactive (low power factor), e.g. capacitor bank or idle motors</span>
+                    <span><span class="note note-energy"><i class="fas fa-triangle-exclamation"></i> Energy not counting</span> current flows but energy counters read 0. Compare with the meter display</span>
+                    <span>Hover over any indicator on a card for details.</span>
+                </div>
+
+                <!-- Charts Section -->
+                <div class="charts-row wide">
+                    <div class="chart-container">
+                        <div class="chart-title">Active Power per Meter and Phase (kW)</div>
+                        <div class="chart-box" style="height: 340px;"><canvas id="loadDistributionChart"></canvas></div>
+                    </div>
+                    <div class="chart-container">
+                        <div class="chart-title">Meter Power Share Ratio</div>
+                        <div class="chart-box" style="height: 340px;"><canvas id="departmentChart"></canvas></div>
+                    </div>
+                </div>
+
+                <footer class="footer"><p>Toyo Packaging &mdash; Advanced Energy Management System</p></footer>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // --- INFLUXDB CLOUD CONFIGURATION ---
+        const INFLUX_URL = "https://us-east-1-1.aws.cloud2.influxdata.com";
+        const INFLUX_TOKEN = "7ab5RgQQFiI8ykfMKQ-Wppd6zC46risspDpbzGDRLhk_TaD_aEwrjkY69nDtZlnJN14UnaTe1AJvNt_2LE2aHQ==";
+        const INFLUX_ORG = "Fahad";
+        const INFLUX_BUCKET = "Toyo";
+
+        const REFRESH_MS = 5000;            // dashboard refresh rate
+        const ONLINE_WINDOW_MS = 30 * 1000; // a meter is Online if its latest data is newer than this
+
+        // --- INDICATOR THRESHOLDS ---
+        const IDLE_CURRENT_A = 0.05;   // below this total current a feeder counts as "no load"
+        const NOISE_POWER_W = 10;      // power readings smaller than this are shown as 0.00 kW
+        const REACTIVE_PF = 0.5;       // |P| / S below this = mostly reactive load
+        const MIN_S_FOR_PF_VA = 200;   // only judge power factor above this apparent power
+
+        // --- FIELD MAPS (as written by ems_combined_logger.py) ---
+        const JANITZA_FIELDS = {
+            p1: "p_l1", p2: "p_l2", p3: "p_l3", pTotal: "p_total",
+            i1: "i_l1", i2: "i_l2", i3: "i_l3",
+            v1: "v_l1n", v2: "v_l2n", v3: "v_l3n",
+            freq: "frequency_hz", kwhImp: "kwh_import", kwhExp: "kwh_export", sTotal: "s_total"
+        };
+        const EEM_FIELDS = {
+            p1: "p_active_phase_1", p2: "p_active_phase_2", p3: "p_active_phase_3", pTotal: "total_active_power_w",
+            i1: "i_phase_1", i2: "i_phase_2", i3: "i_phase_3",
+            v1: "v_phase_1", v2: "v_phase_2", v3: "v_phase_3",
+            freq: "frequency_hz", kwhImp: "kwh_import", kwhExp: "kwh_export", sTotal: "total_apparent_power_va"
+        };
+
+        // --- METER LIST ---
+        // "tag" must match meter_name in ems_combined_logger.py.
+        // "label" is only the display name: rename freely (e.g. "Main Compressor").
+        const METERS = [
+            { tag: "Janitza_Main_Master", label: "Janitza Main Master", info: "UMG 96-PQ-L · Unit 1", measurement: "janitza_umg96pql",   fields: JANITZA_FIELDS },
+            { tag: "Janitza_Unit_02",     label: "Janitza Unit 02",     info: "Gateway · Unit 2",     measurement: "janitza_feeder",     fields: JANITZA_FIELDS },
+            { tag: "Janitza_Unit_03",     label: "Janitza Unit 03",     info: "Gateway · Unit 3",     measurement: "janitza_feeder",     fields: JANITZA_FIELDS },
+            { tag: "Janitza_Unit_05",     label: "Janitza Unit 05",     info: "Gateway · Unit 5",     measurement: "janitza_feeder",     fields: JANITZA_FIELDS },
+            { tag: "Janitza_Unit_06",     label: "Janitza Unit 06",     info: "Gateway · Unit 6",     measurement: "janitza_feeder",     fields: JANITZA_FIELDS },
+            { tag: "Janitza_Unit_07",     label: "Janitza Unit 07",     info: "Gateway · Unit 7",     measurement: "janitza_feeder",     fields: JANITZA_FIELDS },
+            { tag: "Janitza_Unit_08",     label: "Janitza Unit 08",     info: "Gateway · Unit 8",     measurement: "janitza_feeder",     fields: JANITZA_FIELDS },
+            { tag: "Janitza_Unit_09",     label: "Janitza Unit 09",     info: "Gateway · Unit 9",     measurement: "janitza_feeder",     fields: JANITZA_FIELDS },
+            { tag: "Janitza_Unit_10",     label: "Janitza Unit 10",     info: "Gateway · Unit 10",    measurement: "janitza_feeder",     fields: JANITZA_FIELDS },
+            { tag: "EEM_570R",            label: "EEM 570R",            info: "192.168.10.8",         measurement: "eem570r_meter_data", fields: EEM_FIELDS }
+        ];
+
+        // One clearly different colour per meter (same order as METERS)
+        const COLORS = [
+            '#1f77b4', // Janitza Main Master - blue
+            '#ff7f0e', // Unit 02 - orange
+            '#2ca02c', // Unit 03 - green
+            '#d62728', // Unit 05 - red
+            '#9467bd', // Unit 06 - purple
+            '#8c564b', // Unit 07 - brown
+            '#e377c2', // Unit 08 - pink
+            '#17becf', // Unit 09 - teal
+            '#bcbd22', // Unit 10 - olive
+            '#2c3e50'  // EEM 570R - dark slate
+        ];
+        // Phase colours follow the Red / Yellow / Blue convention
+        const PHASE_COLORS = ['#e53935', '#f4b400', '#1e63d6'];
+
+        const meterKey = (measurement, tag) => `${measurement}|${tag}`;
+
+        function buildFluxQuery() {
+            const measurements = [...new Set(METERS.map(m => m.measurement))];
+            const measFilter = measurements.map(m => `r._measurement == "${m}"`).join(" or ");
+            const fieldSet = [...new Set(METERS.flatMap(m => Object.values(m.fields)))];
+            const fieldFilter = fieldSet.map(f => `r._field == "${f}"`).join(" or ");
+            // last() per series, then keep only the newest value per meter + field
+            return `
+                from(bucket: "${INFLUX_BUCKET}")
+                  |> range(start: -30d)
+                  |> filter(fn: (r) => ${measFilter})
+                  |> filter(fn: (r) => ${fieldFilter})
+                  |> last()
+                  |> keep(columns: ["_time", "_value", "_field", "_measurement", "meter_name"])
+                  |> group(columns: ["_measurement", "meter_name", "_field"])
+                  |> sort(columns: ["_time"])
+                  |> last()
+                  |> group()
+            `;
+        }
+        const FLUX_QUERY = buildFluxQuery();
+
+        let barChart, doughnutChart;
+
+        // ---------- Build meter cards ----------
+        function buildMeterCards() {
+            const grid = document.getElementById('meters-grid');
+            grid.innerHTML = METERS.map((m, i) => `
+                <div class="card meter-card offline" id="card-${i}" style="border-left-color: ${COLORS[i % COLORS.length]};">
+                    <div class="card-header" style="margin-bottom: 4px;">
+                        <div>
+                            <div class="meter-name">${m.label}</div>
+                            <div class="meter-unit">${m.info}</div>
+                        </div>
+                        <span class="status-badge badge-offline" id="badge-${i}">Offline</span>
+                    </div>
+                    <div class="meter-kw" id="kw-${i}">-- kW</div>
+                    <div class="phase-bars" title="Current per phase">
+                        <div class="phase-bar"><div id="bar-${i}-1" style="width:0%; background:${PHASE_COLORS[0]};"></div></div>
+                        <div class="phase-bar"><div id="bar-${i}-2" style="width:0%; background:${PHASE_COLORS[1]};"></div></div>
+                        <div class="phase-bar"><div id="bar-${i}-3" style="width:0%; background:${PHASE_COLORS[2]};"></div></div>
+                    </div>
+                    <div class="meter-row"><span>Current L1/L2/L3</span><span id="i-${i}">-- A</span></div>
+                    <div class="meter-row"><span>Voltage L-N (avg)</span><span id="v-${i}">-- V</span></div>
+                    <div class="meter-row"><span>Energy import</span><span id="imp-${i}">-- kWh</span></div>
+                    <div class="meter-row"><span>Energy export</span><span id="exp-${i}">-- kWh</span></div>
+                    <div class="meter-row"><span>Power factor (P/S)</span><span id="pf-${i}">--</span></div>
+                    <div class="meter-notes" id="notes-${i}"></div>
+                    <div class="last-seen" id="seen-${i}">Last update: --</div>
+                </div>
+            `).join('');
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            buildMeterCards();
+
+            barChart = new Chart(document.getElementById('loadDistributionChart'), {
+                type: 'bar',
+                data: {
+                    labels: METERS.map(m => m.label),
+                    datasets: ['L1', 'L2', 'L3'].map((ph, i) => ({
+                        label: `Phase ${ph}`, data: METERS.map(() => 0),
+                        borderColor: '#ffffff', borderWidth: { top: 1 },
+                        backgroundColor: PHASE_COLORS[i], borderRadius: 3
+                    }))
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { stacked: true, ticks: { autoSkip: false, maxRotation: 45, minRotation: 0 } },
+                        y: { stacked: true, title: { display: true, text: 'kW' } }
+                    },
+                    plugins: { tooltip: { mode: 'index', intersect: false } }
+                }
+            });
+
+            doughnutChart = new Chart(document.getElementById('departmentChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: METERS.map(m => m.label),
+                    datasets: [{ data: METERS.map(() => 0), backgroundColor: METERS.map((_, i) => COLORS[i % COLORS.length]),
+                                borderColor: '#ffffff', borderWidth: 2 }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false, cutout: '60%',
+                    plugins: {
+                        legend: { position: 'right', labels: { boxWidth: 12, font: { size: 11 } } },
+                        tooltip: { callbacks: { label: (c) => ` ${c.label}: ${c.parsed.toFixed(2)} kW` } }
+                    }
+                }
+            });
+
+            fetchInfluxData();
+            setInterval(fetchInfluxData, REFRESH_MS);
+
+            function updatePktClock() {
+                document.getElementById('pkt-clock').innerText = formatPkt(new Date()) + ' PKT';
+            }
+            updatePktClock();
+            setInterval(updatePktClock, 1000);
+        });
+
+        async function fetchInfluxData() {
+            try {
+                const response = await fetch(`${INFLUX_URL}/api/v2/query?org=${encodeURIComponent(INFLUX_ORG)}`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Token ${INFLUX_TOKEN}`,
+                        'Content-Type': 'application/vnd.flux',
+                        'Accept': 'application/csv'
+                    },
+                    body: FLUX_QUERY
+                });
+                if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+
+                const csvText = await response.text();
+                parseAndRender(csvText);
+                document.getElementById('db-status').innerText = "Connected";
+                document.getElementById('db-status').style.color = "var(--primary)";
+            } catch (err) {
+                console.error("InfluxDB Fetch Exception:", err);
+                document.getElementById('db-status').innerText = "DB Offline";
+                document.getElementById('db-status').style.color = "var(--danger)";
+            }
+        }
+
+        function formatPkt(date) {
+            return date.toLocaleString('en-GB', {
+                timeZone: 'Asia/Karachi', hourCycle: 'h23',
+                day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit'
+            });
+        }
+
+        const fmt = (v, d = 2) => v.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+
+        function parseAndRender(csvData) {
+            const lines = csvData.split(/\r?\n/);
+            const values = {};    // values[key][field] = number
+            const lastTime = {};  // lastTime[key] = Date
+            let header = [];
+
+            lines.forEach(line => {
+                if (!line.trim() || line.startsWith('#')) return;
+                const parts = line.split(',').map(s => s.trim());
+                if (parts.includes('_field') && parts.includes('_value')) { header = parts; return; }
+                if (header.length === 0 || parts.length !== header.length) return;
+
+                const key = meterKey(parts[header.indexOf('_measurement')], parts[header.indexOf('meter_name')]);
+                const field = parts[header.indexOf('_field')];
+                const value = parseFloat(parts[header.indexOf('_value')]);
+                const time = new Date(parts[header.indexOf('_time')]);
+
+                if (!values[key]) values[key] = {};
+                values[key][field] = value;
+                if (!lastTime[key] || time > lastTime[key]) lastTime[key] = time;
+            });
+
+            let totalKwh = 0, totalLiveW = 0, onlineCount = 0, freq = 0;
+            const offlineNames = [];
+            const phaseKw = [[], [], []];
+            const shareKw = [];
+
+            METERS.forEach((m, i) => {
+                const key = meterKey(m.measurement, m.tag);
+                const d = values[key] || {};
+                const f = m.fields;
+                const seen = lastTime[key];
+                const online = Boolean(seen && (Date.now() - seen.getTime()) < ONLINE_WINDOW_MS);
+                const card = document.getElementById(`card-${i}`);
+                const badge = document.getElementById(`badge-${i}`);
+
+                // Energy: last known value is shown even when offline
+                const imp = d[f.kwhImp] || 0, exp = d[f.kwhExp] || 0;
+                totalKwh += imp + exp;
+                document.getElementById(`imp-${i}`).innerText = seen ? `${fmt(imp)} kWh` : '-- kWh';
+                document.getElementById(`exp-${i}`).innerText = seen ? `${fmt(exp)} kWh` : '-- kWh';
+                document.getElementById(`seen-${i}`).innerText =
+                    seen ? `Last update: ${formatPkt(seen)} PKT` : 'Last update: no data yet';
+
+                if (online) {
+                    onlineCount++;
+                    card.classList.remove('offline');
+                    badge.innerText = "Online";
+                    badge.className = "status-badge badge-online";
+
+                    const p = [d[f.p1] || 0, d[f.p2] || 0, d[f.p3] || 0];
+                    const pSum = (d[f.pTotal] !== undefined) ? d[f.pTotal] : p[0] + p[1] + p[2];
+                    const cur = [d[f.i1] || 0, d[f.i2] || 0, d[f.i3] || 0];
+                    const vAvg = ([d[f.v1], d[f.v2], d[f.v3]].filter(x => x !== undefined)
+                                  .reduce((a, b, _, arr) => a + b / arr.length, 0));
+
+                    const iTotal = cur[0] + cur[1] + cur[2];
+                    const idle = iTotal < IDLE_CURRENT_A;
+                    // Clean up measurement noise: no current or tiny power -> 0
+                    const pClean = (idle || Math.abs(pSum) < NOISE_POWER_W) ? 0 : pSum;
+                    const sTotal = d[f.sTotal];
+                    const pf = (sTotal && sTotal > MIN_S_FOR_PF_VA) ? pClean / sTotal : null;
+
+                    totalLiveW += pClean;
+                    const kwEl = document.getElementById(`kw-${i}`);
+                    kwEl.innerText = `${fmt(pClean / 1000)} kW`;
+                    kwEl.classList.toggle('negative', pClean < 0);
+                    document.getElementById(`pf-${i}`).innerText = pf === null ? '--' : pf.toFixed(2);
+
+                    // Indicators that explain unusual readings
+                    const notes = [];
+                    if (idle) {
+                        notes.push(`<span class="note note-idle" title="This feeder is not drawing current. Small power values caused by measurement noise are shown as 0.00 kW."><i class="fas fa-power-off"></i> No load</span>`);
+                    }
+                    if (pClean < 0) {
+                        notes.push(`<span class="note note-reverse" title="Active power is negative: energy flows back through the meter (export). This is normal for generators, solar or regenerative drives. If this feeder should only consume power, the CTs may be installed in reverse or S1/S2 swapped."><i class="fas fa-right-left"></i> Reverse power</span>`);
+                    }
+                    if (pf !== null && Math.abs(pf) < REACTIVE_PF) {
+                        notes.push(`<span class="note note-reactive" title="Power factor ${pf.toFixed(2)}: the current is mostly reactive, so very little real power is used. Typical of capacitor banks, lightly loaded motors or transformers."><i class="fas fa-wave-square"></i> Mostly reactive</span>`);
+                    }
+                    if (!idle && iTotal > 0.5 && imp === 0 && exp === 0) {
+                        notes.push(`<span class="note note-energy" title="Current is flowing but both energy counters read 0. The meter may store energy in different registers (different model) or the counters were reset. Compare with the energy value on the meter display."><i class="fas fa-triangle-exclamation"></i> Energy not counting</span>`);
+                    }
+                    document.getElementById(`notes-${i}`).innerHTML = notes.join('');
+                    document.getElementById(`i-${i}`).innerText = cur.map(x => x.toFixed(2)).join(' / ') + ' A';
+                    document.getElementById(`v-${i}`).innerText = vAvg ? `${vAvg.toFixed(1)} V` : '-- V';
+
+                    const maxI = Math.max(...cur, 1);
+                    cur.forEach((x, ph) => {
+                        document.getElementById(`bar-${i}-${ph + 1}`).style.width = `${Math.min(100, (x / maxI) * 100)}%`;
+                    });
+
+                    p.forEach((x, ph) => phaseKw[ph][i] = (idle || Math.abs(x) < NOISE_POWER_W) ? 0 : x / 1000);
+                    shareKw[i] = Math.max(pClean, 0) / 1000;
+                    if (m.tag === "Janitza_Main_Master" && d[f.freq]) freq = d[f.freq];
+                    if (!freq && d[f.freq]) freq = d[f.freq];
+                } else {
+                    card.classList.add('offline');
+                    badge.innerText = "Offline";
+                    badge.className = "status-badge badge-offline";
+                    document.getElementById(`kw-${i}`).innerText = '-- kW';
+                    document.getElementById(`i-${i}`).innerText = '-- A';
+                    document.getElementById(`v-${i}`).innerText = '-- V';
+                    document.getElementById(`pf-${i}`).innerText = '--';
+                    document.getElementById(`notes-${i}`).innerHTML = '';
+                    [1, 2, 3].forEach(ph => document.getElementById(`bar-${i}-${ph}`).style.width = '0%');
+                    phaseKw.forEach(arr => arr[i] = 0);
+                    shareKw[i] = 0;
+                    offlineNames.push(m.label);
+                }
+            });
+
+            document.getElementById('facility-total-kwh').innerText = `${fmt(totalKwh)} kWh`;
+            document.getElementById('facility-live-kw').innerText = `${fmt(totalLiveW / 1000)} kW`;
+            document.getElementById('sys-freq').innerText = freq > 0 ? `${freq.toFixed(2)} Hz` : "0.0 Hz";
+            document.getElementById('meters-online').innerText = `${onlineCount} / ${METERS.length}`;
+            document.getElementById('meters-offline-list').innerText =
+                offlineNames.length ? `Offline: ${offlineNames.join(', ')}` : 'All meters reporting';
+
+            phaseKw.forEach((arr, ph) => barChart.data.datasets[ph].data = METERS.map((_, i) => arr[i] || 0));
+            barChart.update();
+            doughnutChart.data.datasets[0].data = METERS.map((_, i) => shareKw[i] || 0);
+            doughnutChart.update();
+        }
+    </script>
+</body>
+</html>
