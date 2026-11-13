@@ -110,6 +110,7 @@
         .icon-power { background: linear-gradient(135deg, #ff9f1c, #ff6b6b); }
         .icon-alerts { background: linear-gradient(135deg, #e74c3c, #ff5252); }
         .icon-reporting { background: linear-gradient(135deg, #2ecc71, #00b56c); }
+        .icon-cost { background: linear-gradient(135deg, #f4b400, #ff7f0e); }
 
         .horizontal-item a:hover, .horizontal-item.active a {
             background-color: #f0f7ff;
@@ -213,6 +214,97 @@
         }
 
 
+
+        /* --- Meter detail view (opens on card click) --- */
+        .meter-card[data-src] { cursor: pointer; transition: box-shadow 0.2s, border-color 0.2s; }
+        .meter-card[data-src]:hover { box-shadow: 0 6px 24px rgba(58,134,255,0.13); border-color: #c7dbff; }
+        .meter-card[data-src]:focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
+        .card-open-hint { font-size: 0.74rem; font-weight: 600; color: var(--primary); display: flex; align-items: center; gap: 6px; margin-top: 2px; }
+        body.md-open { overflow: hidden; }
+
+        .md-overlay { --md-pad: 24px; position: fixed; inset: 0; z-index: 1000; background: rgba(30,35,60,0.55); overflow-y: auto; padding: var(--md-pad); }
+        .md-overlay[hidden] { display: none; }
+        .md-panel { max-width: 1320px; margin: 0 auto; background: #f5f7ff; border-radius: 16px; box-shadow: 0 24px 60px rgba(0,0,0,0.25); overflow: clip; animation: mdIn 0.22s ease-out; }
+        @keyframes mdIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+        @media (prefers-reduced-motion: reduce) { .md-panel { animation: none; } }
+
+        .md-head { position: sticky; top: calc(-1 * var(--md-pad)); z-index: 3; background: white; border-top: 6px solid var(--md-color, var(--primary));
+                   border-bottom: 1px solid #e2e8f0; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; }
+        .md-title { font-size: 1.35rem; font-weight: 700; color: var(--dark); }
+        .md-sub { font-size: 0.82rem; color: #718096; margin-top: 2px; }
+        .md-head-right { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+        .md-seen { font-size: 0.8rem; color: #718096; }
+        .md-close { width: 40px; height: 40px; border-radius: 10px; border: 1px solid #e2e8f0; background: #f8fafc; color: #4a5568; font-size: 1.1rem; cursor: pointer; }
+        .md-close:hover { background: #f0f7ff; color: var(--primary); border-color: var(--primary); }
+        .md-close:focus-visible, .md-seg button:focus-visible, .md-btn:focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
+
+        .md-body { padding: 22px 24px 28px; display: flex; flex-direction: column; gap: 20px; }
+        .md-section { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+        .md-sec-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .md-sec-head h3 { font-size: 1.08rem; font-weight: 700; color: var(--dark); display: flex; align-items: center; gap: 9px; }
+        .md-sec-head h3 i { color: var(--md-color, var(--primary)); }
+        .md-sec-note { font-size: 0.8rem; color: #94a3b8; }
+
+        .md-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); gap: 12px; }
+        .md-tile { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; }
+        .md-tile-main { grid-column: span 2; background: #f0f7ff; border-color: #c7dbff; }
+        .md-tl { font-size: 0.78rem; font-weight: 600; color: #718096; }
+        .md-tv { font-size: 1.4rem; font-weight: 700; color: var(--dark); margin-top: 4px; font-variant-numeric: tabular-nums; }
+        .md-tile-main .md-tv { font-size: 2.1rem; }
+        .md-tv.negative { color: var(--warning); }
+        .md-unit { font-size: 0.8rem; font-weight: 600; color: #94a3b8; margin-left: 4px; }
+        .md-ts { font-size: 0.75rem; color: #94a3b8; margin-top: 3px; }
+
+        .md-table-wrap { overflow-x: auto; }
+        .md-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; font-variant-numeric: tabular-nums; }
+        .md-table th { text-align: right; font-size: 0.76rem; font-weight: 600; color: #718096; padding: 8px 10px; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
+        .md-table td { text-align: right; padding: 9px 10px; border-bottom: 1px solid #edf2f7; white-space: nowrap; color: #2d3748; }
+        .md-table th:first-child, .md-table td:first-child { text-align: left; }
+        .md-table tr.md-total td { font-weight: 700; background: #f8fafc; border-bottom: none; }
+        .md-table .na { color: #cbd5e0; }
+        .md-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 7px; vertical-align: middle; }
+        .md-small { font-size: 0.72rem; color: #94a3b8; font-weight: 500; }
+
+        .md-note { font-size: 0.8rem; color: #64748b; background: #f8fafc; border: 1px dashed #cbd5e0; border-radius: 8px; padding: 9px 12px; line-height: 1.5; }
+        .md-note:empty { display: none; }
+        .md-error { font-size: 0.82rem; color: var(--danger); font-weight: 600; }
+        .md-error:empty { display: none; }
+
+        .md-grid-2 { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; }
+        .md-grid-3 { display: grid; grid-template-columns: 1.6fr 1fr 1fr; gap: 16px; }
+        .md-chart-card { border: 1px solid #edf2f7; border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+        .md-chart-title { font-size: 0.92rem; font-weight: 600; color: var(--dark); }
+        .md-chart-sub { font-size: 0.76rem; color: #94a3b8; }
+        .md-chart { position: relative; height: 270px; }
+        .md-chart.tall { height: 320px; }
+        .md-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 20px;
+                    font-size: 0.85rem; color: #94a3b8; background: rgba(255,255,255,0.92); }
+        .md-empty[hidden] { display: none; }
+
+        .md-controls { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
+        .md-seg { display: inline-flex; flex-wrap: wrap; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; background: #f8fafc; }
+        .md-seg button { border: none; background: transparent; padding: 8px 12px; font-size: 0.82rem; font-weight: 600; color: #4a5568; cursor: pointer; border-right: 1px solid #e2e8f0; }
+        .md-seg button:last-child { border-right: none; }
+        .md-seg button[aria-pressed="true"] { background: var(--primary); color: white; }
+        .md-controls label { font-size: 0.82rem; font-weight: 600; color: #4a5568; display: inline-flex; align-items: center; gap: 6px; }
+        .md-controls input, .md-controls select { font: inherit; font-weight: 500; font-size: 0.85rem; padding: 6px 8px; border: 1px solid #cbd5e0; border-radius: 8px; background: white; color: var(--dark); }
+        .md-custom { display: inline-flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+        .md-custom[hidden] { display: none; }
+        .md-btn { font: inherit; font-size: 0.85rem; font-weight: 600; padding: 7px 14px; border-radius: 8px; border: none; background: var(--primary); color: white; cursor: pointer; }
+
+        .md-details summary { cursor: pointer; font-size: 0.88rem; font-weight: 600; color: var(--primary); padding: 4px 0; }
+        .md-details[open] summary { margin-bottom: 10px; }
+
+        @media (max-width: 992px) {
+            .md-grid-2, .md-grid-3 { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 640px) {
+            .md-overlay { --md-pad: 0px; }
+            .md-panel { border-radius: 0; min-height: 100%; }
+            .md-body { padding: 14px; }
+            .md-section { padding: 14px; }
+            .md-tile-main { grid-column: span 1; }
+        }
     </style>
 </head>
 <body>
@@ -243,15 +335,9 @@
                         </a>
                     </li>
                     <li class="horizontal-item">
-                        <a href="TOU.html">
-                            <div class="nav-icon-box icon-alerts"><i class="fas fa-bell"></i></div>
-                            <span>TOU</span>
-                        </a>
-                    </li>
-                    <li class="horizontal-item">
-                        <a href="rep.html">
-                            <div class="nav-icon-box icon-reporting"><i class="fas fa-file-invoice-dollar"></i></div>
-                            <span>Reporting</span>
+                        <a href="Rep.html">
+                            <div class="nav-icon-box icon-cost"><i class="fas fa-coins"></i></div>
+                            <span>Energy &amp; Cost Reports</span>
                         </a>
                     </li>
                 </ul>
@@ -348,6 +434,190 @@
                 <footer class="footer"><p>Toyo Packaging &mdash; Advanced Energy Management System</p></footer>
             </div>
         </main>
+    </div>
+
+
+    <!-- ===== Meter detail view (opens when a meter card is clicked) ===== -->
+    <div class="md-overlay" id="md-overlay" hidden>
+        <div class="md-panel" role="dialog" aria-modal="true" aria-labelledby="md-title">
+            <div class="md-head">
+                <div>
+                    <div class="md-title" id="md-title">Meter</div>
+                    <div class="md-sub" id="md-sub"></div>
+                </div>
+                <div class="md-head-right">
+                    <span class="md-seen" id="md-seen">Loading…</span>
+                    <span class="status-badge badge-offline" id="md-badge">Offline</span>
+                    <button class="md-close" id="md-close" aria-label="Close meter details" title="Close (Esc)"><i class="fas fa-xmark"></i></button>
+                </div>
+            </div>
+
+            <div class="md-body">
+                <!-- Live values -->
+                <section class="md-section">
+                    <div class="md-sec-head">
+                        <h3><i class="fas fa-bolt"></i> Live values</h3>
+                        <span class="md-sec-note">Updates every 5 seconds</span>
+                    </div>
+                    <div class="md-tiles">
+                        <div class="md-tile md-tile-main"><div class="md-tl">Active power, total</div><div class="md-tv" id="md-p">--</div></div>
+                        <div class="md-tile"><div class="md-tl">Reactive power, total</div><div class="md-tv" id="md-q">--</div></div>
+                        <div class="md-tile"><div class="md-tl">Apparent power</div><div class="md-tv" id="md-s">--</div></div>
+                        <div class="md-tile"><div class="md-tl">Power factor</div><div class="md-tv" id="md-pf">--</div></div>
+                        <div class="md-tile"><div class="md-tl">Frequency</div><div class="md-tv" id="md-hz">--</div></div>
+                        <div class="md-tile"><div class="md-tl">Energy today</div><div class="md-tv" id="md-etoday">--</div><div class="md-ts" id="md-etoday-src"></div></div>
+                        <div class="md-tile"><div class="md-tl">Energy import (meter counter)</div><div class="md-tv" id="md-imp">--</div></div>
+                        <div class="md-tile"><div class="md-tl">Energy export (meter counter)</div><div class="md-tv" id="md-exp">--</div></div>
+                    </div>
+                    <div class="md-table-wrap">
+                        <table class="md-table">
+                            <thead>
+                                <tr>
+                                    <th>Phase</th><th>Active power (kW)</th><th>Current (A)</th><th>Voltage L-N (V)</th>
+                                    <th>Reactive (kvar)</th><th>Power factor</th><th>THD voltage (%)</th><th>THD current (%)</th>
+                                    <th>Energy today (kWh)</th><th>Energy counter (kWh)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="md-phase-body"></tbody>
+                        </table>
+                    </div>
+                    <div class="md-note" id="md-missing"></div>
+                    <div class="md-grid-2">
+                        <div class="md-chart-card">
+                            <div class="md-chart-title">Phase balance</div>
+                            <div class="md-chart-sub">Active power and current per phase, live</div>
+                            <div class="md-chart"><canvas id="md-c-phase"></canvas><div class="md-empty" hidden></div></div>
+                        </div>
+                        <div class="md-chart-card">
+                            <div class="md-chart-title" id="md-c-phasepie-title">Active power share by phase</div>
+                            <div class="md-chart-sub">Live</div>
+                            <div class="md-chart"><canvas id="md-c-phasepie"></canvas><div class="md-empty" hidden></div></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Harmonics -->
+                <section class="md-section">
+                    <div class="md-sec-head">
+                        <h3><i class="fas fa-wave-square"></i> Harmonics</h3>
+                        <span class="md-sec-note">Live</span>
+                    </div>
+                    <div class="md-grid-2">
+                        <div class="md-chart-card">
+                            <div class="md-chart-title">Total harmonic distortion (THD)</div>
+                            <div class="md-chart-sub">Voltage and current, per phase</div>
+                            <div class="md-chart"><canvas id="md-c-thd"></canvas><div class="md-empty" hidden></div></div>
+                        </div>
+                        <div class="md-chart-card">
+                            <div class="md-controls" style="justify-content: space-between;">
+                                <div class="md-chart-title">Harmonic spectrum</div>
+                                <label id="md-spec-kind-wrap" hidden>Show <select id="md-spec-kind"><option value="I">Current</option><option value="V">Voltage</option></select></label>
+                            </div>
+                            <div class="md-chart-sub">Individual harmonics in %</div>
+                            <div class="md-chart"><canvas id="md-c-spec"></canvas><div class="md-empty" hidden></div></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Day statistics -->
+                <section class="md-section">
+                    <div class="md-sec-head">
+                        <h3><i class="fas fa-calendar-day"></i> Day statistics</h3>
+                        <div class="md-controls"><label>Day <input type="date" id="md-day"></label></div>
+                    </div>
+                    <div class="md-error" id="md-day-error"></div>
+                    <div class="md-tiles">
+                        <div class="md-tile"><div class="md-tl">Maximum active power</div><div class="md-tv" id="md-d-peak">--</div><div class="md-ts" id="md-d-peak-t"></div></div>
+                        <div class="md-tile"><div class="md-tl">Maximum demand (<span class="mdi-min"></span>-min average)</div><div class="md-tv" id="md-d-dem">--</div><div class="md-ts" id="md-d-dem-t"></div></div>
+                        <div class="md-tile"><div class="md-tl">Energy this day</div><div class="md-tv" id="md-d-energy">--</div><div class="md-ts" id="md-d-energy-src"></div></div>
+                        <div class="md-tile"><div class="md-tl">MDI current L1</div><div class="md-tv" id="md-d-mdi1">--</div><div class="md-ts" id="md-d-mdi1-t"></div></div>
+                        <div class="md-tile"><div class="md-tl">MDI current L2</div><div class="md-tv" id="md-d-mdi2">--</div><div class="md-ts" id="md-d-mdi2-t"></div></div>
+                        <div class="md-tile"><div class="md-tl">MDI current L3</div><div class="md-tv" id="md-d-mdi3">--</div><div class="md-ts" id="md-d-mdi3-t"></div></div>
+                    </div>
+                    <div class="md-grid-3">
+                        <div class="md-chart-card">
+                            <div class="md-chart-title">MDI current, every hour</div>
+                            <div class="md-chart-sub">Highest <span class="mdi-min"></span>-minute average current in each hour</div>
+                            <div class="md-chart"><canvas id="md-c-mdi"></canvas><div class="md-empty" hidden></div></div>
+                        </div>
+                        <div class="md-chart-card">
+                            <div class="md-chart-title">Energy by phase</div>
+                            <div class="md-chart-sub" id="md-c-dayphase-sub">kWh on this day</div>
+                            <div class="md-chart"><canvas id="md-c-dayphase"></canvas><div class="md-empty" hidden></div></div>
+                        </div>
+                        <div class="md-chart-card">
+                            <div class="md-chart-title">Energy by shift</div>
+                            <div class="md-chart-sub">kWh on this day</div>
+                            <div class="md-chart"><canvas id="md-c-shift"></canvas><div class="md-empty" hidden></div></div>
+                        </div>
+                    </div>
+                    <details class="md-details">
+                        <summary>Hourly MDI and energy table</summary>
+                        <div class="md-table-wrap">
+                            <table class="md-table">
+                                <thead><tr><th>Hour (PKT)</th><th>MDI L1 (A)</th><th>MDI L2 (A)</th><th>MDI L3 (A)</th><th>Energy (kWh)</th></tr></thead>
+                                <tbody id="md-mdi-body"></tbody>
+                            </table>
+                        </div>
+                    </details>
+                </section>
+
+                <!-- Trends and energy -->
+                <section class="md-section">
+                    <div class="md-sec-head">
+                        <h3><i class="fas fa-chart-line"></i> Trends and energy</h3>
+                        <span class="md-sec-note">Times in PKT</span>
+                    </div>
+                    <div class="md-controls">
+                        <div class="md-seg" role="group" aria-label="Time range" id="md-range-seg">
+                            <button data-preset="1h">1 h</button><button data-preset="6h">6 h</button><button data-preset="12h">12 h</button>
+                            <button data-preset="24h">24 h</button><button data-preset="today">Today</button><button data-preset="yesterday">Yesterday</button>
+                            <button data-preset="7d">7 days</button><button data-preset="custom">Custom</button>
+                        </div>
+                        <div class="md-custom" id="md-custom" hidden>
+                            <label>From <input type="datetime-local" id="md-from"></label>
+                            <label>To <input type="datetime-local" id="md-to"></label>
+                            <button class="md-btn" id="md-apply">Show range</button>
+                        </div>
+                    </div>
+                    <div class="md-error" id="md-range-error"></div>
+                    <div class="md-chart-card">
+                        <div class="md-chart-title">Current trend</div>
+                        <div class="md-chart-sub" id="md-c-cur-sub"></div>
+                        <div class="md-chart tall"><canvas id="md-c-cur"></canvas><div class="md-empty" hidden></div></div>
+                    </div>
+                    <div class="md-chart-card">
+                        <div class="md-chart-title">Load profile</div>
+                        <div class="md-chart-sub" id="md-c-load-sub"></div>
+                        <div class="md-chart tall"><canvas id="md-c-load"></canvas><div class="md-empty" hidden></div></div>
+                    </div>
+                    <div class="md-chart-card">
+                        <div class="md-controls" style="justify-content: space-between;">
+                            <div class="md-chart-title">Energy per period (kWh)</div>
+                            <div class="md-controls">
+                                <label>Step <select id="md-step"></select></label>
+                                <label>Bars <select id="md-split"><option value="total">Total</option><option value="phase">By phase</option></select></label>
+                            </div>
+                        </div>
+                        <div class="md-chart-sub" id="md-c-energy-sub"></div>
+                        <div class="md-chart tall"><canvas id="md-c-energy"></canvas><div class="md-empty" hidden></div></div>
+                    </div>
+                </section>
+
+                <!-- Raw values -->
+                <section class="md-section">
+                    <details class="md-details">
+                        <summary><i class="fas fa-list"></i> All values this meter writes to the database</summary>
+                        <div class="md-table-wrap">
+                            <table class="md-table">
+                                <thead><tr><th>Field</th><th>Latest value</th><th>Time (PKT)</th></tr></thead>
+                                <tbody id="md-all-body"></tbody>
+                            </table>
+                        </div>
+                    </details>
+                </section>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -489,7 +759,7 @@
             const row = (label, id, dflt, hidden = false) =>
                 `<div class="meter-row" id="isl-row-${id}-${j}"${hidden ? ' style="display:none;"' : ''}><span>${label}</span><span id="isl-${id}-${j}">${dflt}</span></div>`;
             return `
-                <div class="card meter-card offline" id="isl-card-${j}" style="border-left-color: ${s.color};">
+                <div class="card meter-card offline" id="isl-card-${j}" data-src="s${j}" tabindex="0" role="button" aria-label="Open live details for ${s.label}" style="border-left-color: ${s.color};">
                     <div class="card-header" style="margin-bottom: 4px;">
                         <div>
                             <div class="meter-name">${s.label}</div>
@@ -519,12 +789,13 @@
                     </div>
                     <div class="meter-notes" id="isl-notes-${j}"><span class="source-tag" title="Read from the Sungrow iSolarCloud portal. The portal gets a new reading from the Logger1000 about every 5 minutes; the logger checks the portal every minute, so the values here match the iSolarCloud page.">iSolarCloud · same values as portal</span></div>
                     <div class="last-seen" id="isl-seen-${j}">Last update: --</div>
+                    <div class="card-open-hint"><i class="fas fa-up-right-and-down-left-from-center"></i> Click for live values, trends and energy</div>
                 </div>`;
         }
 
         function meterCardHtml(m, i) {
             return `
-                <div class="card meter-card offline" id="card-${i}" style="border-left-color: ${m.color};">
+                <div class="card meter-card offline" id="card-${i}" data-src="m${i}" tabindex="0" role="button" aria-label="Open live details for ${m.label}" style="border-left-color: ${m.color};">
                     <div class="card-header" style="margin-bottom: 4px;">
                         <div>
                             <div class="meter-name">${m.label}</div>
@@ -545,11 +816,13 @@
                     <div class="meter-row"><span>Power factor (P/S)</span><span id="pf-${i}">--</span></div>
                     <div class="meter-notes" id="notes-${i}"></div>
                     <div class="last-seen" id="seen-${i}">Last update: --</div>
+                    <div class="card-open-hint"><i class="fas fa-up-right-and-down-left-from-center"></i> Click for live values, trends and energy</div>
                 </div>`;
         }
 
         document.addEventListener('DOMContentLoaded', function() {
             buildMeterCards();
+            initMeterDetail();
 
             barChart = new Chart(document.getElementById('loadDistributionChart'), {
                 type: 'bar',
@@ -625,7 +898,7 @@
                 document.getElementById('db-status').innerText = "Connected";
                 document.getElementById('db-status').style.color = "var(--primary)";
             } catch (err) {
-                console.error("InfluxDB Fetch Exception:", err);
+                console.error("Data fetch error:", err);
                 document.getElementById('db-status').innerText = "DB Offline";
                 document.getElementById('db-status').style.color = "var(--danger)";
             }
@@ -914,6 +1187,744 @@
                     el('nextcheck').innerText = left > 0 ? `in ${mmss(left)}` : 'checking now...';
                 }
             });
+        }
+
+
+        // =====================================================================
+        // METER DETAIL VIEW: opens when a meter card is clicked
+        // =====================================================================
+        const MDI_DEMAND_MIN = 15;              // MDI = highest average current over this many minutes
+        const HISTORY_REFRESH_MS = 60 * 1000;   // charts and day statistics refresh while the view is open
+        const SHIFTS = [                        // used for the "Energy by shift" pie (PKT hours)
+            { name: 'Shift A (08–16)', from: 8,  to: 16 },
+            { name: 'Shift B (16–24)', from: 16, to: 24 },
+            { name: 'Shift C (00–08)', from: 0,  to: 8 }
+        ];
+        const SHIFT_COLORS = ['#3a86ff', '#ff9f1c', '#8338ec'];
+        const ENERGY_STEPS_H = [1, 2, 3, 4, 6, 8, 12, 24];  // energy bar step, never less than 1 hour
+        const HOUR_MS = 3600 * 1000, DAY_MS = 24 * HOUR_MS, PKT_OFFSET_MS = 5 * HOUR_MS;
+        const PHASE_NAMES = ['L1', 'L2', 'L3'];
+
+        // iSolarCloud field names for the KE / Genset detail view
+        const ISOLAR_DETAIL_FIELDS = {
+            pTotal: "meter_active_power_kw", qTotal: "reactive_power_kvar", sTotal: "apparent_power_kva",
+            pf: "pf", freq: "frequency_hz",
+            i1: "phase_a_current_a", i2: "phase_b_current_a", i3: "phase_c_current_a",
+            v1: "phase_a_voltage_v", v2: "phase_b_voltage_v", v3: "phase_c_voltage_v"
+        };
+
+        const DETAIL_SOURCES = [
+            ...METERS.map((m, i) => ({
+                id: `m${i}`, slug: m.tag, label: m.label, info: m.info, color: m.color,
+                measurements: [m.measurement], tagKey: 'meter_name', tagVal: m.tag,
+                fields: m.fields, badgeId: `badge-${i}`
+            })),
+            ...ISOLAR_SOURCES.map((s, j) => ({
+                id: `s${j}`, slug: s.device.replace(/[^A-Za-z0-9]+/g, '_'), label: s.label, info: s.info, color: s.color,
+                measurements: ['isolarcloud_device', 'isolarcloud_detail'], tagKey: 'device_name', tagVal: s.device,
+                fields: ISOLAR_DETAIL_FIELDS, badgeId: `isl-badge-${j}`
+            }))
+        ];
+
+        const MD = {
+            src: null, f: null, live: {}, liveTime: {}, today: null, charts: {}, lastFocus: null,
+            seq: 0, trendTok: 0, dayTok: 0,
+            preset: 'today', customFrom: null, customTo: null, stepH: 1, split: 'total', day: null, lastEnergy: null
+        };
+
+        // ---------- small helpers ----------
+        const pktShift = d => new Date(d.getTime() + PKT_OFFSET_MS);
+        const pktDayStart = d => new Date(Math.floor((d.getTime() + PKT_OFFSET_MS) / DAY_MS) * DAY_MS - PKT_OFFSET_MS);
+        const pktDateStr = d => pktShift(d).toISOString().slice(0, 10);
+        const pktInputStr = d => pktShift(d).toISOString().slice(0, 16);
+        const fromPkt = s => new Date(`${s.length === 10 ? s + 'T00:00' : s}:00+05:00`);
+        const pktHour = d => pktShift(d).getUTCHours();
+        const fmtClock = d => d.toLocaleTimeString('en-GB', { timeZone: 'Asia/Karachi', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+        const fmtDayClock = d => d.toLocaleString('en-GB', { timeZone: 'Asia/Karachi', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+        const fmtDay = d => d.toLocaleDateString('en-GB', { timeZone: 'Asia/Karachi', day: '2-digit', month: 'short' });
+        const fluxDur = ms => `${Math.round(ms / 60000)}m`;
+        const fluxTs = d => new Date(d).toISOString();
+        const isNum = v => typeof v === 'number' && !isNaN(v);
+        const show = (v, d = 2) => isNum(v) ? fmt(v, d) : '<span class="na">—</span>';
+        const sumDef = arr => arr.some(isNum) ? arr.reduce((a, b) => a + (isNum(b) ? b : 0), 0) : undefined;
+        const avgDef = arr => { const a = arr.filter(isNum); return a.length ? a.reduce((x, y) => x + y, 0) / a.length : undefined; };
+        const pScale = name => /kw|kvar|kva/i.test(name) ? 1 : 0.001;               // W/var/VA -> k
+        const eScale = name => /kwh|kvarh/i.test(name) ? 1 : (/wh/i.test(name) ? 0.001 : 1);
+        const $ = id => document.getElementById(id);
+        const stepLabel = h => h === 24 ? '1 day' : `${h} hour${h > 1 ? 's' : ''}`;
+
+        function setTile(id, v, unit, dec = 2) {
+            const el = $(id);
+            el.innerHTML = isNum(v) ? `${fmt(v, dec)}${unit ? `<span class="md-unit">${unit}</span>` : ''}` : '--';
+            el.classList.toggle('negative', isNum(v) && v < 0 && /kW/.test(unit || ''));
+        }
+
+        // ---------- InfluxDB helpers ----------
+        function parseFluxCsv(text) {
+            const rows = []; let header = [];
+            (text || '').split(/\r?\n/).forEach(line => {
+                if (!line.trim()) { header = []; return; }
+                if (line.startsWith('#')) return;
+                const parts = line.split(',').map(s => s.trim());
+                if (parts.includes('_value') && (parts.includes('_time') || parts.includes('_field'))) { header = parts; return; }
+                if (!header.length || parts.length !== header.length) return;
+                const o = {}; header.forEach((h, k) => o[h] = parts[k]); rows.push(o);
+            });
+            return rows;
+        }
+        function toSeries(rows) {   // { field: Map(timeMs -> value) }
+            const s = {};
+            rows.forEach(r => {
+                const v = parseFloat(r._value); if (isNaN(v)) return;
+                (s[r._field] = s[r._field] || new Map()).set(new Date(r._time).getTime(), v);
+            });
+            return s;
+        }
+        const seriesTimes = (S, names) => {
+            const set = new Set(); names.forEach(n => S[n] && S[n].forEach((_, t) => set.add(t)));
+            return [...set].sort((a, b) => a - b);
+        };
+        function fluxBase(src, start, stop) {
+            return `from(bucket: "${INFLUX_BUCKET}")
+  |> range(start: ${start}${stop ? `, stop: ${stop}` : ''})
+  |> filter(fn: (r) => ${src.measurements.map(m => `r._measurement == "${m}"`).join(' or ')})
+  |> filter(fn: (r) => r.${src.tagKey} == "${src.tagVal}")`;
+        }
+        const fieldFilter = names => `|> filter(fn: (r) => ${names.map(n => `r._field == "${n}"`).join(' or ')})`;
+        const runFlux = flux => queryInflux(flux).then(parseFluxCsv);
+
+        // ---------- field discovery ----------
+        // Known names come from the meter's field map. Anything else the logger writes (reactive power,
+        // harmonics, per-phase energy ...) is recognised by its name, so new registers appear automatically.
+        function phaseOf(n) {
+            let m = n.match(/(?:^|_)(?:l|phase_?|ph_?)([123])n?(?:_|$)/);
+            if (m) return +m[1];
+            m = n.match(/(?:^|_)(?:phase_?|ph_?)([abc])(?:_|$)/) || n.match(/^([abc])_/);
+            return m ? 'abc'.indexOf(m[1]) + 1 : 0;
+        }
+        function resolveFields(src, names) {
+            const f = {};
+            Object.entries(src.fields).forEach(([k, n]) => { if (names.includes(n)) f[k] = n; });
+            const used = new Set(Object.values(f));
+            const set = (k, n) => { if (!f[k]) { f[k] = n; used.add(n); } };
+            f.harm = { V: {}, I: {} };
+            names.forEach(raw => {
+                if (used.has(raw)) return;
+                const n = raw.toLowerCase(), ph = phaseOf(n);
+                if (/(^|_)age|time|_ms$|interval|online|status|count|(^|_)id$/.test(n)) return;
+                if (/thd|harm|(^|_)h\d{1,2}(_|$)/.test(n)) {
+                    const kind = /(^|_)i(_|$)|curr|amp/.test(n) ? 'I' : /(^|_)[vu](_|$)|volt/.test(n) ? 'V' : null;
+                    if (!kind) return;
+                    const ord = (n.match(/(?:^|_)h(\d{1,2})(?:_|$)/) || n.match(/harm[a-z]*_?(\d{1,2})(?:_|$)/) || [])[1];
+                    if (ord && +ord > 1) (f.harm[kind][+ord] = f.harm[kind][+ord] || {})[ph] = raw;
+                    else if (/thd/.test(n)) set(`thd${kind}${ph || ''}`, raw);
+                    return;
+                }
+                if (/varh/.test(n)) return;
+                if (/kwh|(^|_)wh(_|$)|energy/.test(n)) {
+                    const dir = /exp|feed|sold|rev|deliver/.test(n) ? 'Exp' : 'Imp';
+                    set(`kwh${dir}${ph || ''}`, raw); return;
+                }
+                if (/line|(^|_)(ll|l1l2|l2l3|l3l1|l12|l23|l31|ab|bc|ca)(_|$)|^[abc]_[abc]_/.test(n)) return;
+                if (/reactive|kvar|^q_|(^|_)q(_|$)/.test(n)) { set(ph ? `q${ph}` : 'qTotal', raw); return; }
+                if (/apparent|kva|^s_(total|sum|l\d)/.test(n)) { set(ph ? `s${ph}` : 'sTotal', raw); return; }
+                if (/power_factor|(^|_)pf(_|$)|cos_?phi/.test(n)) { set(ph ? `pf${ph}` : 'pf', raw); return; }
+                if (/freq/.test(n)) { set('freq', raw); return; }
+                if (!ph) { if (/active|^p_(total|sum)$|_kw$/.test(n)) set('pTotal', raw); return; }
+                if (/curr|(^|_)i(_|$)|^i_/.test(n)) { set(`i${ph}`, raw); return; }
+                if (/volt|(^|_)[vu](_|$)|^[vu]_/.test(n)) { set(`v${ph}`, raw); return; }
+                if (/active|power|(^|_)p(_|$)|^p_|_kw$|_w$/.test(n)) set(`p${ph}`, raw);
+            });
+            return f;
+        }
+        const hasAny = (f, ...ks) => ks.some(k => f[k]);
+        const hasHarm = f => hasAny(f, 'thdV', 'thdI', 'thdV1', 'thdV2', 'thdV3', 'thdI1', 'thdI2', 'thdI3')
+                             || Object.keys(f.harm.V).length > 0 || Object.keys(f.harm.I).length > 0;
+
+        // ---------- charts ----------
+        function drawChart(id, type, data, options) {
+            const c = MD.charts[id];
+            if (c && c.config.type === type) { c.data = data; c.options = options; c.update('none'); return; }
+            if (c) c.destroy();
+            MD.charts[id] = new Chart($(id), { type, data, options });
+        }
+        function setEmpty(id, msg) {
+            const el = $(id).parentElement.querySelector('.md-empty');
+            el.hidden = !msg; el.textContent = msg || '';
+        }
+        const lineOpts = (yTitle, extra = {}) => ({
+            responsive: true, maintainAspectRatio: false, animation: false,
+            interaction: { mode: 'index', intersect: false },
+            elements: { point: { radius: 0, hitRadius: 6 }, line: { borderWidth: 1.6, tension: 0.2 } },
+            plugins: { legend: { labels: { boxWidth: 12 } } },
+            scales: { x: { ticks: { maxTicksLimit: 12, maxRotation: 0 } }, y: { title: { display: true, text: yTitle } }, ...extra }
+        });
+        const pieOpts = unit => ({
+            responsive: true, maintainAspectRatio: false, animation: false, cutout: '55%',
+            plugins: {
+                legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+                tooltip: { callbacks: { label: c => {
+                    const tot = c.dataset.data.reduce((a, b) => a + b, 0) || 1;
+                    return ` ${c.label}: ${fmt(c.parsed)} ${unit} (${(c.parsed / tot * 100).toFixed(1)}%)`;
+                } } }
+            }
+        });
+
+        // ---------- open / close ----------
+        function openMeterDetail(id) {
+            const src = DETAIL_SOURCES.find(s => s.id === id);
+            if (!src) return;
+            if ($('md-overlay').hidden) MD.lastFocus = document.activeElement;
+            MD.src = src; MD.f = null; MD.live = {}; MD.liveTime = {}; MD.today = null; MD.seq++;
+            const panel = document.querySelector('.md-panel');
+            panel.style.setProperty('--md-color', src.color);
+            $('md-title').textContent = src.label;
+            $('md-sub').textContent = src.info;
+            $('md-seen').textContent = 'Loading…';
+            ['md-p', 'md-q', 'md-s', 'md-pf', 'md-hz', 'md-etoday', 'md-imp', 'md-exp'].forEach(x => $(x).textContent = '--');
+            $('md-phase-body').innerHTML = ''; $('md-missing').textContent = ''; $('md-all-body').innerHTML = '';
+            $('md-overlay').hidden = false;
+            document.body.classList.add('md-open');
+            history.replaceState(null, '', `#meter-${src.slug}`);
+            $('md-close').focus();
+            const seq = MD.seq;
+            loadLive().then(ok => { if (ok && seq === MD.seq) { loadToday(); loadDay(); loadTrends(); } });
+        }
+        function closeMeterDetail() {
+            if ($('md-overlay').hidden) return;
+            $('md-overlay').hidden = true;
+            document.body.classList.remove('md-open');
+            MD.src = null; MD.seq++;
+            history.replaceState(null, '', location.pathname + location.search);
+            if (MD.lastFocus && MD.lastFocus.focus) MD.lastFocus.focus();
+        }
+
+        // ---------- live values ----------
+        async function loadLive() {
+            const src = MD.src, seq = MD.seq;
+            if (!src) return false;
+            try {
+                const rows = await runFlux(`${fluxBase(src, '-30d')}
+  |> last()
+  |> keep(columns: ["_time", "_value", "_field"])`);
+                if (seq !== MD.seq) return false;
+                const live = {}, lt = {};
+                rows.forEach(r => {
+                    const v = parseFloat(r._value); if (isNaN(v)) return;
+                    const t = new Date(r._time);
+                    if (!lt[r._field] || t > lt[r._field]) { live[r._field] = v; lt[r._field] = t; }
+                });
+                MD.live = live; MD.liveTime = lt;
+                MD.f = resolveFields(src, Object.keys(live));
+                renderLive();
+                return true;
+            } catch (err) {
+                console.error('Meter detail live query:', err);
+                $('md-seen').textContent = 'Could not reach the database, retrying…';
+                return false;
+            }
+        }
+
+        function renderLive() {
+            const f = MD.f, d = MD.live, src = MD.src;
+            if (!f || !src) return;
+            const raw = k => (f[k] && isNum(d[f[k]])) ? d[f[k]] : undefined;
+            const kv = k => isNum(raw(k)) ? raw(k) * pScale(f[k]) : undefined;
+
+            // header status mirrors the card
+            const cardBadge = $(src.badgeId);
+            const badge = $('md-badge');
+            badge.textContent = cardBadge ? cardBadge.textContent : '--';
+            badge.className = cardBadge ? cardBadge.className : 'status-badge';
+            const times = Object.values(MD.liveTime);
+            const latest = times.length ? new Date(Math.max(...times)) : null;
+            $('md-seen').textContent = latest ? `Last reading ${formatPkt(latest)} PKT` : 'No data in the last 30 days';
+
+            const cur = [1, 2, 3].map(p => raw(`i${p}`));
+            const volt = [1, 2, 3].map(p => raw(`v${p}`));
+            const idle = cur.some(isNum) && sumDef(cur) < IDLE_CURRENT_A;
+            const clean = v => !isNum(v) ? undefined : (idle || Math.abs(v) < NOISE_POWER_W / 1000) ? 0 : v;
+            const pPh = [1, 2, 3].map(p => clean(kv(`p${p}`)));
+            const pT = isNum(kv('pTotal')) ? clean(kv('pTotal')) : sumDef(pPh);
+            const qPh = [1, 2, 3].map(p => kv(`q${p}`));
+            const qT = isNum(kv('qTotal')) ? kv('qTotal') : sumDef(qPh);
+            let sT = kv('sTotal');
+            if (!isNum(sT) && isNum(pT) && isNum(qT)) sT = Math.hypot(pT, qT);
+            const pf = isNum(raw('pf')) ? raw('pf') : (isNum(sT) && sT > MIN_S_FOR_PF_VA / 1000 && isNum(pT) ? pT / sT : undefined);
+            const pfPh = [1, 2, 3].map((p, k) => {
+                if (isNum(raw(`pf${p}`))) return raw(`pf${p}`);
+                const s = isNum(kv(`s${p}`)) ? kv(`s${p}`) : (isNum(pPh[k]) && isNum(qPh[k]) ? Math.hypot(pPh[k], qPh[k]) : undefined);
+                return isNum(s) && s > MIN_S_FOR_PF_VA / 3000 && isNum(pPh[k]) ? pPh[k] / s : undefined;
+            });
+            const thdV = [1, 2, 3].map(p => raw(`thdV${p}`)), thdI = [1, 2, 3].map(p => raw(`thdI${p}`));
+            const ctrImp = raw('kwhImp'), ctrExp = raw('kwhExp');
+            const ctrPh = [1, 2, 3].map(p => isNum(raw(`kwhImp${p}`)) ? raw(`kwhImp${p}`) * eScale(f[`kwhImp${p}`]) : undefined);
+
+            setTile('md-p', pT, 'kW');
+            setTile('md-q', qT, 'kvar');
+            setTile('md-s', sT, 'kVA');
+            setTile('md-pf', pf, '', 2);
+            setTile('md-hz', raw('freq'), 'Hz');
+            setTile('md-imp', isNum(ctrImp) ? ctrImp * eScale(f.kwhImp) : undefined, 'kWh');
+            setTile('md-exp', isNum(ctrExp) ? ctrExp * eScale(f.kwhExp) : undefined, 'kWh');
+            const td = MD.today;
+            setTile('md-etoday', td ? td.totals.main : undefined, 'kWh');
+            $('md-etoday-src').textContent = !td ? '' : td.mainSrc === 'counter' ? 'From the energy counter' : td.mainSrc === 'power' ? 'Calculated from active power' : '';
+
+            const todayPh = td ? td.totals.phases : [];
+            $('md-phase-body').innerHTML = [0, 1, 2].map(k => `
+                <tr>
+                    <td><span class="md-dot" style="background:${PHASE_COLORS[k]}"></span>${PHASE_NAMES[k]}</td>
+                    <td>${show(pPh[k])}</td><td>${show(cur[k])}</td><td>${show(volt[k], 1)}</td>
+                    <td>${show(qPh[k])}</td><td>${show(pfPh[k])}</td>
+                    <td>${show(thdV[k])}</td><td>${show(thdI[k])}</td>
+                    <td>${show(todayPh[k])}</td><td>${show(ctrPh[k])}</td>
+                </tr>`).join('') + `
+                <tr class="md-total">
+                    <td>Total</td><td>${show(pT)}</td>
+                    <td>${show(avgDef(cur))} <span class="md-small">avg</span></td>
+                    <td>${show(avgDef(volt), 1)} <span class="md-small">avg</span></td>
+                    <td>${show(qT)}</td><td>${show(pf)}</td>
+                    <td>${show(raw('thdV'))}</td><td>${show(raw('thdI'))}</td>
+                    <td>${show(td ? td.totals.main : undefined)}</td>
+                    <td>${show(isNum(ctrImp) ? ctrImp * eScale(f.kwhImp) : undefined)}</td>
+                </tr>`;
+
+            // what this meter does not write to the database
+            const miss = [];
+            if (!hasAny(f, 'p1', 'p2', 'p3')) miss.push('active power per phase');
+            if (!hasAny(f, 'i1', 'i2', 'i3')) miss.push('current');
+            if (!hasAny(f, 'v1', 'v2', 'v3')) miss.push('voltage L-N');
+            if (!hasAny(f, 'qTotal', 'q1', 'q2', 'q3')) miss.push('reactive power');
+            if (!hasHarm(f)) miss.push('harmonics (THD)');
+            if (!hasAny(f, 'kwhImp', 'kwhExp')) miss.push('energy counters');
+            let note = miss.length
+                ? `Not in the database for this meter: ${miss.join(', ')}. The logger does not write these values yet. Once it does, they appear here automatically. `
+                : '';
+            if (!hasAny(f, 'kwhImp1', 'kwhImp2', 'kwhImp3') && hasAny(f, 'p1', 'p2', 'p3'))
+                note += 'Per-phase energy today is calculated from the phase active power, because the meter has no per-phase energy counters in the database.';
+            $('md-missing').textContent = note.trim();
+
+            // live phase charts
+            const hasP = pPh.some(isNum), hasI = cur.some(isNum);
+            drawChart('md-c-phase', 'bar', {
+                labels: PHASE_NAMES,
+                datasets: [
+                    { label: 'Active power (kW)', data: pPh.map(v => isNum(v) ? v : null), backgroundColor: src.color, borderRadius: 4, yAxisID: 'y' },
+                    { label: 'Current (A)', data: cur.map(v => isNum(v) ? v : null), backgroundColor: '#94a3b8', borderRadius: 4, yAxisID: 'y1' }
+                ]
+            }, {
+                responsive: true, maintainAspectRatio: false, animation: false,
+                plugins: { legend: { labels: { boxWidth: 12 } } },
+                scales: {
+                    y: { position: 'left', title: { display: true, text: 'kW' } },
+                    y1: { position: 'right', title: { display: true, text: 'A' }, grid: { drawOnChartArea: false }, beginAtZero: true }
+                }
+            });
+            setEmpty('md-c-phase', hasP || hasI ? '' : 'No per-phase values for this meter.');
+
+            const pieVals = hasP ? pPh.map(v => Math.max(v || 0, 0)) : cur.map(v => Math.max(v || 0, 0));
+            $('md-c-phasepie-title').textContent = hasP ? 'Active power share by phase' : 'Current share by phase';
+            drawChart('md-c-phasepie', 'doughnut', {
+                labels: PHASE_NAMES,
+                datasets: [{ data: pieVals, backgroundColor: PHASE_COLORS, borderColor: '#fff', borderWidth: 2 }]
+            }, pieOpts(hasP ? 'kW' : 'A'));
+            setEmpty('md-c-phasepie', pieVals.some(v => v > 0) ? '' : (hasP || hasI ? 'No load at the moment.' : 'No per-phase values for this meter.'));
+
+            renderHarmonics(raw);
+            renderAllValues();
+        }
+
+        function renderHarmonics(raw) {
+            const f = MD.f;
+            const perPhase = hasAny(f, 'thdV1', 'thdV2', 'thdV3', 'thdI1', 'thdI2', 'thdI3');
+            const labels = perPhase ? PHASE_NAMES : ['Total'];
+            const vals = kind => perPhase ? [1, 2, 3].map(p => raw(`thd${kind}${p}`) ?? null) : [raw(`thd${kind}`) ?? null];
+            const ds = [];
+            if (hasAny(f, 'thdV', 'thdV1', 'thdV2', 'thdV3')) ds.push({ label: 'THD voltage (%)', data: vals('V'), backgroundColor: '#8338ec', borderRadius: 4 });
+            if (hasAny(f, 'thdI', 'thdI1', 'thdI2', 'thdI3')) ds.push({ label: 'THD current (%)', data: vals('I'), backgroundColor: '#ff7f50', borderRadius: 4 });
+            drawChart('md-c-thd', 'bar', { labels, datasets: ds }, {
+                responsive: true, maintainAspectRatio: false, animation: false,
+                plugins: { legend: { labels: { boxWidth: 12 } } },
+                scales: { y: { beginAtZero: true, title: { display: true, text: '%' } } }
+            });
+            setEmpty('md-c-thd', ds.length ? '' : 'This meter does not write THD values to the database. Add the THD registers to the logger to see them here.');
+
+            const hasV = Object.keys(f.harm.V).length > 0, hasI = Object.keys(f.harm.I).length > 0;
+            $('md-spec-kind-wrap').hidden = !(hasV && hasI);
+            let kind = $('md-spec-kind').value;
+            if (kind === 'I' && !hasI) kind = 'V';
+            if (kind === 'V' && !hasV) kind = 'I';
+            const spec = f.harm[kind];
+            const orders = Object.keys(spec).map(Number).sort((a, b) => a - b);
+            const phs = [...new Set(orders.flatMap(o => Object.keys(spec[o]).map(Number)))].sort();
+            drawChart('md-c-spec', 'bar', {
+                labels: orders.map(o => `H${o}`),
+                datasets: phs.map(p => ({
+                    label: p ? PHASE_NAMES[p - 1] : 'All phases',
+                    data: orders.map(o => spec[o][p] ? (MD.live[spec[o][p]] ?? null) : null),
+                    backgroundColor: p ? PHASE_COLORS[p - 1] : MD.src.color, borderRadius: 3
+                }))
+            }, {
+                responsive: true, maintainAspectRatio: false, animation: false,
+                plugins: { legend: { labels: { boxWidth: 12 } } },
+                scales: { y: { beginAtZero: true, title: { display: true, text: kind === 'I' ? '% of fundamental current' : '% of fundamental voltage' } } }
+            });
+            setEmpty('md-c-spec', orders.length ? '' : 'This meter does not write individual harmonics (H3, H5, H7 …) to the database.');
+        }
+
+        function renderAllValues() {
+            const names = Object.keys(MD.live).sort();
+            $('md-all-body').innerHTML = names.length ? names.map(n =>
+                `<tr><td>${n}</td><td>${fmt(MD.live[n], 3)}</td><td>${formatPkt(MD.liveTime[n])}</td></tr>`).join('')
+                : '<tr><td colspan="3">No values found in the last 30 days.</td></tr>';
+        }
+
+        // ---------- energy (counters, or calculated from power) ----------
+        async function fetchEnergy(src, f, start, stop, B) {
+            const s0 = new Date(Math.floor((start.getTime() + PKT_OFFSET_MS) / B) * B - PKT_OFFSET_MS);
+            const off = fluxDur(((-PKT_OFFSET_MS % B) + B) % B);   // align windows to PKT
+            const cntKeys = ['kwhImp', 'kwhExp', 'kwhImp1', 'kwhImp2', 'kwhImp3'].filter(k => f[k]);
+            const pwKeys = ['pTotal', 'p1', 'p2', 'p3'].filter(k => f[k]);
+            const every = fluxDur(B);
+            const [cRows, pRows] = await Promise.all([
+                cntKeys.length ? runFlux(`${fluxBase(src, fluxTs(s0 - B), fluxTs(stop))}
+  ${fieldFilter(cntKeys.map(k => f[k]))}
+  |> aggregateWindow(every: ${every}, offset: ${off}, fn: last, createEmpty: false, timeSrc: "_start")
+  |> difference(nonNegative: true)
+  |> filter(fn: (r) => r._time >= ${fluxTs(s0)})
+  |> keep(columns: ["_time", "_value", "_field"])`) : [],
+                pwKeys.length ? runFlux(`${fluxBase(src, fluxTs(s0), fluxTs(stop))}
+  ${fieldFilter(pwKeys.map(k => f[k]))}
+  |> aggregateWindow(every: ${every}, offset: ${off}, fn: (column, tables=<-) => tables |> integral(unit: 1h, column: column), createEmpty: false, timeSrc: "_start")
+  |> keep(columns: ["_time", "_value", "_field"])`) : []
+            ]);
+            const C = toSeries(cRows), P = toSeries(pRows);
+            const at = (S, k, t, sc) => (f[k] && S[f[k]] && S[f[k]].has(t)) ? S[f[k]].get(t) * sc(f[k]) : null;
+            const ctrOk = k => f[k] && C[f[k]] && [...C[f[k]].values()].some(v => v > 0);
+
+            const mainSrc = ctrOk('kwhImp') ? 'counter' : (P[f.pTotal] ? 'power' : null);
+            const phSrc = [1, 2, 3].every(p => ctrOk(`kwhImp${p}`)) ? 'counter'
+                        : ([1, 2, 3].some(p => f[`p${p}`] && P[f[`p${p}`]]) ? 'power' : null);
+            const times = [...new Set([
+                ...seriesTimes(C, [f.kwhImp, f.kwhExp, f.kwhImp1, f.kwhImp2, f.kwhImp3].filter(Boolean)),
+                ...seriesTimes(P, [f.pTotal, f.p1, f.p2, f.p3].filter(Boolean))
+            ])].sort((a, b) => a - b);
+
+            const main = times.map(t => mainSrc === 'counter' ? at(C, 'kwhImp', t, eScale) : mainSrc === 'power' ? at(P, 'pTotal', t, pScale) : null);
+            const exp = times.map(t => mainSrc === 'counter' && f.kwhExp ? at(C, 'kwhExp', t, eScale) : null);
+            const phases = [1, 2, 3].map(p => times.map(t =>
+                phSrc === 'counter' ? at(C, `kwhImp${p}`, t, eScale) : phSrc === 'power' ? at(P, `p${p}`, t, pScale) : null));
+            const sum = arr => sumDef(arr.map(v => v === null ? undefined : v));
+            return { times, B, main, exp, phases, mainSrc, phSrc,
+                     totals: { main: sum(main), exp: sum(exp), phases: phases.map(sum) } };
+        }
+
+        async function loadToday() {
+            const src = MD.src, f = MD.f, seq = MD.seq;
+            if (!src || !f) return;
+            try {
+                const now = new Date();
+                const e = await fetchEnergy(src, f, pktDayStart(now), now, DAY_MS);
+                if (seq !== MD.seq) return;
+                MD.today = e;
+                renderLive();
+            } catch (err) { console.error('Meter detail today energy:', err); }
+        }
+
+        // ---------- day statistics ----------
+        async function loadDay() {
+            const src = MD.src, f = MD.f, seq = MD.seq, tok = ++MD.dayTok;
+            if (!src || !f) return;
+            $('md-day-error').textContent = '';
+            const now = new Date();
+            const d0 = fromPkt(MD.day);
+            if (isNaN(d0) || d0 > now) { $('md-day-error').textContent = 'Choose a day up to today.'; return; }
+            const d1 = new Date(Math.min(d0.getTime() + DAY_MS, now.getTime()));
+            const iF = [1, 2, 3].map(p => f[`i${p}`]).filter(Boolean);
+            const base = fluxBase(src, fluxTs(d0), fluxTs(d1));
+            try {
+                const [mdiRows, peakRows, demRows, energy] = await Promise.all([
+                    iF.length ? runFlux(`${base}
+  ${fieldFilter(iF)}
+  |> aggregateWindow(every: ${MDI_DEMAND_MIN}m, fn: mean, createEmpty: false, timeSrc: "_start")
+  |> aggregateWindow(every: 1h, fn: max, createEmpty: false, timeSrc: "_start")
+  |> keep(columns: ["_time", "_value", "_field"])`) : [],
+                    f.pTotal ? runFlux(`${base}
+  ${fieldFilter([f.pTotal])}
+  |> max()
+  |> keep(columns: ["_time", "_value", "_field"])`) : [],
+                    f.pTotal ? runFlux(`${base}
+  ${fieldFilter([f.pTotal])}
+  |> aggregateWindow(every: ${MDI_DEMAND_MIN}m, fn: mean, createEmpty: false, timeSrc: "_start")
+  |> max()
+  |> keep(columns: ["_time", "_value", "_field"])`) : [],
+                    fetchEnergy(src, f, d0, d1, HOUR_MS)
+                ]);
+                if (seq !== MD.seq || tok !== MD.dayTok) return;
+                renderDay(d0, d1, mdiRows, peakRows, demRows, energy);
+            } catch (err) {
+                console.error('Meter detail day query:', err);
+                $('md-day-error').textContent = 'Could not load the day statistics. They will retry in a minute.';
+            }
+        }
+
+        function renderDay(d0, d1, mdiRows, peakRows, demRows, energy) {
+            const f = MD.f;
+            const best = rows => rows.reduce((b, r) => {
+                const v = parseFloat(r._value);
+                return (!isNaN(v) && (!b || v > b.v)) ? { v, t: new Date(r._time) } : b;
+            }, null);
+            const pk = best(peakRows), dm = best(demRows);
+            setTile('md-d-peak', pk ? pk.v * pScale(f.pTotal) : undefined, 'kW');
+            $('md-d-peak-t').textContent = pk ? `at ${fmtClock(pk.t)} PKT` : 'No power data';
+            setTile('md-d-dem', dm ? dm.v * pScale(f.pTotal) : undefined, 'kW');
+            $('md-d-dem-t').textContent = dm ? `${fmtClock(dm.t)}–${fmtClock(new Date(dm.t.getTime() + MDI_DEMAND_MIN * 60000))} PKT` : 'No power data';
+            setTile('md-d-energy', energy.totals.main, 'kWh');
+            $('md-d-energy-src').textContent = energy.mainSrc === 'counter' ? 'From the energy counter'
+                : energy.mainSrc === 'power' ? 'Calculated from active power' : 'No energy data';
+
+            // hourly MDI
+            const hours = Math.max(1, Math.ceil((d1 - d0) / HOUR_MS));
+            const mdi = [[], [], []].map(() => new Array(hours).fill(null));
+            mdiRows.forEach(r => {
+                const ph = [1, 2, 3].find(p => f[`i${p}`] === r._field);
+                const h = Math.round((new Date(r._time) - d0) / HOUR_MS);
+                const v = parseFloat(r._value);
+                if (ph && h >= 0 && h < hours && !isNaN(v)) mdi[ph - 1][h] = v;
+            });
+            const hourLabels = Array.from({ length: hours }, (_, h) => `${String(h).padStart(2, '0')}:00`);
+            [0, 1, 2].forEach(k => {
+                let bi = -1;
+                mdi[k].forEach((v, h) => { if (v !== null && (bi < 0 || v > mdi[k][bi])) bi = h; });
+                setTile(`md-d-mdi${k + 1}`, bi >= 0 ? mdi[k][bi] : undefined, 'A');
+                $(`md-d-mdi${k + 1}-t`).textContent = bi >= 0 ? `in the hour ${hourLabels[bi]}–${String(bi + 1).padStart(2, '0')}:00` : 'No current data';
+            });
+            drawChart('md-c-mdi', 'bar', {
+                labels: hourLabels,
+                datasets: [0, 1, 2].map(k => ({ label: `${PHASE_NAMES[k]} (A)`, data: mdi[k], backgroundColor: PHASE_COLORS[k], borderRadius: 2 }))
+            }, {
+                responsive: true, maintainAspectRatio: false, animation: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: { legend: { labels: { boxWidth: 12 } } },
+                scales: { x: { ticks: { maxRotation: 0, autoSkip: true } }, y: { beginAtZero: true, title: { display: true, text: 'A' } } }
+            });
+            setEmpty('md-c-mdi', mdi.some(a => a.some(v => v !== null)) ? '' : 'No current data for this day.');
+
+            // energy by phase
+            const phE = energy.totals.phases.map(v => Math.max(v || 0, 0));
+            $('md-c-dayphase-sub').textContent = energy.phSrc === 'counter' ? 'kWh on this day, from per-phase counters'
+                : 'kWh on this day, calculated from phase power';
+            drawChart('md-c-dayphase', 'doughnut', {
+                labels: PHASE_NAMES, datasets: [{ data: phE, backgroundColor: PHASE_COLORS, borderColor: '#fff', borderWidth: 2 }]
+            }, pieOpts('kWh'));
+            setEmpty('md-c-dayphase', phE.some(v => v > 0) ? '' : 'No per-phase energy for this day.');
+
+            // energy by shift
+            const shiftE = SHIFTS.map(() => 0);
+            const hourE = new Array(hours).fill(null);
+            energy.times.forEach((t, k) => {
+                const v = energy.main[k]; if (v === null) return;
+                const h = pktHour(new Date(t));
+                const si = SHIFTS.findIndex(s => h >= s.from && h < s.to);
+                if (si >= 0) shiftE[si] += Math.max(v, 0);
+                const hi = Math.round((t - d0) / HOUR_MS);
+                if (hi >= 0 && hi < hours) hourE[hi] = v;
+            });
+            drawChart('md-c-shift', 'doughnut', {
+                labels: SHIFTS.map(s => s.name), datasets: [{ data: shiftE, backgroundColor: SHIFT_COLORS, borderColor: '#fff', borderWidth: 2 }]
+            }, pieOpts('kWh'));
+            setEmpty('md-c-shift', shiftE.some(v => v > 0) ? '' : 'No energy for this day.');
+
+            $('md-mdi-body').innerHTML = hourLabels.map((l, h) => `
+                <tr><td>${l}–${String(h + 1).padStart(2, '0')}:00</td>
+                <td>${show(mdi[0][h] ?? undefined)}</td><td>${show(mdi[1][h] ?? undefined)}</td><td>${show(mdi[2][h] ?? undefined)}</td>
+                <td>${show(hourE[h] ?? undefined)}</td></tr>`).join('');
+        }
+
+        // ---------- trends and energy over a selectable range ----------
+        function currentRange() {
+            const now = new Date();
+            const rel = { '1h': 1, '6h': 6, '12h': 12, '24h': 24, '7d': 168 };
+            if (rel[MD.preset]) return { start: new Date(now - rel[MD.preset] * HOUR_MS), stop: now, live: true };
+            if (MD.preset === 'today') return { start: new Date(Math.min(pktDayStart(now), now - HOUR_MS)), stop: now, live: true };
+            if (MD.preset === 'yesterday') { const s = pktDayStart(now); return { start: new Date(s - DAY_MS), stop: s, live: false }; }
+            const a = MD.customFrom, b = MD.customTo;
+            if (!a || !b || isNaN(a) || isNaN(b)) return { error: 'Choose both a start and an end time.' };
+            if (a >= now) return { error: 'The start time is in the future.' };
+            const stop = b > now ? now : b;
+            if (stop - a < HOUR_MS) return { error: 'The range must be at least 1 hour. Move the start earlier or the end later.' };
+            return { start: a, stop, live: b >= now };
+        }
+        function windowFor(span, steps) { return steps.find(([max]) => span <= max)[1]; }
+
+        function syncRangeUI(span) {
+            document.querySelectorAll('#md-range-seg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.preset === MD.preset)));
+            $('md-custom').hidden = MD.preset !== 'custom';
+            const sel = $('md-step');
+            const allowed = ENERGY_STEPS_H.filter(h => !span || h * HOUR_MS <= Math.max(span, HOUR_MS));
+            if (!allowed.includes(MD.stepH)) MD.stepH = allowed[allowed.length - 1];
+            sel.innerHTML = allowed.map(h => `<option value="${h}"${h === MD.stepH ? ' selected' : ''}>${stepLabel(h)}</option>`).join('');
+        }
+
+        async function loadTrends() {
+            const src = MD.src, f = MD.f, seq = MD.seq, tok = ++MD.trendTok;
+            if (!src || !f) return;
+            const r = currentRange();
+            $('md-range-error').textContent = r.error || '';
+            if (r.error) return;
+            const span = r.stop - r.start;
+            syncRangeUI(span);
+            let stepH = MD.stepH;
+            while (span / (stepH * HOUR_MS) > 400 && stepH < 24) stepH = ENERGY_STEPS_H.find(h => h > stepH);
+            const tw = windowFor(span, [[2 * HOUR_MS, 60e3], [12 * HOUR_MS, 5 * 60e3], [2 * DAY_MS, 15 * 60e3], [8 * DAY_MS, HOUR_MS], [Infinity, 3 * HOUR_MS]]);
+            const lw = windowFor(span, [[3 * HOUR_MS, 5 * 60e3], [2 * DAY_MS, 15 * 60e3], [8 * DAY_MS, HOUR_MS], [Infinity, DAY_MS]]);
+            const iF = [1, 2, 3].map(p => f[`i${p}`]).filter(Boolean);
+            const lF = ['pTotal', 'p1', 'p2', 'p3', 'qTotal'].map(k => f[k]).filter(Boolean);
+            const base = fluxBase(src, fluxTs(r.start), fluxTs(r.stop));
+            const agg = w => `|> aggregateWindow(every: ${fluxDur(w)}, fn: mean, createEmpty: false, timeSrc: "_start")
+  |> keep(columns: ["_time", "_value", "_field"])`;
+            try {
+                const [iRows, lRows, energy] = await Promise.all([
+                    iF.length ? runFlux(`${base}\n  ${fieldFilter(iF)}\n  ${agg(tw)}`) : [],
+                    lF.length ? runFlux(`${base}\n  ${fieldFilter(lF)}\n  ${agg(lw)}`) : [],
+                    fetchEnergy(src, f, r.start, r.stop, stepH * HOUR_MS)
+                ]);
+                if (seq !== MD.seq || tok !== MD.trendTok) return;
+                MD.lastEnergy = energy;
+                renderTrends(span, tw, lw, toSeries(iRows), toSeries(lRows));
+                renderEnergy(span);
+            } catch (err) {
+                console.error('Meter detail trend query:', err);
+                $('md-range-error').textContent = 'Could not load the trends for this range. Try a shorter range, or wait for the next refresh.';
+            }
+        }
+
+        const winText = w => w >= DAY_MS ? '1-day' : w >= HOUR_MS ? `${w / HOUR_MS}-hour` : `${w / 60000}-minute`;
+
+        function renderTrends(span, tw, lw, I, L) {
+            const f = MD.f, src = MD.src;
+            const lbl = t => span > DAY_MS ? fmtDayClock(new Date(t)) : fmtClock(new Date(t));
+
+            const iNames = [1, 2, 3].map(p => f[`i${p}`]);
+            const it = seriesTimes(I, iNames.filter(Boolean));
+            $('md-c-cur-sub').textContent = `${winText(tw)} average current per phase`;
+            drawChart('md-c-cur', 'line', {
+                labels: it.map(lbl),
+                datasets: iNames.map((n, k) => n ? {
+                    label: `${PHASE_NAMES[k]} (A)`, borderColor: PHASE_COLORS[k], backgroundColor: PHASE_COLORS[k],
+                    data: it.map(t => I[n] && I[n].has(t) ? I[n].get(t) : null)
+                } : null).filter(Boolean)
+            }, lineOpts('A'));
+            setEmpty('md-c-cur', it.length ? '' : 'No current data in this range.');
+
+            const lt = seriesTimes(L, Object.keys(L));
+            const ser = (k, sc = true) => f[k] && L[f[k]] ? lt.map(t => L[f[k]].has(t) ? L[f[k]].get(t) * (sc ? pScale(f[k]) : 1) : null) : null;
+            const ds = [];
+            const pT = ser('pTotal');
+            if (pT) ds.push({ label: 'Active power (kW)', data: pT, borderColor: src.color, backgroundColor: src.color + '26', fill: 'origin', borderWidth: 2 });
+            [1, 2, 3].forEach(p => { const s = ser(`p${p}`); if (s) ds.push({ label: `${PHASE_NAMES[p - 1]} (kW)`, data: s, borderColor: PHASE_COLORS[p - 1], hidden: !!pT }); });
+            const q = ser('qTotal');
+            if (q) ds.push({ label: 'Reactive power (kvar)', data: q, borderColor: '#8338ec', borderDash: [5, 4] });
+            $('md-c-load-sub').textContent = `${winText(lw)} average power. Click a legend item to show or hide it.`;
+            drawChart('md-c-load', 'line', { labels: lt.map(lbl), datasets: ds }, lineOpts('kW / kvar'));
+            setEmpty('md-c-load', lt.length && ds.length ? '' : 'No power data in this range.');
+        }
+
+        function renderEnergy(span) {
+            const e = MD.lastEnergy, src = MD.src;
+            if (!e) return;
+            const B = e.B, many = span > DAY_MS || B >= DAY_MS;
+            const lbl = t => B >= DAY_MS ? fmtDay(new Date(t)) : many ? fmtDayClock(new Date(t)) : fmtClock(new Date(t));
+            const ranges = e.times.map(t => `${many ? fmtDayClock(new Date(t)) : fmtClock(new Date(t))} – ${fmtClock(new Date(t + B))}`);
+            const byPhase = MD.split === 'phase' && e.phSrc;
+            const ds = [];
+            if (byPhase) {
+                e.phases.forEach((arr, k) => ds.push({ type: 'bar', label: `${PHASE_NAMES[k]} (kWh)`, data: arr, backgroundColor: PHASE_COLORS[k], stack: 'e', yAxisID: 'y' }));
+            } else {
+                ds.push({ type: 'bar', label: e.mainSrc === 'power' ? 'Energy, net (kWh)' : 'Energy import (kWh)', data: e.main, backgroundColor: src.color, borderRadius: 3, yAxisID: 'y' });
+                if (e.exp.some(v => v > 0)) ds.push({ type: 'bar', label: 'Energy export (kWh)', data: e.exp, backgroundColor: '#ff9f1c', borderRadius: 3, yAxisID: 'y' });
+            }
+            let run = 0;
+            const cumSrc = byPhase ? e.times.map((_, k) => e.phases.reduce((a, arr) => a + (arr[k] || 0), 0)) : e.main;
+            ds.push({ type: 'line', label: 'Cumulative (kWh)', data: cumSrc.map(v => (run += v || 0)), borderColor: '#2b2d42',
+                      borderWidth: 2, pointRadius: 0, tension: 0.25, yAxisID: 'y1' });
+            drawChart('md-c-energy', 'bar', { labels: e.times.map(lbl), datasets: ds }, {
+                responsive: true, maintainAspectRatio: false, animation: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: { legend: { labels: { boxWidth: 12 } },
+                           tooltip: { callbacks: { title: items => items.length ? ranges[items[0].dataIndex] + ' PKT' : '' } } },
+                scales: {
+                    x: { stacked: !!byPhase, ticks: { maxTicksLimit: 14, maxRotation: 0 } },
+                    y: { stacked: !!byPhase, beginAtZero: true, title: { display: true, text: `kWh per ${stepLabel(B / HOUR_MS)}` } },
+                    y1: { position: 'right', beginAtZero: true, grid: { drawOnChartArea: false }, title: { display: true, text: 'Cumulative kWh' } }
+                }
+            });
+            const total = byPhase ? sumDef(e.totals.phases) : e.totals.main;
+            const how = (byPhase ? e.phSrc : e.mainSrc) === 'counter' ? 'from the meter energy counter' : 'calculated from active power';
+            $('md-c-energy-sub').textContent = e.times.length
+                ? `Total ${fmt(total || 0)} kWh in this range, ${how}. One bar per ${stepLabel(B / HOUR_MS)}.${MD.split === 'phase' && !e.phSrc ? ' Per-phase values are not available for this meter.' : ''}`
+                : '';
+            setEmpty('md-c-energy', e.times.length ? '' : 'No energy data in this range.');
+        }
+
+        // ---------- wiring ----------
+        function initMeterDetail() {
+            document.querySelectorAll('.mdi-min').forEach(el => el.textContent = MDI_DEMAND_MIN);
+            const today = pktDateStr(new Date());
+            MD.day = today;
+            $('md-day').value = today;
+            $('md-day').max = today;
+            $('md-from').value = pktInputStr(pktDayStart(new Date()));
+            $('md-to').value = pktInputStr(new Date());
+            syncRangeUI();
+
+            ['grid-generation', 'grid-distribution', 'grid-other'].forEach(g => {
+                const grid = $(g);
+                grid.addEventListener('click', e => {
+                    const card = e.target.closest('.meter-card[data-src]');
+                    if (card) openMeterDetail(card.dataset.src);
+                });
+                grid.addEventListener('keydown', e => {
+                    const card = e.target.closest('.meter-card[data-src]');
+                    if (card && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openMeterDetail(card.dataset.src); }
+                });
+            });
+            $('md-close').addEventListener('click', closeMeterDetail);
+            $('md-overlay').addEventListener('click', e => { if (e.target.id === 'md-overlay') closeMeterDetail(); });
+            document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMeterDetail(); });
+
+            $('md-range-seg').addEventListener('click', e => {
+                const b = e.target.closest('button[data-preset]'); if (!b) return;
+                MD.preset = b.dataset.preset;
+                syncRangeUI();
+                if (MD.preset !== 'custom') loadTrends();
+            });
+            $('md-apply').addEventListener('click', () => {
+                MD.customFrom = $('md-from').value ? fromPkt($('md-from').value) : null;
+                MD.customTo = $('md-to').value ? fromPkt($('md-to').value) : null;
+                loadTrends();
+            });
+            $('md-step').addEventListener('change', e => { MD.stepH = +e.target.value; loadTrends(); });
+            $('md-split').addEventListener('change', e => { MD.split = e.target.value; renderEnergy(currentRange().stop - currentRange().start || HOUR_MS); });
+            $('md-day').addEventListener('change', e => { if (e.target.value) { MD.day = e.target.value; loadDay(); } });
+            $('md-spec-kind').addEventListener('change', () => renderLive());
+
+            setInterval(() => { if (MD.src) loadLive(); }, REFRESH_MS);
+            setInterval(() => {
+                if (!MD.src || !MD.f) return;
+                loadToday();
+                if (MD.day === pktDateStr(new Date())) loadDay();
+                const r = currentRange();
+                if (!r.error && r.live) loadTrends();
+            }, HISTORY_REFRESH_MS);
+
+            // open straight from a link such as index.html#meter-Janitza_Unit_02
+            const m = location.hash.match(/^#meter-(.+)$/);
+            if (m) {
+                const s = DETAIL_SOURCES.find(x => x.slug === decodeURIComponent(m[1]));
+                if (s) openMeterDetail(s.id);
+            }
         }
     </script>
 </body>
