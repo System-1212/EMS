@@ -305,6 +305,28 @@
             .md-section { padding: 14px; }
             .md-tile-main { grid-column: span 1; }
         }
+
+        /* --- Loading progress (first sync) --- */
+        .load-card { background: white; border: 1px solid #c7dbff; border-radius: 14px; padding: 14px 20px 15px;
+                     box-shadow: 0 4px 20px rgba(58,134,255,0.08); }
+        .load-card[hidden] { display: none; }
+        .load-top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+        .load-title { font-size: 0.95rem; font-weight: 700; color: var(--dark); display: flex; align-items: center; gap: 9px; }
+        .load-title i { color: var(--primary); }
+        .load-pct { font-size: 1.35rem; font-weight: 700; color: var(--primary); font-variant-numeric: tabular-nums; }
+        .load-track { height: 10px; margin: 9px 0 8px; background: #edf2f7; border-radius: 6px; overflow: hidden; }
+        .load-fill { height: 100%; width: 0; border-radius: 6px; background: linear-gradient(90deg, #00b4d8, var(--primary));
+                     transition: width 0.2s linear; position: relative; overflow: hidden; }
+        .load-fill::after { content: ''; position: absolute; inset: 0;
+                     background: repeating-linear-gradient(115deg, rgba(255,255,255,0.28) 0 10px, transparent 10px 20px); }
+        @media (prefers-reduced-motion: no-preference) { .load-card.busy .load-fill::after { animation: loadStripes 0.8s linear infinite; } }
+        @keyframes loadStripes { from { background-position: 0 0; } to { background-position: 46px 0; } }
+        .load-sub { font-size: 0.82rem; color: #718096; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+        .load-card.done { border-color: #a7e9c3; }
+        .load-card.done .load-fill { background: var(--success); }
+        .load-card.done .load-pct, .load-card.done .load-title i { color: var(--success); }
+        .load-card.failed { border-color: #f5b7b1; }
+        .load-card.failed .load-pct, .load-card.failed .load-title i { color: var(--danger); }
     </style>
 </head>
 <body>
@@ -321,6 +343,15 @@
                     <i class="fas fa-cloud"></i> <span id="db-status">Cloud Syncing...</span><span id="pkt-clock" style="font-size:0.8rem;font-weight:600;color:#94a3b8;margin-left:8px;">-- PKT</span>
                 </div>
             </header>
+
+            <div class="load-card busy" id="load-card" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Loading dashboard data">
+                <div class="load-top">
+                    <span class="load-title"><i class="fas fa-cloud-arrow-down" id="load-icon"></i><span id="load-title">Connecting to the cloud…</span></span>
+                    <span class="load-pct" id="load-pct">0%</span>
+                </div>
+                <div class="load-track"><div class="load-fill" id="load-fill"></div></div>
+                <div class="load-sub"><span id="load-sub">Step 1 of 3: requesting live meter values</span><span id="load-time">0 s</span></div>
+            </div>
 
             <section class="nav-section">
                 <div class="nav-instruction">
@@ -687,7 +718,14 @@
 
         const meterKey = (measurement, tag) => `${measurement}|${tag}`;
 
-        function buildFluxQuery() {
+        // Live values only need the last few minutes (fast). The last known values of meters that are
+        // offline come from a 30-day search, which is slow, so it runs in the background and less often.
+        const FAST_RANGE = '-10m';          // meters (online = data newer than 30 s)
+        const FAST_ISOLAR_RANGE = '-2h';    // iSolarCloud portal updates about every 5 minutes
+        const HISTORY_RANGE = '-30d';
+        const LAST_KNOWN_REFRESH_MS = 10 * 60 * 1000;
+
+        function buildFluxQuery(range) {
             const measurements = [...new Set(METERS.map(m => m.measurement))];
             const measFilter = measurements.map(m => `r._measurement == "${m}"`).join(" or ");
             const fieldSet = [...new Set(METERS.flatMap(m => Object.values(m.fields)))];
@@ -695,7 +733,7 @@
             // last() per series, then keep only the newest value per meter + field
             return `
                 from(bucket: "${INFLUX_BUCKET}")
-                  |> range(start: -30d)
+                  |> range(start: ${range})
                   |> filter(fn: (r) => ${measFilter})
                   |> filter(fn: (r) => ${fieldFilter})
                   |> last()
@@ -706,11 +744,9 @@
                   |> group()
             `;
         }
-        const FLUX_QUERY = buildFluxQuery();
-
-        const ISOLAR_FLUX_QUERY = `
+        const isolarQuery = range => `
             from(bucket: "${INFLUX_BUCKET}")
-              |> range(start: -30d)
+              |> range(start: ${range})
               |> filter(fn: (r) => r._measurement == "isolarcloud_device")
               |> filter(fn: (r) => ${ISOLAR_SOURCES.map(s => `r.device_name == "${s.device}"`).join(" or ")})
               |> filter(fn: (r) => ${ISOLAR_FIELDS.map(f => `r._field == "${f}"`).join(" or ")})
@@ -720,9 +756,9 @@
         `;
 
         // Full detail-page data (3-phase values, portal reading time, next check)
-        const ISOLAR_DETAIL_FLUX_QUERY = `
+        const isolarDetailQuery = range => `
             from(bucket: "${INFLUX_BUCKET}")
-              |> range(start: -30d)
+              |> range(start: ${range})
               |> filter(fn: (r) => r._measurement == "isolarcloud_detail")
               |> filter(fn: (r) => ${ISOLAR_SOURCES.map(s => `r.device_name == "${s.device}"`).join(" or ")})
               |> filter(fn: (r) => r._field != "status")
@@ -861,6 +897,7 @@
                 }
             });
 
+            loadBar.start();
             fetchInfluxData();
             setInterval(fetchInfluxData, REFRESH_MS);
             setInterval(updateIsolarCounters, 1000);
@@ -886,21 +923,129 @@
             return response.text();
         }
 
+        // ---------- Loading progress (shown until all data has arrived the first time) ----------
+        const loadBar = (() => {
+            const $ = id => document.getElementById(id);
+            let shown = 0, cap = 0, rate = 0.04, t0 = Date.now(), timer = null, active = false;
+            function paint() {
+                $('load-fill').style.width = shown.toFixed(1) + '%';
+                $('load-pct').textContent = Math.floor(shown) + '%';
+                $('load-card').setAttribute('aria-valuenow', String(Math.floor(shown)));
+                $('load-time').textContent = Math.round((Date.now() - t0) / 1000) + ' s';
+                if (active) {
+                    const st = $('db-status');
+                    st.innerText = `Syncing ${Math.floor(shown)}%`;
+                    st.style.color = 'var(--primary)';
+                }
+            }
+            function tick() { shown += Math.max(0, cap - shown) * rate; paint(); }   // creeps toward the next step
+            return {
+                start() { active = true; t0 = Date.now(); shown = 0; cap = 25; clearInterval(timer); timer = setInterval(tick, 120); paint(); },
+                set(min, nextCap, title, sub, speed) {
+                    shown = Math.max(shown, min); cap = Math.max(cap, nextCap); rate = speed || 0.04;
+                    if (title) $('load-title').textContent = title;
+                    if (sub) $('load-sub').textContent = sub;
+                    paint();
+                },
+                finish(title, sub) {
+                    clearInterval(timer); shown = 100; active = false; paint();
+                    $('load-card').classList.remove('busy'); $('load-card').classList.add('done');
+                    $('load-icon').className = 'fas fa-circle-check';
+                    $('load-title').textContent = title; $('load-sub').textContent = sub;
+                    setTimeout(() => { $('load-card').hidden = true; }, 2500);
+                },
+                fail(msg) {
+                    $('load-card').classList.add('failed');
+                    $('load-icon').className = 'fas fa-triangle-exclamation';
+                    $('load-title').textContent = 'Could not reach the cloud. Retrying…';
+                    $('load-sub').textContent = msg;
+                },
+                clearFail() {
+                    $('load-card').classList.remove('failed');
+                    $('load-icon').className = 'fas fa-cloud-arrow-down';
+                },
+                get active() { return active; }
+            };
+        })();
+
+        let fetchBusy = false, firstLiveDone = false;
+        let lastKnown = null, historyAt = 0, historyBusy = false;   // 30-day "last known values"
+        let lastFast = null;
+
+        const joinCsv = (...parts) => { const p = parts.filter(Boolean); return p.length ? p.join('\n') : null; };
+        function renderMerged() {
+            // history first, live values after: newer readings overwrite the older ones
+            const h = lastKnown || {};
+            parseAndRender(joinCsv(h.meters, lastFast.meters) || '', joinCsv(h.isolar, lastFast.isolar), joinCsv(h.detail, lastFast.detail));
+        }
+
         async function fetchInfluxData() {
+            if (fetchBusy) return;              // never stack requests when the cloud is slow
+            fetchBusy = true;
+            const first = !firstLiveDone;
             try {
-                // iSolarCloud query failing must not break the meter dashboard
-                const [csvText, isolarCsv, isolarDetailCsv] = await Promise.all([
-                    queryInflux(FLUX_QUERY),
-                    queryInflux(ISOLAR_FLUX_QUERY).catch(err => { console.error("iSolarCloud query:", err); return null; }),
-                    queryInflux(ISOLAR_DETAIL_FLUX_QUERY).catch(err => { console.error("iSolarCloud detail query:", err); return null; })
+                let done = 0;
+                const step = p => p.then(r => {
+                    done++;
+                    if (first) loadBar.set(10 + done * 18, 12 + (done + 1) * 18, 'Loading live values…',
+                        `Step ${Math.min(done + 1, 3)} of 3: ${done === 1 ? 'reading the solar and grid portal' : done === 2 ? 'reading phase details' : 'preparing the dashboard'}`);
+                    return r;
+                });
+                const [meters, isolar, detail] = await Promise.all([
+                    step(queryInflux(buildFluxQuery(FAST_RANGE))),
+                    step(queryInflux(isolarQuery(FAST_ISOLAR_RANGE)).catch(err => { console.error("iSolarCloud query:", err); return null; })),
+                    step(queryInflux(isolarDetailQuery(FAST_ISOLAR_RANGE)).catch(err => { console.error("iSolarCloud detail query:", err); return null; }))
                 ]);
-                parseAndRender(csvText, isolarCsv, isolarDetailCsv);
-                document.getElementById('db-status').innerText = "Connected";
-                document.getElementById('db-status').style.color = "var(--primary)";
+                lastFast = { meters, isolar, detail };
+                renderMerged();
+                if (!loadBar.active) {
+                    document.getElementById('db-status').innerText = "Connected";
+                    document.getElementById('db-status').style.color = "var(--primary)";
+                }
+                if (first) {
+                    firstLiveDone = true;
+                    loadBar.clearFail();
+                    loadBar.set(70, 96, 'Live values are on screen',
+                        'Now loading the last known values of offline meters (this search covers 30 days and can take a while)', 0.006);
+                }
+                if (!lastKnown || Date.now() - historyAt > LAST_KNOWN_REFRESH_MS) loadHistory();
             } catch (err) {
                 console.error("Data fetch error:", err);
-                document.getElementById('db-status').innerText = "DB Offline";
+                document.getElementById('db-status').innerText = "Cloud offline";
                 document.getElementById('db-status').style.color = "var(--danger)";
+                if (first) loadBar.fail('Check the internet connection. The page tries again every few seconds.');
+            } finally {
+                fetchBusy = false;
+            }
+        }
+
+        async function loadHistory() {
+            if (historyBusy) return;
+            historyBusy = true;
+            try {
+                const [meters, isolar, detail] = await Promise.all([
+                    queryInflux(buildFluxQuery(HISTORY_RANGE)),
+                    queryInflux(isolarQuery(HISTORY_RANGE)).catch(() => null),
+                    queryInflux(isolarDetailQuery(HISTORY_RANGE)).catch(() => null)
+                ]);
+                lastKnown = { meters, isolar, detail };
+                historyAt = Date.now();
+                if (lastFast) renderMerged();
+                if (loadBar.active) {
+                    loadBar.finish('All data loaded', 'Live values update every 5 seconds');
+                    document.getElementById('db-status').innerText = "Connected";
+                    document.getElementById('db-status').style.color = "var(--primary)";
+                }
+            } catch (err) {
+                console.error("History fetch error:", err);
+                if (loadBar.active) {
+                    loadBar.finish('Live values loaded', 'Last known values of offline meters could not be loaded yet; the page will try again.');
+                    document.getElementById('db-status').innerText = "Connected";
+                    document.getElementById('db-status').style.color = "var(--primary)";
+                }
+                historyAt = Date.now() - LAST_KNOWN_REFRESH_MS + 60 * 1000;   // retry in about a minute
+            } finally {
+                historyBusy = false;
             }
         }
 
@@ -1404,9 +1549,11 @@
             const src = MD.src, seq = MD.seq;
             if (!src) return false;
             try {
-                const rows = await runFlux(`${fluxBase(src, '-30d')}
+                const lastQ = range => runFlux(`${fluxBase(src, range)}
   |> last()
   |> keep(columns: ["_time", "_value", "_field"])`);
+                let rows = await lastQ(src.measurements.some(m => m.startsWith('isolar')) ? '-2h' : '-10m');
+                if (!rows.length) rows = await lastQ('-30d');   // offline meter: last known values
                 if (seq !== MD.seq) return false;
                 const live = {}, lt = {};
                 rows.forEach(r => {
