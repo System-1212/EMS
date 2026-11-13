@@ -1,0 +1,1751 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Toyo Packaging | Energy and Cost Reports</title>
+<style>
+
+:root {
+  color-scheme: dark;
+  --bg: #090f1b; --ink: #ecf3ff; --muted: #92a6c1; --soft-ink: #c9daef;
+  --line: #29374b; --line2: #243348; --card: #0d1c2e; --card-line: #2d445e; --grid: #1f3047;
+  --cyan: #61dfff; --green: #40edba; --red: #ff786e; --amber: #ffc967; --spin: #b99aff;
+  --others: #4f6580; --bar-empty: #1a2b40; --th: #1a2b40; --input: #0a1524; --input-line: #3d526c;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { background: #070c16; scroll-padding-top: env(safe-area-inset-top, 0px); }
+body {
+  margin: 0; color: var(--ink); font: 13px/1.5 "Segoe UI", Arial, Helvetica, sans-serif; -webkit-font-smoothing: antialiased;
+  background: radial-gradient(ellipse at 3% 0%, #152e4866, transparent 35%), radial-gradient(ellipse at 92% 30%, #4c2b6420, transparent 45%), #090f1b;
+  min-height: 100vh; padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px);
+}
+.wrap { max-width: 1400px; margin: 0 auto; padding: 16px 26px 30px; }
+button, input, select { font-family: inherit; }
+
+/* ---------- Header (same as the dashboard) ---------- */
+header.top { display: flex; align-items: center; gap: 14px; min-height: 76px; padding-bottom: 6px; margin-bottom: 16px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.brand-tile { display: flex; align-items: center; justify-content: center; background: #fff; border-radius: 10px; padding: 4px 10px; height: 68px; box-shadow: 0 0 0 1px #ffffff22, 0 6px 18px #0005; }
+.brand { display: block; height: 60px; width: auto; }
+.heading { margin: 0 0 0 6px; padding-left: 20px; border-left: 1px solid #34485f; font-size: 16px; letter-spacing: 1.6px; font-weight: 600; color: #76ddf8; line-height: 1.25; }
+.heading small { display: block; font-size: 8px; letter-spacing: 1.8px; margin-bottom: 5px; color: #95acc7; font-weight: 600; }
+.site-clock { margin-left: auto; min-width: 174px; padding: 0 16px; border-left: 1px solid #34485f; text-align: right; }
+.site-clock small { display: block; color: #a7bbd2; font-size: 11px; letter-spacing: .3px; }
+.site-clock time { font-size: 22px; font-weight: 600; letter-spacing: 1.5px; font-variant-numeric: tabular-nums; color: #d9f4ff; }
+.site-clock em { font-style: normal; font-size: 9px; color: #7dddf4; margin-left: 6px; }
+.btn, a.btn {
+  display: inline-block; font: inherit; font-size: 12px; letter-spacing: .6px; color: var(--green); text-decoration: none;
+  border: 1px solid #008e86; background: #00302f; border-radius: 6px; padding: 9px 13px; cursor: pointer;
+}
+.btn:hover { background: #07514a; }
+.btn:disabled { opacity: .6; cursor: wait; }
+.btn.primary { font-size: 13px; font-weight: 600; padding: 11px 26px; background: #07514a; color: #d9fff3; box-shadow: 0 0 18px #40edba22; }
+.btn.primary:hover { background: #0a6a60; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid #7ee7ff; outline-offset: 3px; }
+
+/* ---------- Panels ---------- */
+.panel { border: 1px solid var(--line); border-radius: 16px; background: linear-gradient(145deg, #142134bf, #101927dd 55%, #101826); box-shadow: inset 0 1px 0 #b8d4ff0c, 0 8px 22px #00000019; position: relative; }
+h2, legend { margin: 0; font-size: 12px; letter-spacing: 1.6px; font-weight: 600; color: var(--soft-ink); }
+h2:before, legend:before { content: ''; display: inline-block; vertical-align: middle; width: 4px; height: 12px; margin-right: 9px; border-radius: 2px; background: var(--accent, #70d8f9); box-shadow: 0 0 12px #6cddff38; }
+
+.tabbar { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+.seg { display: flex; gap: 2px; background: #081321; padding: 3px; border: 1px solid #273b52; border-radius: 10px; }
+.seg button { font: inherit; font-size: 12px; letter-spacing: 1.2px; font-weight: 600; color: #b5d0e3; background: transparent; border: 1px solid transparent; border-radius: 7px; padding: 9px 20px; cursor: pointer; }
+.seg button[aria-selected="true"] { background: #23475c; border-color: #406b7f; color: #d9f7ff; box-shadow: 0 2px 6px #0003; }
+.tabbar .hint { color: #9eb2cb; font-size: 11px; }
+
+.section { --accent: var(--cyan); }
+.section[data-kind="dist"] { --accent: var(--spin); }
+.intro { margin: 0 0 14px; color: #9eb2cb; font-size: 12px; }
+
+.controls { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.controls .wide { grid-column: 1 / -1; }
+@media (max-width: 1060px) { .controls { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 700px) { .controls { grid-template-columns: 1fr; } }
+fieldset.panel { margin: 0; padding: 18px 20px 20px; min-width: 0; }
+fieldset.panel legend { float: left; width: 100%; margin-bottom: 14px; padding: 0; }
+fieldset.panel legend + * { clear: both; }
+label { display: block; font-size: 11px; letter-spacing: .5px; color: #c7e2f1; margin-top: 12px; }
+label:first-of-type { margin-top: 0; }
+input[type="date"], input[type="time"], input[type="search"], input[type="number"], input[type="text"], select {
+  display: block; width: 100%; margin-top: 5px; padding: 10px 12px; font-size: 13px; color: #e4efff;
+  background: var(--input); border: 1px solid var(--input-line); border-radius: 8px;
+}
+input[type="date"]::-webkit-calendar-picker-indicator, input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(.8); }
+.custom { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+.custom label { margin-top: 0; }
+.range-text { margin: 14px 0 0; font-size: 11px; color: #a3c2da; }
+
+.dev-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-bottom: 12px; clear: both; }
+.dev-tools input { flex: 1 1 200px; width: auto; margin: 0; }
+.linkbtn { background: none; border: 0; padding: 2px 0; color: var(--accent); font-size: 12px; font-weight: 600; letter-spacing: .4px; cursor: pointer; }
+.linkbtn:hover { text-decoration: underline; text-underline-offset: 3px; }
+.dev-count { color: var(--muted); font-size: 11px; margin-left: auto; }
+.dev-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 2px 12px; max-height: 250px; overflow-y: auto; scrollbar-color: #46617d #0c1828; scrollbar-width: thin; }
+.dev-list label { display: flex; align-items: center; gap: 9px; margin: 0; padding: 5px 4px; font-size: 12px; letter-spacing: .2px; color: #dbe9f9; cursor: pointer; border-radius: 6px; }
+.dev-list label:hover { background: #20364d; }
+.dev-list input { accent-color: var(--accent); width: 15px; height: 15px; }
+
+.actions { display: flex; align-items: center; gap: 18px; margin: 16px 0; flex-wrap: wrap; }
+.status { color: #a3c2da; font-size: 12px; }
+.banner { border: 1px solid #885044; background: #42232c55; color: #ffd6d0; padding: 12px 16px; border-radius: 10px; font-size: 12px; line-height: 1.5; flex: 1 1 400px; }
+.banner strong { color: var(--red); margin-right: 8px; }
+
+/* ---------- Progress ---------- */
+.progress { flex: 1 1 420px; max-width: 640px; background: var(--card); border: 1px solid var(--card-line); border-radius: 12px; padding: 12px 16px 13px; }
+.p-top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.p-title { font-size: 12px; letter-spacing: .6px; font-weight: 600; color: #d9f5ff; }
+.p-pct { font-size: 20px; font-weight: 600; color: var(--accent); font-variant-numeric: tabular-nums; }
+.p-track { height: 10px; margin: 8px 0 7px; background: #081321; border: 1px solid #273b52; border-radius: 6px; overflow: hidden; }
+.p-fill { height: 100%; width: 0; border-radius: 5px; background: linear-gradient(90deg, #1e6f8a, var(--accent)); box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 45%, transparent); transition: width .15s linear; position: relative; overflow: hidden; }
+.p-fill:after { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(115deg, #ffffff24 0 10px, transparent 10px 20px); }
+@media (prefers-reduced-motion: no-preference) { .progress.busy .p-fill:after { animation: stripes .8s linear infinite; } }
+@keyframes stripes { from { background-position: 0 0; } to { background-position: 46px 0; } }
+.p-sub { font-size: 11px; color: #97b0cb; }
+.progress.done .p-fill { background: var(--green); }
+.progress.done .p-pct { color: var(--green); }
+
+/* ---------- Report ---------- */
+.results { overflow: hidden; }
+.results:empty { display: none; }
+.rep-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px 24px; padding: 20px 22px; border-bottom: 1px solid var(--line); }
+.rep-head h3 { margin: 0 0 6px; font-size: 17px; font-weight: 550; letter-spacing: .3px; color: #e6f4ff; }
+.rep-head .meta { margin: 0; font-size: 11px; color: #a5bbd4; line-height: 1.7; }
+.rep-head .meta b { color: #d9f5ff; font-weight: 600; }
+.rep-logo-tile { flex: none; background: #fff; border-radius: 10px; padding: 4px 8px; display: flex; align-items: center; }
+.rep-logo { display: block; height: 58px; width: auto; }
+.rep-id { display: flex; gap: 18px; align-items: center; }
+.rep-tools { display: flex; gap: 10px; align-items: flex-start; flex-wrap: wrap; }
+.rep-body { padding: 18px 22px 22px; }
+
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 900px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.kpi { position: relative; overflow: hidden; background: var(--card); border: 1px solid var(--card-line); border-radius: 12px; padding: 16px 18px; --c: var(--accent); }
+.kpi:before { content: ''; position: absolute; left: 18px; right: 18px; top: 0; height: 2px; background: linear-gradient(90deg, var(--c), transparent); opacity: .9; }
+.kpi:after { content: ''; position: absolute; right: -16px; top: -44px; width: 120px; height: 120px; border-radius: 50%; background: radial-gradient(circle, var(--c), transparent 70%); opacity: .08; pointer-events: none; }
+.kpi .k { font-size: 10px; letter-spacing: 1.2px; font-weight: 600; color: #b2c2d9; text-transform: uppercase; margin-bottom: 8px; }
+.kpi .v { font-size: 24px; font-weight: 600; letter-spacing: -.5px; line-height: 1.15; color: #f2f8ff; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.kpi .v small { font-size: 12px; font-weight: 500; color: #99acc5; margin-left: 5px; letter-spacing: 0; }
+.kpi .s { font-size: 11px; color: #99acc5; margin-top: 6px; line-height: 1.4; overflow-wrap: anywhere; }
+.kpi.main .v { color: var(--accent); font-size: 30px; }
+
+.charts { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: 14px; margin-top: 16px; }
+@media (max-width: 900px) { .charts { grid-template-columns: 1fr; } }
+.card { background: var(--card); border: 1px solid var(--card-line); border-radius: 12px; padding: 16px 18px 18px; min-width: 0; break-inside: avoid; }
+.card h2 { margin-bottom: 4px; }
+.card .sub { margin: 0 0 12px 13px; font-size: 11px; color: #97b0cb; }
+
+.donut-wrap { display: flex; flex-wrap: wrap; gap: 14px 20px; align-items: center; }
+.donut { width: 190px; height: 190px; flex: none; filter: drop-shadow(0 0 14px #08283e); }
+.donut .c-total { font-size: 20px; font-weight: 600; fill: #f2f8ff; }
+.donut .c-unit { font-size: 9px; letter-spacing: 1px; fill: #a5b9d0; }
+.legend { list-style: none; margin: 0; padding: 0; flex: 1 1 170px; font-size: 12px; }
+.legend li { display: grid; grid-template-columns: 10px 1fr auto; gap: 9px; align-items: center; padding: 5px 0; border-bottom: 1px solid var(--line2); color: #e0ecfa; }
+.legend li:last-child { border-bottom: 0; }
+.legend small { color: #97b0cb; }
+.legend .pct { font-weight: 600; font-variant-numeric: tabular-nums; color: #d9f5ff; }
+.dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; background: var(--c); box-shadow: 0 0 6px color-mix(in srgb, var(--c) 50%, transparent); }
+
+.hbars { display: grid; grid-template-columns: minmax(90px, max-content) 1fr auto; gap: 7px 12px; align-items: center; font-size: 12px; }
+.hbars .nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; color: #dbe9f9; }
+.hbars .track { background: #081321; border-radius: 4px; height: 14px; overflow: hidden; }
+.hbars .fill { height: 100%; background: linear-gradient(90deg, color-mix(in srgb, var(--c) 55%, #081321), var(--c)); border-radius: 4px; min-width: 2px; }
+.hbars .val { font-variant-numeric: tabular-nums; font-weight: 600; text-align: right; color: #d9f5ff; }
+
+.colchart { width: 100%; height: auto; display: block; background: #0c1828; border: 1px solid #29425d; border-radius: 12px; }
+.colchart .gl { stroke: #1f3047; }
+.colchart .ax { fill: #92a6c1; font-size: 11px; }
+.colchart .vl { fill: #d9f5ff; font-size: 10px; font-weight: 600; }
+.colchart .b { fill: var(--accent); }
+.colchart .b.peak { fill: var(--red); }
+.colchart .b.empty { fill: var(--bar-empty); }
+
+.note { margin: 12px 0 0; font-size: 11px; line-height: 1.6; color: #93adc7; }
+.tablebox { overflow-x: auto; margin-top: 16px; border: 1px solid #293c52; border-radius: 10px; }
+table { border-collapse: collapse; width: 100%; font-size: 12px; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 10px; border-bottom: 1px solid var(--line2); white-space: nowrap; }
+thead th { background: var(--th); font-size: 10px; letter-spacing: .5px; font-weight: 600; color: #90abc8; text-transform: uppercase; border-color: #34485f; }
+td { color: #d0e2f5; }
+td.n, th.n { text-align: right; }
+td.kwh { font-weight: 600; color: #f2f8ff; }
+tbody tr:nth-child(even) td { background: #ffffff04; }
+tbody tr:hover td { background: #20364d; }
+tr.sum td { font-weight: 700; color: var(--accent); border-top: 1px solid #406b7f; border-bottom: 0; background: #0d1c2e !important; }
+td.flag { color: var(--amber); white-space: normal; min-width: 160px; font-size: 11px; }
+.share { display: inline-block; width: 60px; height: 6px; background: #081321; border-radius: 3px; margin-left: 8px; vertical-align: middle; }
+.share i { display: block; height: 100%; background: var(--c); border-radius: 3px; }
+.bd-tools { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 4px 0 12px 13px; }
+.bd-tools label { margin: 0; }
+.bd-tools select { width: auto; display: inline-block; margin: 0; padding: 7px 10px; }
+.bd-tools .print-only { display: none; }
+.rep-foot { margin-top: 16px; font-size: 10px; letter-spacing: .4px; color: #8ba1bc; }
+footer.site { display: flex; justify-content: space-between; padding-top: 18px; font-size: 10px; letter-spacing: .5px; color: #8ba1bc; }
+footer.site span:first-child { letter-spacing: 1.7px; color: #b8cbdf; }
+
+/* ---------- Print (white paper, dark brand band kept) ---------- */
+@page { size: A4; margin: 10mm; }
+@media print {
+  :root { color-scheme: light; --ink: #111; --muted: #4a5560; --line: #c9d1d8; --line2: #dde3e8; --card: #fff; --card-line: #c9d1d8; --th: #eef2f5; --bar-empty: #e4e8ec; --others: #9aa5b1; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  html, body { background: #fff !important; color: #111; font-size: 10px; }
+  .wrap { max-width: none; padding: 0; }
+  header.top, .tabbar, .intro, .controls, .actions, .rep-tools, .bd-tools select, .bd-tools label, footer.site { display: none !important; }
+  .section { --cyan: #0a8db3; --spin: #7a52d6; }
+  .panel { border: 0; background: none; box-shadow: none; border-radius: 0; }
+  .rep-head { background: #090f1b; border-radius: 10px; border: 0; padding: 12px 16px; align-items: center; }
+  .rep-logo { height: 46px; }
+  .rep-head h3 { color: #fff; font-size: 15px; }
+  .rep-head .meta { color: #b9c9db; }
+  .rep-head .meta b { color: #fff; }
+  .rep-body { padding: 12px 0 0; }
+  .kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  .kpi { background: #fff; padding: 8px 10px; }
+  .kpi:after { display: none; }
+  .kpi .k { color: #4a5560; }
+  .kpi .v { color: #111; font-size: 17px; }
+  .kpi.main .v { font-size: 19px; }
+  .kpi .v small, .kpi .s { color: #4a5560; }
+  .charts { grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 10px; margin-top: 10px; }
+  .card { background: #fff; padding: 10px 12px; }
+  h2, legend { color: #111; }
+  .card .sub, .note, .rep-foot { color: #4a5560; }
+  .donut { width: 135px; height: 135px; filter: none; }
+  .donut .c-total { fill: #111; }
+  .donut .c-unit { fill: #4a5560; }
+  .legend li { color: #111; padding: 2px 0; }
+  .legend br { display: none; }
+  .legend small::before { content: " "; }
+  .legend small, .hbars .nm, .hbars .val, .legend .pct { color: #111; }
+  .dot { box-shadow: none; }
+  .hbars .track { background: #e9edf1; height: 10px; }
+  .hbars .fill { background: var(--c); }
+  .colchart { background: #fff; border-color: #c9d1d8; }
+  .colchart .gl { stroke: #e3e7eb; }
+  .colchart .ax { fill: #4a5560; }
+  .colchart .vl { fill: #111; }
+  .bd-tools .print-only { display: inline; font-weight: 600; color: #111; }
+  .tablebox { overflow: visible; border-color: #c9d1d8; margin-top: 10px; }
+  th, td { white-space: normal; padding: 4px 6px; }
+  thead th { color: #333; }
+  td, td.kwh { color: #111; }
+  tbody tr:nth-child(even) td { background: #f6f8fa; }
+  tr.sum td { background: #eef2f5 !important; color: #111; border-top: 1.5px solid #111; }
+  td.flag { color: #8f4a00; min-width: 0; }
+  .share { width: 36px; background: #e9edf1; }
+  thead { display: table-header-group; }
+  .card, .kpi, tr { break-inside: avoid; }
+}
+
+.card-tools .print-only { display: none; }
+/* ---------- Toyo additions ---------- */
+.lchart .pk { paint-order: stroke; stroke: #0c1828; stroke-width: 4px; stroke-linejoin: round; }
+@media print { .lchart .pk { stroke: #fff; } }
+.section[data-kind="cmp"] { --accent: var(--green); }
+.grp-h { margin: 12px 0 4px 4px; font-size: 10px; letter-spacing: 1.4px; font-weight: 600; color: var(--muted); text-transform: uppercase; }
+.grp-h:first-of-type { margin-top: 0; }
+td small { color: #93adc7; font-weight: 500; }
+td.lead { background: color-mix(in srgb, var(--accent) 16%, transparent) !important; font-weight: 700; color: #f2f8ff; }
+.cmp-table td { vertical-align: top; line-height: 1.35; }
+@media print { td.lead { background: #e3f6ee !important; color: #000; } td small { color: #4a5560; } }
+
+.custom.four { grid-template-columns: 1fr 1fr; }
+.rate-row { display: grid; grid-template-columns: 90px 1fr; gap: 10px; }
+.rate-row label { margin-top: 0; }
+.rate-big { font-size: 18px !important; font-weight: 600; letter-spacing: .3px; }
+.hint-s { margin: 10px 0 0; font-size: 11px; color: #93adc7; line-height: 1.5; }
+.chk { display: flex !important; align-items: center; gap: 9px; margin: 0 !important; padding: 7px 4px; font-size: 12.5px !important; color: #dbe9f9 !important; cursor: pointer; border-radius: 6px; }
+.chk:hover { background: #20364d; }
+.chk input { accent-color: var(--accent); width: 15px; height: 15px; }
+.chk.locked { cursor: default; opacity: .75; }
+.chk.locked:hover { background: none; }
+.chk small { color: var(--muted); margin-left: auto; font-size: 11px; }
+
+.kpi.cost { --c: var(--amber); }
+.kpi.cost .v { color: var(--amber); }
+.kpi.peak { --c: var(--red); }
+
+.summary { margin-top: 16px; }
+.summary p { margin: 0 0 8px 13px; font-size: 13px; line-height: 1.65; color: #d4e4f5; max-width: 110ch; }
+.summary p:last-child { margin-bottom: 0; }
+.summary b { color: #f2f8ff; font-weight: 600; }
+.summary .warn { color: var(--amber); }
+
+.card-tools { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 4px 0 12px 13px; }
+.card-tools label { margin: 0; display: inline-flex; align-items: center; gap: 8px; }
+.card-tools select { width: auto; display: inline-block; margin: 0; padding: 7px 10px; }
+.card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
+
+tr.peak td { background: #ff786e1c !important; }
+tr.peak td:first-child { box-shadow: inset 3px 0 0 var(--red); }
+td.cost { font-weight: 600; color: var(--amber); }
+.tag-peak { display: inline-block; font-size: 9.5px; letter-spacing: .8px; font-weight: 700; color: #ffd6d0; background: #ff786e33; border: 1px solid #ff786e66; border-radius: 4px; padding: 1px 6px; margin-left: 8px; }
+
+.param { margin-top: 16px; }
+.hl { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0; border: 1px solid #ff786e55; background: linear-gradient(90deg, #ff786e14, transparent 70%); border-radius: 10px; margin: 0 0 14px; overflow: hidden; }
+.hl > div { padding: 11px 14px; border-right: 1px solid #ff786e2a; min-width: 0; }
+.hl > div:last-child { border-right: 0; }
+.hl .k { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: #ffb8ae; font-weight: 600; }
+.hl .v { font-size: 17px; font-weight: 600; color: #fff; margin-top: 3px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.hl .v small { font-size: 11px; color: #c9b5b2; font-weight: 500; margin-left: 4px; }
+.hl .s { font-size: 11px; color: #c9b5b2; margin-top: 2px; }
+.hl.low { border-color: #63afff55; background: linear-gradient(90deg, #63afff14, transparent 70%); }
+.hl.low > div { border-color: #63afff2a; }
+.hl.low .k { color: #a9cfff; }
+@media (max-width: 900px) { .hl { grid-template-columns: 1fr 1fr; } .hl > div { border-bottom: 1px solid #ff786e2a; } }
+.lchart { width: 100%; height: auto; display: block; background: #0c1828; border: 1px solid #29425d; border-radius: 12px; }
+.lchart .gl { stroke: #1f3047; }
+.lchart .ax { fill: #92a6c1; font-size: 11px; }
+.lchart .pk { fill: var(--red); font-size: 11px; font-weight: 700; }
+.legend-inline { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 10px 0 0; font-size: 11px; color: #a3c2da; }
+.legend-inline span { display: inline-flex; align-items: center; gap: 6px; }
+.legend-inline i { display: inline-block; width: 16px; height: 3px; border-radius: 2px; background: var(--c); }
+.legend-inline i.dash { background: repeating-linear-gradient(90deg, var(--c) 0 4px, transparent 4px 7px); }
+.na { color: #5f7690; }
+.explain p { margin: 0 0 8px 13px; font-size: 12px; line-height: 1.65; color: #b9cde2; max-width: 120ch; }
+.explain p b { color: #e6f4ff; font-weight: 600; }
+.sec-title { margin: 22px 0 0; }
+
+@media print {
+  .rep-logo-tile { padding: 2px 6px; }
+  .summary p, .explain p { color: #111; font-size: 10.5px; margin-left: 0; }
+  .summary b, .explain p b { color: #000; }
+  .summary .warn { color: #8f4a00; }
+  .card-tools select, .card-tools label { display: none !important; }
+  .card-tools .print-only { display: inline; font-weight: 600; color: #111; }
+  td.cost { color: #6b4300; }
+  tr.peak td { background: #ffe9e6 !important; }
+  .tag-peak { color: #a32116; background: #ffe0dc; border-color: #f2a59c; }
+  .hl { background: #fff4f2; border-color: #f2a59c; }
+  .hl.low { background: #f1f7ff; border-color: #a9cbf2; }
+  .hl .k { color: #a32116; } .hl.low .k { color: #1d4f91; }
+  .hl .v { color: #111; } .hl .v small, .hl .s { color: #4a5560; }
+  .lchart { background: #fff; border-color: #c9d1d8; }
+  .lchart .gl { stroke: #e3e7eb; }
+  .lchart .ax { fill: #4a5560; }
+  .legend-inline { color: #333; }
+  .param, .summary { break-inside: avoid; }
+}
+
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <span class="brand-tile"><img class="brand" id="brandLogo" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALwAAAB1CAYAAAD0rovXAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAACpcSURBVHhe7X0HgFRFuvXpMDlnYGCYAYYcJYskRREkGdawLi666y6uCfft/vuv678+/fetWZ9vVcxrQkVRQBBRogGQnIZhyGkCA5Nz6O77vlN9exxguqdnAKeb7qOXubG67r2nvjpf1Vd1DZoAfvjhIzDqf/3wwyfgJ7wfPgU/4f3wKfgJ74dPwU94P3wKfsL74VPwE94Pn4Kf8H74FPyE98On4Ce8Hz4FP+H98Cn4Ce+HT+GSCx6zye1U11lRJUtNvRV1VhvqLDbYLPWor62RG7YhIMCM+MgwREeEwGS0l3mDwdCweAts8uYq5P6qLRpqbECtrFuq6qCVV8FQW48gGBBjMiFG/iLQBASbYQgOAEJlCTLLTesJ+RAuCcJb5M3nllTjZGkNcuTv/pPlOJBfgeNFVSioqMXJ00WoLziKwrxsmKx1iI8Kx9SRffGriUPRIyURZiGF0WCEWQqC2WSGyWyC2WyGUS8MnoRaq4aTtTbkVluRU2NBRlk9DlVYcbzKgvzsIlR9nwnLpv0IyCtCe7mn8SFhmGkLRPe4CKBTFAwp0TD0iIehWxzQIQKG5EggJkRP/dKHVxO+uLIOGTll2HmiBBuPFGKH/D18ulJZ9wZYLTCczISxPF/fYUegkPzG0f3x4C/GIik2Qk6zwiLnkvgBgQEICgpCSEgIgoODFfnb0vLzBRXV2bC7tB47SuqwqbgOW4uF6JX1EP7bUVGN0BVbEbN2J4x1Fn2nHePqTXiiJAAJ+jZhiAuFoV8SDEOTYbisAwwD2tsLQcClrXK9kvBFQvR1BwuwYk8+1h0qxO7sEtQ3vPmzUFEAU16GEL9e3/ETEkTWPPeHGbiifxpslANCeKvVKuS3wCa1BokeHBKMiIgIREVFqe2fGyVC9BWnarH2dA3WFdZif4UF1U3cq+lwHqLnrUJobqG+5ydEagY8Wh6A6bVNk9kQL+Qf3gnGsWkwTOwGQ+9EwHxpEt+rCF8vpNx2rATvbTiKVXtP4YhYc2p0lyg8BlPhIRG8jax+Izx3z3RMG9VHHoRIo0aEV3/1xSQyJzQsFEmJiYiKjtavvPj4Or8G845XKaKfqLKi3sWrCt59BHFvfiXW/dyCHSzLrFoz/lTmosBKBWaIClbW3jijFwy/6AtDO5FBlxi8phhXiF59+4cjuOeDrXhn3VHsE53eLNkJIat6m03ALBo9NCjQpVYnx2rF2S0sKMCBAwdw5PBh1NefS6oLCerzB3aU4L7txfj4RBUOV1pckp2wid9RT4e0CRjl0ihrM5JMztFKamBbewTWf6yFdc4yaFtzpGZ04xl7EbyC8OU19fjr57vx1892K51+hkZvDmFxsJqaJsKgrh3QOSlGdHvz+pwVYVVVNU6cOIHM3RmoqKjQj1xYLDtZg+s3FODNoxU46AbRHagXP6QmNUnfOhPhImlGV7n5qkXKaacqYVsozu8dn8H29YFLivQeT/hKsey3vrYRr6w5hOKqemVxW4QAqdCTesJqMOk77OgQG4lZk0agV2o7fY97oMQ5XViIXTt3oqioSN97/qgRXf70vnLcuaUIm8UpbUqnu4ImBbds7ACUtxfHsxF41/+n1IweQvoWQYyKlnkKlts+hW3eTn2n98OjNXx+WQ1+MXcDvj9QoO9pHjTWgSYjgqSKDzAbEB5kRmJEMDqGA6WFJ2CoqsTwru0weWQf9ExJUPLEQs1uEY1sqT9Hw1tkv1XX9meuWxASEoruPbojKSmp1U2YtJ15ImGe3V+urHqFxf3XQQoHmQwIMhoQIBtRAUakVVUgIeMoog7moYskNaPSjNSjJdBEAkKMhzhCotHkr0V+2d2fkudpfmsGjLcNsLfnezE8lvAk+5yPduKTLSdUZ1JzCDQbkRQZjM5xoRjZJQ4jusZiUEoMOsWEwiykcAaSl6SvralFRWWF6PVatVhkX3OEZ8tOaKhO+nbtxLltGRloxA9U1Cuyvy/OaR17ktxAiNxPQpARnUJMGJ8QjMvjAtE/KhDtg9mfoJ90FrRKqR33n4a2LRfat0eh7TwJLacMKKqmXtPPcoEQM8xzp8N4az97p5WXwiMJXyLS5cmvsvDy6oOooDVyAZO84e5JERgpBL/+so4YnR6PqJCmNXtz4KOorq5GWVkZymWhZmdhcEV4roeFhaFn715oJ6R319KT2+w0emJfKT7Lkd9xQyaHCtG7hZsxKi4I09qH4MrEIAQ6Y7grUKcfLoJt2X7YvtwHbJVCUFilH3QOdlqZXp4C4+QeIoZb8bseAI8jvEVI9OHG43hkUQZO0Pq4QFx4ICb1bY/bR6RgQi/2mF4Yl8RmswnZq1BcXIziomIpBFUuCc/1qOgo9O3XDwkJCW51UmWU1uPRzFIsyq1WssYVWEGlhppxXbtg3JAcimGxgcrKXwhoOaXQPsmAVRZtS45d6jiDPF/jFSkwvTgFhgEt8308BR5HePaa/scnO7Em67RLKdMtMRx3j+6CmSNT0D764nSNk8gkff7JkygvLxdrT7I3TXi24cfHx2PwkCGIjIzUU2gax6oseHBnCZa4QfZgIfa4+CDcmRomFj0Y8YEXoZ1BnrP2w3FYX98M24IMu9Z3BjEyprsGw/T38WJxQvWd3gOPaqVhW/vC7TnYdESqWxdk79EuAn+d1BOzx3W5aGQn2LMaFxeHlM6dERER2azlzs8/hZ3bd7hspz9VY8Ufd5Xgy7zmyU4JMzstHM/0jxbLHnJxyE7IfRlGieV+dDxMs4fCEBmkH2gCFXWwLd0H2+rD7ml/D4NHEX53dim+2iXW1IWF6Rwbioeu7o6bh3VCZCu1ektATc7Qgi5duyA2Nkbf6wwacrKzsWvnLn37TJSLXPjbnjIszatBc40xlCzPC9Ef7hmJvpEBMLshk84LoskN4gcZ54yC4db+KrLSGbRjJbAtyYJ2QpxeL4PHEL5SnNNv95/GdpE0zhARZMZtw1Jw+/AU1dz4c4GW3d4a06NZuUL9f2D/fhw9ckTfYwdrrBcOVIiD2nxrTGyAEZ+MiMMskTFsjfnZQEvfKQqmB0fCOD5NbTcJkXLaykPQNmezjHsVPIbwDOVdkZmv4mWaAh/9kNQY/OHKrgh3YX0uJgICAtB/wACEhYXre5pGfV0dtm7Zqlp7HPg0pxpvH61EcTPNMST7/OFxuC4pRLWv/+ygpe+dCOO9I2BIP7MTqzG0vHIla7TTlfoe74BHEN4qFu9gfgU2Hj430s+BxMhg3HlFGjqJpGlLkPR9+vZRnU6uUFlRgW3btqFWyL+tpA4vH6pQzqozkNpsV39zcCzGJgQ5Na4/F4wT02XpJtrKuWzU1oiOP1qsb3kHPILwbGtfd7AQlU5iZBjr0jc5EjMGJet72hbh4eFI756OwMBAfc+5sIq0yT6Rje93Z+HlA2X4sahOP9I0OgrZ/6tPFCa1C0aAJ7Rxm40wzBwEQ0qUvTQ2AW1fAWx78lUYgrfAIwhfVl2PHw46Dx8Ilmr+5iGdENFGUuZs0JFNiE9ASkqKyxj5kooqvPNjBj7fl4N6F7o9SXT6/d3CMa1DiGqG9BQYB3eAYWyqkN9JDzI7sL4/Bq2sVt/h+fAIwrNndU9uqb51LqJDA3Fd//b6lmeAo6KSOyYjPiFeCsC5JKWTSgmz9lAeSo4cBGqb7kSLlMJ8a6cw3C4LY2E8CnJfxl8OcN1iszkHKPcT3m1Qvx/IL1ekd4ah4qwme+C4y9CwMLHybKM/d6BEqUXDl4W1yKkQMuQfBwpPsglHP2oHpcuYuCDM7hKODiJpPBHGoR1h6Oi8ZUo7JH4XwxK8pLWmzQlPS7iXkXwucGXPRH3Ns8Dmyrj4OCQnd0RQIz1P9bK9oBJ79+6Dcf92GDN/BPZsEE/2p1qMdUJqqAl/7h6BHhGeIdWaRGgAjKNF1jhDtQXafiH9WYXZU+EBhAeOKwthkWr/hFSPQo5yIUftMdlnd4bYHOmpoIZnT2xsXJwUAPvjLBbtvn7JEkRvXInIzI2IzNiAyOXvw7x5hTh4NeochvXOEd0+Mi7QmU/oORjeUV+xwIbDsOJbWdaJUc9W+xiIpl6kF8AjLHxBmVi+8u+BogX2v+U/yPpn4s2uFdLbVNyMJyMkNER1SnHAN7Fy2dcoP7AH5qoymGtrYBL9bi7OR/ii12DMFj0v9zxdHNS7UsM9o0WmGRj7cySVVai9RP5dKKT/UZZ1sv2JbG+Glu8nvNvQpCo8cTLTbtltjM0WLc/FJpawYiNQs1e1wXs6EhMTkdIpBZajx7B5g9RQZ1fxQnJjeREM3y1CvNmGVwZGe1SLjEt0iBRibxKLLu8JrKHYn0Cfi/FAq2HLzvAT3l1o8igrKnartaYQaeYx70CfTh1h/vRTl/6bOTsLs4PzEONpLTIuYBDCk9jOoNVKAVeFwPPR9oQXy1dudR4/U2txfsyjUF+PgFdewcj9WYjSd50N2vOBCdGI3bMRhYXOe5W9DYZgDh7xW3i3YBANmxjrvMkxKMoqhcLzWwC0jRthe/99pNTW4pf1tTi7Q55kT4iKwqgeXVBbU4W1q9eo0VVeAa0W5i76ehMwdAoVJnmHPGtzwpvlQV3erz0Q1kQ7dJARA/oHoLzOeaeUJ0DLz4f26qtANlstgNnirF5XV40kqb1CxPJFyNLVbMKYQQOQkGAPyDp08KCKnWd0pcfDmofAP0bD2ETVZeos73BiMjsV9D2ejTbPJWfvHdy9IwaNiEB4u0B5emIpZAlOCsTgyyPROy0YJ8oP6Wd7ICwWaIsWQVuzRvSXvccxQQj+QE0FrpdlsljzSTXVuDqlI9J794Ap0G77OUpq65YtamInT4dmOQTDpCQEPhQLc2/7PkOYvKbLIQUhBhiczqrafsDDYfpPgb7eJqDyK67NRZFxD9p1CESXLiFI7xGK9F6ypIYgIMCAyKBo9Iq7zH6Bp2HrVmgvvABkZsrN2HUsK3f2TYZarTBabUiIjkLomNFAp07i/PE0TS2UNFWVVWif3EHF23sqDDWfSaZ3w9g7BKbBYTBdHQXzDPtiHBYNxF4PQ2AfOdPzSd/mOeRsvZ0iuiBIiJ0sVj2tS7BaOsl6ICdbEewp2CLOqwfqXXE8bfPnQ/vxR6n2z4wYZL9ruhTnRM5i0FvI0K2bmJczZRvHxNLCbxb976l6XmMTcc0P9o1QMwyDImCaKMuVETD0jFDTd8AsFt4LyE60eS4N8l9McCLiQ5yPgi+pLcSewi36lodACG5bvRraBx8IIey9p43Bokq13js1BSHDh4qPIhqgCdTV1WGHaPndO3d5pp6v2yD3elLfaAKmjjCY4mXF77S6jZCAUHSN7qVvnYs6ay1+yF4Oi9V1TPnPCY0S5vnnOXJb33MujFFR6HzLzeg66VqX89Vwnsrv1q7F/n37lNTxHNhgqF4kN3tugW5A4EDhumf3hDeGZxDeHIaesYNgMjQdRCWKF7lVx7Epfy1sntBEefo0tNdes0sZZxD5YhgxAiH33INeffqgQ4cOKtjMGQoKCrDymxU4dvSoh1h6eeo1q8Xa7JB1ZwM8RKIFSO3lJ3zLQKInh6ciJaKrvudcVNaVYUPOCuSUH1EFoM0gWts2bx60N9/UdzhBcjIMQnaDOKoJiYno07evGgDuivQk+9IlS3H82PG2t/TWE0DVx2LkXczraU4TwvcUwjsf+eVp8AjCE7Gi4/vED0GAsemHR5JnVxzB2hNLUFjtXEZcVHDypQULoP3jHw1NkE0iMBCGm2+GYfJktUmSd03vJpa+t8thgcThg4eweOFCHD50uO1IT5JXfQRDPcM6nNU2JmhBY5SG9yZ4DOGDzaEiawaKpRer4QT1tjrsLtysSF9Uc0rf+zOhvh7aRx9Be/hh1TrjCoYrroDxwQfF+v3U38owYs54wKjK5uafPCSkX/Dpp9i2ZavLSZ0uCmwlUostFkd8uVgZFzMSmFOlYI8QBrmetsTT0Obt8I0REhCOWkuVWPLDitxNgftPV+epZsr2YSkIFoeXLT0XFeJUam+9BdsTTwDHj+s7mwYljOHVV2HorffQNAKte3x8gtLrnFtes9nb4+mXMGqU62pb1kuKi5XEqa2tU5GYjtDjiwpl2ecL4ReIpHFRixpC5WVNhSH4Wln3/EjWxvAowpuNZkQGxiC/MltIfdKpVifpT1XlypKDxJBkRAVxgMjFIb127Bi0556D9sorDaEDThEeDuPzz9uljBOtTuImtUtC3sk8lJWUOiU8/7L15tjRY8jLzUNYeBhiYmObrR1aDYto9oq5YtmXCPFP6zubgtxX4AAg7E55YZ4xi0RL4FGEJ0LNYQgPiMLRsn2orHc+9M9iq0eBFIqsoh1SAGrRUaSQ2eh8DpUWQzS6tmIFtL/9Ddrnn0NMsrDfhaYWIhpE7hjvugsIcjE3o4DTayeLU3tCnFNO0uqM8Aya41z1J6Vw7N2TKX/z1cgqjqF15fy2CBxVVvs1UPZPsSRbZLuZT/mY2kvBFrIHDZcNj1HEbsMj54cnAdbnfo0vDr2Pqvrmv6VEoscHJWJsylQMThqN0IBzB1W7DWr1jRuhvfQStOWiY/ktp7N6UZuC4e67YXz8caCde9NI87Hn5uRg4WcLkZeX2+irIzYVZ2Nft8g6/9rXieCQEAwcOBBXXT0BPXr2VPtaA41DKus2wFDxhlgPhkXQCW+GCpQyYTOF8PfIhgePw3UBjyS8A18cfA+rTyxW1txdhAdEok/cENXi0yW6l9QY4coaqv/4yQ35n7bRyNt2LDU1sGVkwLBmDbTFi6Ft22ZPzB2wvX3KFBifeQZIZxd7y0DSL1n8BY6KXrd/dcQ54X9a5xTd9UrbDxk2DAPEGU7v0V3F46h71RcHgTltvpGf8uP4U0sODLVr5Z6XySbnv2y+MNshBA+ZDC3yUUnbdQ3myfBowrNKX3zoXazL+RrV4sy2FPQJYoMSkGBMRLTI0qg9VTAW1iG23oq0onJEi0QwnRRfgRGLla2YIzE4GIarr4bhscdgGDRI39lCyNPPzc3FSpFPWXv3oqa6xm3Cs3BwP79PRYLzG7IJiQniSoQgKjJQiC6Ov0iWPj2tGDagFHER2SJCqM9b+MpJ8KBx0KL+6dVkJzya8ARJv/LY5/g+ZzmKa07Lq2pZdo31NoStPIbAj8SC62WGtq+TcGFsDZBia6USZSfS1Kkw/uUvQL9++s7Wgy0333/7HXbu2KFaaBwfX3CX8Gofj1lqYK3Lk79F+vmaqt2GDQnBH++JR49uLSSsMVYK9gRoEX/xerITHue0ng1artSo7ogKjEFZXTHK60tbFF4QcqAYwW/vhqH8zKq71GSvzDvIPy1qWKNUYC/qrFkw/vnPwHno6MagHOmc2lk5tJVS25QUl4jzapXF7siy4P+0fqZje0bzpqVQlgLZZ5FtGgy7C5KXX496i4ahg0IbolBdQ8wAhzmF3QYt7Hdy2543EVZr4PGEJxhCnBTaER3COqsCQOLXWl0ENDVC6JpjMO0ukrd+bs1QL+89VXy3aHcrDbbEjBkD40MPwfjb3yriX0hwZuLkjh3RrkN71WbP6bbZNOk24cXX0axCeBuvofNvJzyXunpN0jRiyMAQxMU043AaxOkPGiUO0SyxBpMvGbITXkF4gqSPDo5DSkQ3JIS2h7x+FTZsZWuDC4RsOwnjgZImCU8p00Muj3GnwujVC8b77oOBy8SJTsN9zxcs0DExMUjr0kUFnAUHByni0+o3T3h+d6pEtqtk+0zCcz0h1owrhochMcEZ4QPssTGht8lyKxDYXzLkPXEy7sDjNXxTsMiLLaktwJHSfdh1egMyCjaj3klLTiT1+3uZQBNzs3cQHT9ZKor2TsNFTDD06QPceKPdOe3bF2hiHsmLBb4akp0tORm7d2PL5i3q0/d1tXVONLzsq8uWJV9pd9mt/lLScA7PK4aH4r/+1g4J8WcTXqo6czq0ELHmgWLZzSmy6+IU6LaGVxLeAasQv8pSgdKaQuwo2IDM01uQU3lMjDnVuR3m0jpEPrsBxr1nfo8oQO56VDUwXEh/hg2jRk9KgmHCBECcUsPgwTDItrLoPNYG4CuqqalR5Geczc7t28W53YkcKQjnOK3i41jrjsu+6jMIHxNtxH13x+OmqVFUZnZwVHbQ5dCCroIhQKy5MVru0XOHGl4IeDXhG4PShgWgtLZILH+Wsv45FUdRUJWLmpP5iHw3A9iYJyeKNBWLPlQs+2VC9tDYWCAlRVlyw4AB0C6/HIZ+/WBgbynnfm/h17UvNihluJDg+fn5qikza0+masfnBxhOnz4thaNIiJ8nC78va0OSSJjZd8Zj2uTOMAV1ldIutVbgYPnLwRssyLT4rWqr8jpcMoR3BavInbK6EhjKymGqrEaQKVgcxFAYRCuzLf1SAgtDWWkpahi+bOXnaOqRwDnsA6Klgrq0rbc78AnC++GHA75Rj/nhhw4/4f3wKfgJ74dPwU94P3wKfsL74VPwt9I0AT6SqqoqNRqJU2t48ryPFxIMSy4pKYHJZFKjqlx9g9Zb0eaE50P+5OP5eOftt/U9rUf3Ht3x0ty5+lbLwEHVS79Ygu+/+xaZGXtQUlpqD0JhbEt0NHr36YPxE67ClKlTm/xMpbt48fkXsPyrr1THUWpqKp545mnExdmn0HYX897/APM//hg11dWIiorCMy88r9JqKZiH9T+sw1fLlmHXjh04fvy42kcEBgWpNEeMHIGp06er+78U0OaE5zQUb7z2Ol549ll9T+vRt38/LPziC32rebCw5eXm4oP33sfHH36orHpzCAkJwR2zZmHmr+9AXHx8i63goUOHcMsNN6JUClRYeDhm3XUn7n/wQWVV3cHBAwfwxwfnYG9mpgo0Y14eefTv+tHmwdfNQLS1a9Zg7ssv4+D+A6qzqjkMHzEC98+ZgwEDByDYizvr2jxaki9gb+Ze1UXOWPCmlip9NBJH7NO6RopVa+q8Tp1SMP36Gerc5qBe+uo1eOzvj2LVihVqUlOCLzM2NlZ9f5WzBFDSBIm1U7EqUkC4bN+2DevXrUdiYhLad2ivwnrdBdOuq6vF5k2bUFdbq2Yu6Nmzl6Tjeio+gjMMvynGYd3336t88Jqnnn1GFRx3wHGzh48cwf+88AJefWUuTublqefP5xottRgHiLMQc+RUmMg47qdB4jk52dn4evlyVaukde2KcPnN5vLriWhzC0/rwoCoffuy9D3n4qH7H1B/o2NicN2UKRgybKjaPhtRUdEYzXnYm0GFaPMlIl/eeO01nNDnmQmRF9y9e3cMHDQQgwYPlsLTSZGfQ+4Yobhj+3bs2LEdWVI4GchFsMqffe8fMHHSJEUAd8EgsF/efAv2ZWWpuPcZN1yPP/75zy6lDZ/T6lWr8MyTT+Gw1BIBct2jjz+OW269RT/DNRhgtndvJl7+n39hzerVqgCT0B3lPnv17q2kSxchcrwQnkFohQWF2C/527x5E/bszsDJk/YZhOnPTJo8GbPvuxedO9vHJ3gVSHhPR7fOqWoZPWKktvCzz/W9rYOQVVu6ZIk2Yey4hnTHjrpCe/qJJzUhs35W08jKytKeeuIJlQ/HtROvmqAtW7pUpdsS8JoBvfs0/P7nCz7TpJbRj56L3Jwc7T/mPKT16NJVXfPrX/1Kk1pKP+oaUli0Y0ePaff/4d6G6/v17KX9/je/1ZYvW6ZJzaGfeS7EidU++3SBdvstt2rpqWnqWub7P//f37Xc3Fz9LO+BVwwA+dd/v6j+Us6MHDUKPXs5n1rbFeR+1QcI/vu555UGJrp06YLf3zMbM+/4tRpp5Aq0fkOGDpV8RIr23a8sNcefFhYWof+A/koOuGvxOLjjyJHD2L9vv6px6kVS9enXr0krT7m14utv8On8+WoEFAeI/OXhh9G1Wze3fo81En0UXk+JQj9k+owZuO/BBzB4yBCXkoy1HGuAHiK7Ck6fljwfUflhjD4niU1PT2+RpGtr+FQ7fK28eOpQDpQmSK6Zs36NKdOmqa9puwPq+WkzpouzeZfS9yxEO0TTr1q5UvkF7oIS6rbbb1c6nGlQ069dtVoR+mwcPXIUSxYvwulT9vk0J0+dKtJrkNuFi1P2ffLRx2pSJ14zbvx4zPrtb5CalqZkjTvo3ac37n3gfikgg9U2B51/sWiRatnxJvgU4dnGvHDBZ8rh44ufcM01uGbitS1uZ+f511x7La7mUD8BLd6XS5aiSCy9uyDRaDln3HCDygsLy2cLFih9zgLgAAvAyhXfYNtW+1w53cSqT5cC1xKfYcnixQ0anBb5hptuVP6Hu2QnmEdO/DTz17NUUyjBUVhbt25RBclb4FOE37ZtO7L1+SE5WHr02DFqHpfWIDEpEVdedZWaDIkgUdlk6E4TnwMk7YSrJ6Bvv75qm3KLfRKUSgSJf7Z1nipkd2cGYgeYBuec519eQ4d/sMgyd5tBG4PSpf/AAbhcZCXBgr7px41KknkLfIrw28UaOQiZ3r07eghxSKLWgORJ65KGHr3s03Sw1WPLli2q9nAXDqs5dfoM1dHDvC345BPs2rVLEZRNgO+/974aykcMGToE48aNU02w7uL4sWNKbxPxCfHo17//eXWcJSUlqQLjwG7Ja6Ub/ReeAp8i/MEDB/U1oH379mgny/kgPiEBHTt20reA7EY9le6CPsGoK67AyJEjVQHg9S88/YySMpulAC0UmUOwNmDzZ/cWzoNzQGodB+Li4tEppbO+1TrQytPhZps9wY47Dir3FvgU4Rs7lZy2+nx7DElWOp8OtPbjBd3Su4k/cI1qBSJ2izZ+99/v4LmnnlZWn/JjuBSIMWPHtbhnlxM6OcA2/1A3nXNX4H2HhtjTcXRMeQt8ivCNdS/ncmmJ3m4KvJ6zg50vmK8xY8di2IjhDU18r8+di8w9e9R6gtQkV19zNVLTWh4v01ir2/N7fvdMqEmhvIjkjeFThI+OidbXIJKhHJUVrZhAtRH4Fe2y0p+m/zif7nY2T06dNk1JLcLxoWJa5aHDh6mmxNakzVAGB5gmY3jOB7TmrCkdjir9CROnJ/YS+BTh09O762uit09kN7TYtBan8vNVK4oDjDFpTeuHAyMuvxxXjB6tJIMD7Ny54aabVKdWa9C9Z4+GPKmOo8Pn97G0anFQ2S/g6C9I6dz5jPx6OnyK8CMuH9kga/bt26ckQ0udTAeoXRmbwo8JE5QinKf9fAhPa3nr7b9UPakE9fpwkTlDhw1T260Bm0176o4umzs5gVO+3ibfGuTlncT6desapBGbVENb0GrU1vApwjM4zBHXXVxUhFUrVzQEj7UUbOpbvuwrNUiEYNAZNXZjP6E1YBt7kO5Ms/B06JB8XhaUaUyZPk2tk6Qbf/wRmzZualVBZ4jC+vXrGnqq6fSPkhrpfJo5f274FOEZ9vqLW25RpGS1/u2aterrG+VlLes4oYZdtHAhNqxfr7ZpiadMn66aKc8XJGhjpW5spU/QGIxuZGQjwfCED957T9VuLZE2PHdf1j688eprDdGiI0aOVAbEm0ZG+RTh6QCOGTtG6WSCPYWvzZ2rRg8xzsYd0DJ+NG8eXvnXSw3NkHQoR40a5bFaln7A3bNnNxR0xvM/88STqlPKXdIfFu3/0AMPqHZ3gnFIDGt2FCRvgU8RnmBIwW9+dze6ioNJArDL/pknn8Qjf/2rkjd0xs7uLeU293O00v/905/w1D+fUPKA11Mf3z5zpnLePBUs6FdOuAo333qrWic2bNiA3931G6z85hsUFxer59CY/FynJS8sLMT8Dz/Czdff0CD/OODklttuVU2p5yvhfm54xSDu9FT717nZZMeBErQs5wNa5m++/hpzX3oZhw4ebCA4B5hMnjIFw4YPQ0cpGJQXtOg52Tn4UbTvV19+qcKBCVbjDE2Yfe+9qtPofJzVs3H1uPFqclTWGL8Xy3z/Q3P0I+cHhva+8q9/CclXNLSykLCMjblywgTl44SG2TvS6Jtk7snEsqVLsScjQxVwNotyZBQD3n43+/cXRML93PBJwhOUMz98972KE9+yeXOD80nwxdIhY9w4rRzbrxs/JjppbDlhi8roMWMuuIa9WIQnjomM+Xjeh/hm+XJ9uu2fnFfeR7jcG78Zy/G9jXuOWTC6paerEWc3i3V39Ap7G3yW8ARvncML+QW9H6WKz8rMVFW4MzB+hCG9tIjs+eRXOi4GLibhCXY+cbaCNatXYdfOXTgqlt9Zqw1bjNLSUnHZ4MG4SmoB9hU4ZJE3wisI///1QVmRkVEYf9WV6D9ggNq+UKAlY3gvRx/xLz8jSVJwP9vXo6KjVMAUCc7oRsakX0gJczY47rSoqBAmsbgMLBs7bpx+5MKC88vvz9qHAwf2I/vECZw+XaAsO605+wQYXclBIt3E3+FoLG9qfnQGryA828wJg7wIDr64mBaGL5wdNBy8bbVZFbEpbzjogX9bGzrQErCw2WhxG0mriwn6MLznStH1dVLIeY98xiQ979vbHFNX8ArC++HHhYLPNUv64dvwE94Pn4Kf8H74FNp8Xhp2aHCqh1OnTqm2cTpodJrYRkyHjU4j3Qw2F+bl5anzuY9t4/zL6/iXrSl0ODl9hKM1gZ0rbHHhbAWMVWc67FWkE0bH0HGNozWGMTKcZYxpMx9Ml2CazA/TcTiuTJf54fXMN5v1mAbTZx75W7yGeaADyGvYKuK4Jx6jA86/3M80HMcc4DHmg/fOPDN95oX5ZZMl02TzJe+Nx7mfz4Nf8mM6/F2GQPN5cLJYR754nzzOhffBdBxp8Vo6sEyP5/E3CabDNLjN9nreJ51d5oMzIvBemIano80Jzy7tp556Sj14dt1zrhc+yJdeekm1ECQnJ6uH/cUXX6jxmSQQX8Z+fSKkZcuWqTABkmX16tVqu3///qrDaMWKFdixY4c6l9NS8IUwHb6czz//XBHl4MGDikRc5z6GDfMFsmOFeSE+/PBDbNu2TcWTMJ+chu+dd95R28wDCwh/hwOc33vvPXX8hx9+UNfwtx0F+eWXX1b55PEnn3wSAwcOxLvvvqvui72gJCB/10F6Ppd+/fqp32KBateuHd588031DNLS0lS+H3/8cTWZFAd6cPD32rVrVXq8V/Zb8PWOHTsWH330kfoN5oNDCNljSvI+99xzishM49NPP1XPjAWNIcrr169XzbEMQ9i4caNKl4WTv7V06VK1zWf/+uuvY+jQoV4RRNbmkoZWhwS79tpr1XpWVha+/fZb1SS2cOFCZbW+/PJLRZQbb7wRvXr1UmTmS3vxxRdVvDeJRkvLl8UXzZezdetWVVCuueYajBkzRpGEBYm1Cdf37t2rfockoQXly2WBu+mmm3DZZZepcxxg7ySvJTH48klgvngOvSOpevfurc4hMWkhaVEXL16sfnvQoEHqN1iwSKS33npL/c3MzFSFnfc3Y8YMRWCGL/B6B5hHnsN75T3x/phPWnE+KxZEhkAsWrRI7eM9p6SkqPRIZp7Da5l3Fs7vvvsOa9asUc+b6XKWBT4v5pWWf9KkSWremmHDhqn7Ym3HWu3f//63mi2B74jPj9cxn/zdnTt3qnvhb3kDPELDs1uflomkZhTeJs6sK6TiS6aFZPVJy0eC0eLTQtPS8qU5QlW3b9+uLA4tLklBQtKKOSwmydwYJCKrYxKYhYW/wYJjn923TqXVGDzGDicHIXktrR/zy5rguuuuU/cwc+ZMdZxgJKFj6jzmlVZ08ODBqvZygFaRv8n7IulYAM4GawT+HgnG3+R9sfB9/PHH6lmQdHsajX8lWR01iwPcz3tmreMowLT6fDZ8/ixMLKg0NFwcUoZ5Yg3GvPNZ8hiNAZ8H0+N1rnqnPQ0eQXi+tNGjR2PixIlKW/Ph0prcd999ympOmzZNyZVHHnkE8+bNU+RkVfrAAw+ol03Lxup4zpw5yqqSEKy6ed7TTz+NN954o+EFOsBzaNF4HgvN+PHjVSF57LHHMH/+/HPOz8jIULLFMRqJaa9atUottNiMmmRtQ3JSig0ZMkTJibffflsRhfdEa8qCQUI6QMtLecP8M3iLRDobLFCUP5MnT0YfPf6ctd8dd9yBK6+8Uj0fPgMWMEq2Rx99tEGbO8D7YWGj9WZBYK3DfPE5P/zww1i+fPkZBcQBPp/rr79ePRc+SxaO4cOHq2NMi/ftkGDegDbveGJVSOnBqpggkfiiHFreoZlJKr4QWhgeoyWk7iZJHU4Z0+DtsNDwJfB8R1AY9S+tpMOp5TESk+nzpZLIrOodzrDDmhF0TunAMW1ey2PMD/PANLnNNCgBaKmZf9Y0/C2mxbSZFi0hrTl/g+uUI0yH90kHk+mw8DtAzc30KCv4uwQLp8OhZP6ZLmso3jOfC9Nlvhz5ZIGiXOLzcdw3z2cB4P0wP8wvrT5rD1pv3guPMy3mnfnjM+B5TIPX8PcczjhrPT575svT4e9p9cOn4G+H98On4Ce8Hz4FP+H98Cn4Ce+HT8FPeD98Cn7C++FT8BPeD5+Cn/B++BCA/wUQsUKgH9UjKwAAAABJRU5ErkJggg==" alt="Toyo Packaging"></span>
+    <h1 class="heading"><small>ENERGY MANAGEMENT</small>ENERGY AND COST REPORTS</h1>
+    <div class="site-clock" aria-label="Current date and time in Pakistan"><small id="siteDate">—</small><time id="siteTime">—</time><em>PKT</em></div>
+    <a class="btn" id="backLink" href="index.html">← DASHBOARD</a>
+  </header>
+
+  <div class="tabbar">
+    <div class="seg" role="tablist" aria-label="Report type">
+      <button role="tab" data-tab="dist" aria-selected="true" aria-controls="sec-dist">DISTRIBUTION</button>
+      <button role="tab" data-tab="gen" aria-selected="false" aria-controls="sec-gen">GENERATION</button>
+      <button role="tab" data-tab="cmp" aria-selected="false" aria-controls="sec-cmp">COMPARE MACHINES</button>
+    </div>
+    <span class="hint">Energy, cost and electrical parameters from the Toyo energy cloud. All times PKT.</span>
+  </div>
+
+  <main>
+    <section id="sec-dist" class="section" data-kind="dist" role="tabpanel"></section>
+    <section id="sec-gen" class="section" data-kind="gen" role="tabpanel" hidden></section>
+    <section id="sec-cmp" class="section" data-kind="cmp" role="tabpanel" hidden></section>
+  </main>
+
+  <footer class="site"><span>TOYO PACKAGING · ENERGY AND COST REPORTS</span><span id="footSrc"></span></footer>
+</div>
+
+<script>
+/* ================================================================
+   SETTINGS: change these if the cloud details change.
+   The token must have READ access to the bucket.
+   ================================================================ */
+const CONFIG = {
+  url: "https://us-east-1-1.aws.cloud2.influxdata.com",
+  org: "Fahad",
+  bucket: "Toyo",
+  token: "7ab5RgQQFiI8ykfMKQ-Wppd6zC46risspDpbzGDRLhk_TaD_aEwrjkY69nDtZlnJN14UnaTe1AJvNt_2LE2aHQ==",
+  dashboardPage: "index.html",   // the "Dashboard" button opens this file (same folder)
+  tzOffsetHours: 5,              // PKT = UTC+5
+  maxKwhPerHour: 5000,           // a bigger jump of a counter in one hour is treated as a wrong reading
+  currency: "Rs",                // default currency label (can be changed on the page)
+  maxDays: 400                   // longest report period
+};
+
+/* ---------- Meters (same as the dashboard) ---------- */
+const JANITZA = { pTotal: "p_total", p1: "p_l1", p2: "p_l2", p3: "p_l3", i1: "i_l1", i2: "i_l2", i3: "i_l3",
+                  v1: "v_l1n", v2: "v_l2n", v3: "v_l3n", kwhImp: "kwh_import", kwhExp: "kwh_export", kw: false };
+const EEM = { pTotal: "total_active_power_w", p1: "p_active_phase_1", p2: "p_active_phase_2", p3: "p_active_phase_3",
+              i1: "i_phase_1", i2: "i_phase_2", i3: "i_phase_3", v1: "v_phase_1", v2: "v_phase_2", v3: "v_phase_3",
+              kwhImp: "kwh_import", kwhExp: "kwh_export", kw: false };
+const ISOLAR = { pTotal: "meter_active_power_kw", i1: "phase_a_current_a", i2: "phase_b_current_a", i3: "phase_c_current_a",
+                 v1: "phase_a_voltage_v", v2: "phase_b_voltage_v", v3: "phase_c_voltage_v", kw: true };
+const ISOLAR_MEAS = ["isolarcloud_device", "isolarcloud_detail"];
+
+const METERS = [
+  // --- Generation ---
+  { group: "gen",  label: "KE",            info: "Grid supply (K-Electric)", meas: ISOLAR_MEAS, tagKey: "device_name", tag: "Grid - 1", fields: ISOLAR },
+  { group: "gen",  label: "Genset",        info: "Generator",                meas: ISOLAR_MEAS, tagKey: "device_name", tag: "Genset",   fields: ISOLAR },
+  { group: "gen",  label: "Solar 1",       info: "Janitza Unit 9",  meas: ["janitza_feeder"], tagKey: "meter_name", tag: "Janitza_Unit_09", fields: JANITZA },
+  { group: "gen",  label: "Solar 2",       info: "Janitza Unit 10", meas: ["janitza_feeder"], tagKey: "meter_name", tag: "Janitza_Unit_10", fields: JANITZA },
+  // --- Distribution ---
+  { group: "dist", label: "Metallizer",    info: "Janitza Main Master", meas: ["janitza_umg96pql"], tagKey: "meter_name", tag: "Janitza_Main_Master", fields: JANITZA },
+  { group: "dist", label: "Holo",          info: "Janitza Unit 2", meas: ["janitza_feeder"], tagKey: "meter_name", tag: "Janitza_Unit_02", fields: JANITZA },
+  { group: "dist", label: "Silliting",     info: "Janitza Unit 3", meas: ["janitza_feeder"], tagKey: "meter_name", tag: "Janitza_Unit_03", fields: JANITZA },
+  { group: "dist", label: "Super Combi",   info: "Janitza Unit 4", meas: ["janitza_feeder"], tagKey: "meter_name", tag: "Janitza_Unit_04", fields: JANITZA },
+  { group: "dist", label: "Rotomec",       info: "Janitza Unit 5", meas: ["janitza_feeder"], tagKey: "meter_name", tag: "Janitza_Unit_05", fields: JANITZA },
+  { group: "dist", label: "Utilities",     info: "Janitza Unit 6", meas: ["janitza_feeder"], tagKey: "meter_name", tag: "Janitza_Unit_06", fields: JANITZA },
+  { group: "dist", label: "Super Simplex", info: "Janitza Unit 7", meas: ["janitza_feeder"], tagKey: "meter_name", tag: "Janitza_Unit_07", fields: JANITZA },
+  { group: "dist", label: "Bag Making",    info: "Janitza Unit 8", meas: ["janitza_feeder"], tagKey: "meter_name", tag: "Janitza_Unit_08", fields: JANITZA },
+  { group: "dist", label: "Mosque",        info: "EEM 570R",       meas: ["eem570r_meter_data"], tagKey: "meter_name", tag: "EEM_570R", fields: EEM }
+];
+METERS.forEach((m, i) => m.id = "m" + i);
+
+const SECTIONS = {
+  dist: { title: "Distribution", intro: "Energy, cost and electrical values of the production and utility feeders. Choose the period, enter the per unit cost, pick the parameters and the meters, then create the report.", noun: "meter", nouns: "meters", legend: "DEPARTMENTS AND MACHINES" },
+  gen:  { title: "Generation",   intro: "Energy, cost and electrical values of the supply sources (KE, genset, solar). Choose the period, enter the per unit cost, pick the parameters and the sources, then create the report.", noun: "source", nouns: "sources", legend: "SOURCES" }
+};
+
+/* Electrical parameters the user can add to the report */
+const PARAMS = [
+  { key: "pTotal", label: "Active power, total",    unit: "kW", fields: ["pTotal"],         power: true, def: true },
+  { key: "pPhase", label: "Active power per phase", unit: "kW", fields: ["p1", "p2", "p3"], power: true },
+  { key: "iPhase", label: "Current per phase",      unit: "A",  fields: ["i1", "i2", "i3"] },
+  { key: "vPhase", label: "Voltage L-N per phase",  unit: "V",  fields: ["v1", "v2", "v3"], low: true }
+];
+const PHASE = { pTotal: "Total", p1: "L1", p2: "L2", p3: "L3", i1: "L1", i2: "L2", i3: "L3", v1: "L1", v2: "L2", v3: "L3" };
+const PHASE_COLORS = { pTotal: "#61dfff", p1: "#ff786e", p2: "#ffc967", p3: "#63afff", i1: "#ff786e", i2: "#ffc967", i3: "#63afff", v1: "#ff786e", v2: "#ffc967", v3: "#63afff" };
+const DAY_BLOCKS = [["Night", 0, 6, "#63afff"], ["Morning", 6, 12, "#ffc967"], ["Afternoon", 12, 18, "#ff786e"], ["Evening", 18, 24, "#b99aff"]];
+const PALETTE = ["#61dfff", "#ffc967", "#40edba", "#ff786e", "#b99aff", "#63afff", "#ff9fd2", "#c6e46b", "#ffa05c", "#7ee8e0"];
+
+/* ================================================================
+   Time helpers (PKT)
+   ================================================================ */
+const MIN = 60e3, HOUR = 3600e3, DAY = 24 * HOUR;
+const TZ = CONFIG.tzOffsetHours * HOUR;
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const pad = n => String(n).padStart(2, "0");
+const P = ms => new Date(ms + TZ);   // read with getUTC* to get PKT parts
+function dayStart(ms) { return Math.floor((ms + TZ) / DAY) * DAY - TZ; }
+function monthStart(ms) { const t = P(ms); return Date.UTC(t.getUTCFullYear(), t.getUTCMonth(), 1) - TZ; }
+function nextMonth(ms) { const t = P(ms); return Date.UTC(t.getUTCFullYear(), t.getUTCMonth() + 1, 1) - TZ; }
+function dateStrToMs(s) { const [y, m, d] = String(s).split("-").map(Number); return Date.UTC(y, m - 1, d) - TZ; }
+function toDateStr(ms) { return P(ms).toISOString().slice(0, 10); }
+function parseHM(s) { const [h, m] = String(s || "0:0").split(":").map(Number); return (h * 60 + (m || 0)) * MIN; }
+function fmtTime(ms) { const t = P(ms); return pad(t.getUTCHours()) + ":" + pad(t.getUTCMinutes()); }
+function fmtDate(ms) { const t = P(ms); return t.getUTCDate() + " " + MONTHS[t.getUTCMonth()] + " " + t.getUTCFullYear(); }
+function fmtDateTime(ms) { return fmtDate(ms) + ", " + fmtTime(ms); }
+function fmtMonth(ms) { const t = P(ms); return MONTHS[t.getUTCMonth()] + " " + t.getUTCFullYear(); }
+function endTime(ms) { return (ms === dayStart(ms) ? "24:00" : fmtTime(ms)); }
+function fmtRange(r) {
+  if (fmtDate(r.start) === fmtDate(r.stop - 1)) return fmtDate(r.start) + ", " + fmtTime(r.start) + " to " + endTime(r.stop) + " PKT";
+  return fmtDateTime(r.start) + " to " + (r.stop === dayStart(r.stop) ? fmtDate(r.stop - 1) + ", 24:00" : fmtDateTime(r.stop)) + " PKT";
+}
+const fmt = (v, d) => v.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
+const fmtKwh = v => fmt(v, 1);
+const short = v => Math.abs(v) >= 100 ? Math.round(v).toLocaleString("en-US") : v.toFixed(1);
+function pct(x) { return (x * 100).toFixed(x >= 0.1 ? 0 : 1) + "%"; }
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+const isNum = v => typeof v === "number" && isFinite(v);
+
+/* ---------- Unit cost (shared by both tabs, saved in this browser) ---------- */
+const RATE_KEY = "toyo-report-rate", CUR_KEY = "toyo-report-currency";
+function savedRate() { try { return localStorage.getItem(RATE_KEY) || ""; } catch (e) { return ""; } }
+function savedCur() { try { return localStorage.getItem(CUR_KEY) || CONFIG.currency; } catch (e) { return CONFIG.currency; } }
+function saveRate(r, c) { try { localStorage.setItem(RATE_KEY, r); localStorage.setItem(CUR_KEY, c); } catch (e) { /* storage blocked */ } }
+function money(v, cur) {
+  const d = Math.abs(v) >= 1000 ? 0 : 2;
+  return (cur ? cur + " " : "") + fmt(v, d);
+}
+
+/* ================================================================
+   Period
+   ================================================================ */
+function rangeFor(sel, now) {
+  const today = dayStart(now);
+  let start, stop;
+  switch (sel.preset) {
+    case "today":     start = today; stop = now; break;
+    case "yesterday": start = today - DAY; stop = today; break;
+    case "last24":    start = Math.floor(now / HOUR) * HOUR - 23 * HOUR; stop = now; break;
+    case "last7":     start = today - 6 * DAY; stop = now; break;
+    case "thismonth": start = monthStart(now); stop = now; break;
+    case "lastmonth": start = monthStart(monthStart(now) - 1); stop = monthStart(now); break;
+    case "last3m":    start = monthStart(monthStart(monthStart(now) - 1) - 1); stop = now; break;
+    default: {
+      const a = dateStrToMs(sel.fromDate), b = dateStrToMs(sel.toDate);
+      if (!isFinite(a) || !isFinite(b)) throw new Error("Choose a start date and an end date.");
+      start = a + parseHM(sel.fromTime);
+      stop = b + (sel.toTime === "23:59" ? DAY : parseHM(sel.toTime));
+      if (!(stop > start)) throw new Error("The end must be later than the start.");
+      if (start >= now) throw new Error("The start time has not come yet.");
+    }
+  }
+  start = Math.floor(start / HOUR) * HOUR;          // reports work in whole hours
+  stop = Math.min(stop, now);
+  if (stop - start < HOUR) {
+    if (sel.preset === "custom") throw new Error("The period must be at least 1 hour long.");
+    start = Math.floor((stop - HOUR) / HOUR) * HOUR;
+  }
+  if (stop - start > CONFIG.maxDays * DAY) throw new Error("The period can be at most " + CONFIG.maxDays + " days.");
+  return { start, stop };
+}
+function defaultGroup(r) { const span = r.stop - r.start; return span <= 2 * DAY ? "hour" : span <= 62 * DAY ? "day" : "month"; }
+const GROUP_WORD = { hour: "hour", day: "day", month: "month" };
+
+/* Buckets of the chosen size, aligned to the PKT clock and cut to the period */
+function buckets(range, group) {
+  const out = [];
+  let s = group === "hour" ? range.start : group === "day" ? dayStart(range.start) : monthStart(range.start);
+  while (s < range.stop) {
+    const e = group === "hour" ? s + HOUR : group === "day" ? s + DAY : nextMonth(s);
+    out.push({ s: Math.max(s, range.start), e: Math.min(e, range.stop), key: s });
+    s = e;
+  }
+  return out;
+}
+function bucketLabel(b, group, multiDay) {
+  if (group === "month") return fmtMonth(b.s);
+  if (group === "day") { const t = P(b.s); return DAYS[t.getUTCDay()] + " " + fmtDate(b.s); }
+  return (multiDay ? fmtDate(b.s) + ", " : "") + fmtTime(b.s) + " to " + endTime(b.e);
+}
+function axisLabel(b, group, multiDay) {
+  const t = P(b.s);
+  if (group === "month") return MONTHS[t.getUTCMonth()] + " " + String(t.getUTCFullYear()).slice(2);
+  if (group === "day") return t.getUTCDate() + " " + MONTHS[t.getUTCMonth()];
+  return multiDay && t.getUTCHours() === 0 ? t.getUTCDate() + " " + MONTHS[t.getUTCMonth()] : fmtTime(b.s);
+}
+
+/* ================================================================
+   InfluxDB Cloud access
+   ================================================================ */
+function parseCsvLine(line) {
+  const out = []; let cur = "", q = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (q) { if (c === '"') { if (line[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += c; }
+    else if (c === '"') q = true;
+    else if (c === ",") { out.push(cur); cur = ""; }
+    else cur += c;
+  }
+  out.push(cur);
+  return out;
+}
+function parseInfluxCsv(text) {   // -> [{t, v, field}]
+  const rows = []; let header = null;
+  for (const raw of String(text).split(/\r?\n/)) {
+    if (!raw.trim()) { header = null; continue; }
+    const f = parseCsvLine(raw);
+    if (!header || (f.includes("_value") && f.includes("_time"))) { header = f; continue; }
+    if (header.includes("error")) throw new Error("The data server returned an error: " + f[header.indexOf("error")]);
+    const t = Date.parse(f[header.indexOf("_time")]);
+    const v = Number(f[header.indexOf("_value")]);
+    const field = f[header.indexOf("_field")];
+    if (field && isFinite(t) && isFinite(v)) rows.push({ t, v, field });
+  }
+  return rows;
+}
+async function influx(flux) {
+  let res;
+  try {
+    res = await fetch(CONFIG.url + "/api/v2/query?org=" + encodeURIComponent(CONFIG.org), {
+      method: "POST",
+      headers: { "Authorization": "Token " + CONFIG.token, "Content-Type": "application/json", "Accept": "application/csv" },
+      body: JSON.stringify({ query: flux, type: "flux", dialect: { header: true, annotations: [], delimiter: ",", dateTimeFormat: "RFC3339" } })
+    });
+  } catch (e) {
+    throw new Error("Could not reach the data server. Check the internet connection, then try again.");
+  }
+  const text = await res.text();
+  if (!res.ok) {
+    let msg = text;
+    try { msg = JSON.parse(text).message || text; } catch (e) { /* plain text */ }
+    if (res.status === 401 || res.status === 403)
+      throw new Error("The data server refused access (" + res.status + "). Ask your system administrator to check the access settings of this page.");
+    throw new Error("Data server error " + res.status + ". Please try again in a moment.");
+  }
+  return text;
+}
+
+function fluxBase(m, start, stop, fieldNames) {
+  return 'from(bucket: ' + JSON.stringify(CONFIG.bucket) + ')\n' +
+    '  |> range(start: ' + new Date(start).toISOString() + ', stop: ' + new Date(stop).toISOString() + ')\n' +
+    '  |> filter(fn: (r) => ' + m.meas.map(x => 'r._measurement == "' + x + '"').join(" or ") + ')\n' +
+    '  |> filter(fn: (r) => r.' + m.tagKey + ' == ' + JSON.stringify(m.tag) + ')\n' +
+    '  |> filter(fn: (r) => ' + fieldNames.map(f => 'r._field == "' + f + '"').join(" or ") + ')\n';
+}
+const KEEP = '  |> keep(columns: ["_time", "_value", "_field"])';
+const HOURLY = fn => '  |> aggregateWindow(every: 1h, fn: ' + fn + ', createEmpty: false, timeSrc: "_start")\n';
+
+/* Query list for one meter */
+function meterJobs(m, range, paramKeys) {
+  const f = m.fields;
+  const pf = [...new Set(paramKeys.flatMap(k => PARAMS.find(p => p.key === k).fields))].filter(k => f[k]);
+  const meanF = [...new Set(["pTotal", ...pf])].filter(k => f[k]).map(k => f[k]);
+  const jobs = [];
+  const cnt = ["kwhImp", "kwhExp"].filter(k => f[k]).map(k => f[k]);
+  if (cnt.length) jobs.push({ m, kind: "cnt", flux: fluxBase(m, range.start - HOUR, range.stop, cnt) + HOURLY("max") + KEEP });
+  if (meanF.length) jobs.push({ m, kind: "mean", flux: fluxBase(m, range.start, range.stop, meanF) + HOURLY("mean") + KEEP });
+  if (pf.length) {
+    const names = pf.map(k => f[k]);
+    jobs.push({ m, kind: "hmax", flux: fluxBase(m, range.start, range.stop, names) + HOURLY("max") + KEEP });
+    jobs.push({ m, kind: "hmin", flux: fluxBase(m, range.start, range.stop, names) + HOURLY("min") + KEEP });
+    jobs.push({ m, kind: "peak", flux: fluxBase(m, range.start, range.stop, names) + '  |> max()\n' + KEEP });
+    jobs.push({ m, kind: "low",  flux: fluxBase(m, range.start, range.stop, names) + '  |> min()\n' + KEEP });
+  }
+  return jobs;
+}
+
+async function loadAll(meters, range, paramKeys, onProgress) {
+  const jobs = meters.flatMap(m => meterJobs(m, range, paramKeys));
+  const texts = new Array(jobs.length);
+  let next = 0, done = 0;
+  onProgress(0, jobs.length);
+  async function worker() {
+    while (next < jobs.length) {
+      const j = next++;
+      texts[j] = await influx(jobs[j].flux);
+      done++; onProgress(done, jobs.length);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(4, jobs.length) }, worker));
+  const raw = {};
+  jobs.forEach((job, k) => {
+    const r = raw[job.m.id] = raw[job.m.id] || {};
+    r[job.kind] = parseInfluxCsv(texts[k]);
+  });
+  const out = {};
+  meters.forEach(m => out[m.id] = processMeter(m, range, raw[m.id] || {}, paramKeys));
+  return out;
+}
+
+/* ================================================================
+   Calculation for one meter
+   ================================================================ */
+function seriesOf(rows, fieldName) {
+  const map = new Map();
+  for (const r of rows || []) if (r.field === fieldName) map.set(r.t, r.v);
+  return map;
+}
+
+/* Counter readings per hour (max) -> energy per hour. Readings that go down or jump more than
+   maxKwhPerHour are treated as wrong and skipped (the hour then uses the power estimate). */
+function counterDeltas(map, range) {
+  const out = new Map(); let prev = map.get(range.start - HOUR), total = 0, bad = 0;
+  for (let t = range.start; t < range.stop; t += HOUR) {
+    if (!map.has(t)) continue;
+    const v = map.get(t);
+    if (prev === undefined) { prev = v; out.set(t, { first: true }); continue; }
+    const d = v - prev;
+    if (d < 0 || d > CONFIG.maxKwhPerHour) { out.set(t, { bad: true }); bad++; continue; }
+    out.set(t, { kwh: d }); total += d; prev = v;
+  }
+  return { out, total, bad };
+}
+
+function processMeter(m, range, raw, paramKeys) {
+  const f = m.fields, sc = f.kw ? 1 : 0.001;
+  // Power estimate: average active power x hours covered (direction ignored)
+  const pMean = seriesOf(raw.mean, f.pTotal);
+  const estimate = t => {
+    if (!pMean.has(t)) return null;
+    const hrs = (Math.min(t + HOUR, range.stop) - Math.max(t, range.start)) / HOUR;
+    return Math.abs(pMean.get(t) * sc) * hrs;
+  };
+  // Energy counter: use the one (import or export) that counted more
+  let ctr = null;
+  ["kwhImp", "kwhExp"].forEach(k => {
+    if (!f[k]) return;
+    const c = counterDeltas(seriesOf(raw.cnt, f[k]), range);
+    if (c.total > 0.01 && (!ctr || c.total > ctr.total)) { ctr = c; ctr.key = k; }
+  });
+  const hours = [];
+  let fromCounter = 0, fromPower = 0, noData = 0;
+  for (let t = range.start; t < range.stop; t += HOUR) {
+    let kwh = null, src = null;
+    if (ctr) {
+      const c = ctr.out.get(t);
+      if (c && isNum(c.kwh)) { kwh = c.kwh; src = "counter"; }
+      else if (c || pMean.has(t)) { const e = estimate(t); if (e !== null) { kwh = e; src = "power"; } }
+    } else {
+      const e = estimate(t); if (e !== null) { kwh = e; src = "power"; }
+    }
+    if (src === "counter") fromCounter++; else if (src === "power") fromPower++; else noData++;
+    hours.push({ t, kwh, src });
+  }
+  const total = hours.reduce((s, h) => s + (h.kwh || 0), 0);
+  const method = ctr ? (fromPower ? "mixed" : "counter") : (fromPower ? "power" : "none");
+
+  // Electrical parameters
+  const params = {};
+  const fieldKeys = [...new Set(paramKeys.flatMap(k => PARAMS.find(p => p.key === k).fields))];
+  fieldKeys.forEach(k => {
+    if (!f[k]) { params[k] = null; return; }
+    const s = (k[0] === "p") ? sc : 1;
+    const scale = map => new Map([...map].map(([t, v]) => [t, v * s]));
+    const mean = scale(seriesOf(raw.mean, f[k])), hmax = scale(seriesOf(raw.hmax, f[k])), hmin = scale(seriesOf(raw.hmin, f[k]));
+    const pick = (rows, better) => (rows || []).filter(r => r.field === f[k])
+      .reduce((b, r) => (!b || better(r.v * s, b.v)) ? { v: r.v * s, t: r.t } : b, null);
+    const peak = pick(raw.peak, (a, b) => a > b), low = pick(raw.low, (a, b) => a < b);
+    const vals = [...mean.values()];
+    params[k] = vals.length ? { mean, hmax, hmin, peak, low, avg: vals.reduce((a, b) => a + b, 0) / vals.length } : null;
+  });
+  return { m, hours, total, method, ctrKey: ctr && ctr.key, badReadings: ctr ? ctr.bad : 0, fromCounter, fromPower, noData, params,
+           hasData: hours.some(h => h.src) };
+}
+
+/* Energy of one meter in the hour that contains time t */
+function hourOf(d, t) { const h = Math.floor(t / HOUR) * HOUR; return d.hours.find(x => x.t === h) || null; }
+
+/* ================================================================
+   Charts (SVG, so they print sharply)
+   ================================================================ */
+function niceScale(lo, hi) {
+  if (!(hi > lo)) { hi = lo + 1; }
+  const raw = (hi - lo) / 5, mag = Math.pow(10, Math.floor(Math.log10(raw))), n = raw / mag;
+  const step = (n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10) * mag;
+  return { bot: Math.floor(lo / step) * step, top: Math.ceil(hi / step) * step, step };
+}
+
+function columnChart(items, unitText) {   // items: {axis, tip, value, has, peak}
+  const W = 900, H = 300, ml = 66, mr = 12, mt = 22, mb = 42;
+  const pw = W - ml - mr, ph = H - mt - mb, n = items.length, slot = pw / Math.max(1, n), bw = Math.max(1, Math.min(slot * 0.72, 56));
+  const { top, step } = niceScale(0, Math.max(0, ...items.filter(x => x.has).map(x => x.value)));
+  let g = "";
+  for (let v = 0; v <= top + step / 2; v += step) {
+    const y = mt + ph - v / top * ph;
+    g += `<line class="gl" x1="${ml}" x2="${W - mr}" y1="${y.toFixed(1)}" y2="${y.toFixed(1)}"/><text class="ax" x="${ml - 8}" y="${(y + 4).toFixed(1)}" text-anchor="end">${short(v)}</text>`;
+  }
+  const every = Math.ceil(n / 12);
+  items.forEach((p, i) => {
+    const x = ml + i * slot + (slot - bw) / 2;
+    if (p.has) {
+      const h = Math.max(1, p.value / top * ph);
+      g += `<rect class="b${p.peak ? " peak" : ""}" x="${x.toFixed(1)}" y="${(mt + ph - h).toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="2"><title>${esc(p.tip)}</title></rect>`;
+      if (n <= 24) g += `<text class="vl" x="${(x + bw / 2).toFixed(1)}" y="${(mt + ph - h - 5).toFixed(1)}" text-anchor="middle">${short(p.value)}</text>`;
+    } else {
+      g += `<rect class="b empty" x="${x.toFixed(1)}" y="${mt}" width="${bw.toFixed(1)}" height="${ph}" rx="2"><title>${esc(p.tip)}</title></rect>`;
+    }
+    if (i % every === 0) g += `<text class="ax" x="${(x + bw / 2).toFixed(1)}" y="${H - mb + 18}" text-anchor="middle">${esc(p.axis)}</text>`;
+  });
+  g += `<text class="ax" x="${ml - 58}" y="${mt - 8}">${esc(unitText)}</text>`;
+  return `<svg class="colchart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Bar chart">${g}</svg>`;
+}
+
+function lineChart(axis, series, unit, mark) {  // series: {name, color, values[], dash}
+  const W = 900, H = 290, ml = 60, mr = 14, mt = 24, mb = 40;
+  const pw = W - ml - mr, ph = H - mt - mb, n = axis.length;
+  const all = series.flatMap(s => s.values).concat(mark && isNum(mark.v) ? [mark.v] : []).filter(isNum);
+  if (!all.length) return "";
+  let lo = Math.min(...all), hi = Math.max(...all);
+  if (lo > 0 && (hi - lo) / hi < 0.35) lo = lo - (hi - lo) * 0.3; else lo = Math.min(0, lo);
+  const sc = niceScale(lo, hi);
+  const X = i => ml + (n === 1 ? pw / 2 : i * pw / (n - 1));
+  const Y = v => mt + ph - (v - sc.bot) / (sc.top - sc.bot) * ph;
+  let g = "";
+  for (let v = sc.bot; v <= sc.top + sc.step / 2; v += sc.step)
+    g += `<line class="gl" x1="${ml}" x2="${W - mr}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}"/><text class="ax" x="${ml - 8}" y="${(Y(v) + 4).toFixed(1)}" text-anchor="end">${short(v)}</text>`;
+  const every = Math.ceil(n / 12);
+  axis.forEach((a, i) => { if (i % every === 0) g += `<text class="ax" x="${X(i).toFixed(1)}" y="${H - mb + 18}" text-anchor="middle">${esc(a)}</text>`; });
+  series.forEach(s => {
+    let d = "", pen = false;
+    s.values.forEach((v, i) => {
+      if (!isNum(v)) { pen = false; return; }
+      d += (pen ? "L" : "M") + X(i).toFixed(1) + " " + Y(v).toFixed(1) + " "; pen = true;
+    });
+    g += `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="${s.dash ? 1.3 : 2}" ${s.dash ? 'stroke-dasharray="5 4" opacity=".85"' : ""} stroke-linejoin="round"/>`;
+    if (n <= 60) s.values.forEach((v, i) => { if (isNum(v) && !s.dash) g += `<circle cx="${X(i).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="2.2" fill="${s.color}"><title>${esc(s.name + ", " + axis[i] + ": " + fmt(v, 2) + " " + unit)}</title></circle>`; });
+  });
+  if (mark && isNum(mark.v) && mark.i >= 0) {
+    const x = X(mark.i), y = Y(mark.v);
+    g += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="6" fill="none" stroke="#ff786e" stroke-width="2.5"/>` +
+         `<text class="pk" x="${Math.min(Math.max(x, ml + 60), W - mr - 60).toFixed(1)}" y="${Math.max(y - 11, 12).toFixed(1)}" text-anchor="middle">${esc(mark.text)}</text>`;
+  }
+  g += `<text class="ax" x="${ml - 52}" y="${mt - 9}">${esc(unit)}</text>`;
+  return `<svg class="lchart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Line chart">${g}</svg>`;
+}
+
+function donutChart(slices, total, centerTop, centerSub, fmtV) {
+  const R = 74, C = 2 * Math.PI * R;
+  let off = 0;
+  const rings = slices.map(s => {
+    const len = total > 0 ? s.value / total * C : 0;
+    const el = `<circle cx="100" cy="100" r="${R}" fill="none" stroke="${s.color}" stroke-width="36"
+      stroke-dasharray="${len.toFixed(2)} ${(C - len).toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}"
+      transform="rotate(-90 100 100)"><title>${esc(s.name)}: ${esc(fmtV(s.value))} (${pct(s.value / total)})</title></circle>`;
+    off += len; return el;
+  }).join("");
+  return `<svg class="donut" viewBox="0 0 200 200" role="img" aria-label="Pie chart">
+    <circle cx="100" cy="100" r="${R}" fill="none" stroke="var(--grid)" stroke-width="36"/>${rings}
+    <text class="c-total" x="100" y="100" text-anchor="middle">${esc(centerTop)}</text>
+    <text class="c-unit" x="100" y="117" text-anchor="middle">${esc(centerSub)}</text></svg>`;
+}
+
+/* ---------- Progress bar (same as the other reports) ---------- */
+function makeProgress(box) {
+  const fill = box.querySelector(".p-fill"), pctEl = box.querySelector(".p-pct");
+  const sub = box.querySelector(".p-sub"), title = box.querySelector(".p-title");
+  let shown = 0, cap = 0, timer = null, hideT = null;
+  function paint() { fill.style.width = shown.toFixed(1) + "%"; pctEl.textContent = Math.floor(shown) + "%"; box.setAttribute("aria-valuenow", String(Math.floor(shown))); }
+  function tick() { shown += Math.max(0, cap - shown) * 0.06; paint(); }
+  return {
+    start() { clearTimeout(hideT); clearInterval(timer); box.hidden = false; box.classList.add("busy"); box.classList.remove("done");
+      shown = 0; cap = 4; title.textContent = "Downloading data, please wait…"; sub.textContent = "Connecting to the data server"; paint(); timer = setInterval(tick, 80); },
+    step(done, total) { shown = Math.max(shown, 4 + 88 * done / total); cap = Math.min(92, 4 + 88 * (done + 0.9) / total);
+      sub.textContent = done ? "Downloaded " + done + " of " + total + " data blocks" : "Requesting " + total + " data blocks"; paint(); },
+    calc() { shown = Math.max(shown, 92); cap = 98; title.textContent = "Preparing report…"; sub.textContent = "Calculating energy, cost and peaks"; paint(); },
+    finish() { clearInterval(timer); shown = 100; paint(); box.classList.remove("busy"); box.classList.add("done");
+      title.textContent = "Report ready"; sub.textContent = "All data downloaded"; hideT = setTimeout(() => { box.hidden = true; }, 2500); },
+    hide() { clearInterval(timer); box.hidden = true; }
+  };
+}
+
+/* ================================================================
+   Section (one per tab)
+   ================================================================ */
+function buildSection(kind) {
+  const S = SECTIONS[kind];
+  const meters = METERS.filter(m => m.group === kind);
+  const el = document.getElementById("sec-" + kind);
+  const today = toDateStr(Date.now());
+  el.innerHTML = `
+    <p class="intro">${esc(S.intro)}</p>
+    <div class="controls">
+      <fieldset class="panel">
+        <legend>PERIOD</legend>
+        <label>Period
+          <select class="f-preset">
+            <option value="today">Today</option>
+            <option value="yesterday">Yesterday</option>
+            <option value="last24">Last 24 hours</option>
+            <option value="last7">Last 7 days</option>
+            <option value="thismonth">This month</option>
+            <option value="lastmonth">Last month</option>
+            <option value="last3m">Last 3 months</option>
+            <option value="custom">Choose dates and times</option>
+          </select>
+        </label>
+        <div class="custom four" hidden>
+          <label>From date <input type="date" class="f-fd" value="${today}" max="${today}"></label>
+          <label>From time <input type="time" class="f-ft" value="00:00" step="3600"></label>
+          <label>To date <input type="date" class="f-td" value="${today}" max="${today}"></label>
+          <label>To time <input type="time" class="f-tt" value="23:59"></label>
+        </div>
+        <label>Show cost per
+          <select class="f-group">
+            <option value="hour">Hour</option>
+            <option value="day">Day</option>
+            <option value="month">Month</option>
+          </select>
+        </label>
+        <p class="range-text"></p>
+      </fieldset>
+
+      <fieldset class="panel">
+        <legend>COST</legend>
+        <div class="rate-row">
+          <label>Currency <input type="text" class="f-cur" maxlength="5" value="${esc(savedCur())}"></label>
+          <label>Per unit cost (per kWh) <input type="number" class="f-rate rate-big" min="0" step="0.01" inputmode="decimal" placeholder="e.g. 52.50" value="${esc(savedRate())}"></label>
+        </div>
+        <p class="hint-s">Every cost in the report is energy (kWh) × this per unit cost. The value is saved in this browser and shared by both tabs.</p>
+      </fieldset>
+
+      <fieldset class="panel">
+        <legend>PARAMETERS</legend>
+        <label class="chk locked"><input type="checkbox" checked disabled> Energy (kWh) and cost <small>always included</small></label>
+        ${PARAMS.map(p => `<label class="chk"><input type="checkbox" class="f-param" value="${p.key}"${p.def ? " checked" : ""}> ${esc(p.label)} <small>${p.unit}</small></label>`).join("")}
+      </fieldset>
+
+      <fieldset class="panel wide">
+        <legend>${S.legend}</legend>
+        <div class="dev-tools">
+          <button type="button" class="linkbtn sel-all">Select all</button>
+          <button type="button" class="linkbtn sel-none">Clear</button>
+          <span class="dev-count"></span>
+        </div>
+        <div class="dev-list">
+          ${meters.map(m => `<label><input type="checkbox" value="${m.id}" checked> ${esc(m.label)}</label>`).join("")}
+        </div>
+      </fieldset>
+    </div>
+    <div class="actions">
+      <button type="button" class="btn primary run">CREATE REPORT</button>
+      <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-label="Download progress" hidden>
+        <div class="p-top"><span class="p-title">Downloading data, please wait…</span><span class="p-pct">0%</span></div>
+        <div class="p-track"><div class="p-fill"></div></div>
+        <div class="p-sub">Connecting to the data server</div>
+      </div>
+      <div class="banner" role="alert" hidden><strong class="b-head"></strong><span class="b-text"></span></div>
+      <span class="status" role="status" aria-live="polite"></span>
+    </div>
+    <div class="results panel"></div>`;
+
+  const $ = s => el.querySelector(s);
+  const boxes = [...el.querySelectorAll(".dev-list input")];
+  const state = { metric: "cost", paramMeter: {} };
+
+  function selection() {
+    return { preset: $(".f-preset").value, fromDate: $(".f-fd").value, fromTime: $(".f-ft").value, toDate: $(".f-td").value, toTime: $(".f-tt").value };
+  }
+  function updateRangeText(setGroup) {
+    $(".custom").hidden = $(".f-preset").value !== "custom";
+    try {
+      const r = rangeFor(selection(), Date.now());
+      if (setGroup) $(".f-group").value = defaultGroup(r);
+      $(".range-text").textContent = "Period: " + fmtRange(r);
+    } catch (e) { $(".range-text").textContent = e.message; }
+  }
+  function updateCount() { $(".dev-count").textContent = boxes.filter(b => b.checked).length + " of " + boxes.length + " selected"; }
+  $(".f-preset").addEventListener("change", () => updateRangeText(true));
+  [".f-fd", ".f-ft", ".f-td", ".f-tt"].forEach(s => ["change", "input"].forEach(ev => $(s).addEventListener(ev, () => updateRangeText(true))));
+  $(".sel-all").addEventListener("click", () => { boxes.forEach(b => b.checked = true); updateCount(); });
+  $(".sel-none").addEventListener("click", () => { boxes.forEach(b => b.checked = false); updateCount(); });
+  boxes.forEach(b => b.addEventListener("change", updateCount));
+  [".f-rate", ".f-cur"].forEach(s => $(s).addEventListener("input", () => {
+    saveRate($(".f-rate").value, $(".f-cur").value.trim() || CONFIG.currency);
+    document.querySelectorAll(".f-rate").forEach(x => { if (x !== $(".f-rate")) x.value = $(".f-rate").value; });
+    document.querySelectorAll(".f-cur").forEach(x => { if (x !== $(".f-cur")) x.value = $(".f-cur").value; });
+  }));
+
+  const prog = makeProgress($(".progress"));
+  function showError(head, text) { $(".b-head").textContent = head; $(".b-text").textContent = text; $(".banner").hidden = false; }
+
+  $(".run").addEventListener("click", async () => {
+    $(".banner").hidden = true; $(".status").textContent = "";
+    const ids = boxes.filter(b => b.checked).map(b => b.value);
+    const paramKeys = [...el.querySelectorAll(".f-param")].filter(b => b.checked).map(b => b.value);
+    const rate = Number($(".f-rate").value), cur = $(".f-cur").value.trim() || CONFIG.currency;
+    let range, group;
+    try {
+      range = rangeFor(selection(), Date.now());
+      group = $(".f-group").value;
+      if (!(rate > 0)) throw new Error("Enter the per unit cost (the price of 1 kWh) in the Cost box.");
+      if (!ids.length) throw new Error("Select at least one " + S.noun + ".");
+      if (group === "hour" && range.stop - range.start > 62 * DAY) throw new Error("Cost per hour works for up to 62 days. Choose cost per day or per month for longer periods.");
+    } catch (e) { showError("Check the selection.", e.message); return; }
+    $(".run").disabled = true;
+    prog.start();
+    try {
+      const sel = METERS.filter(m => ids.includes(m.id));
+      const data = await loadAll(sel, range, paramKeys, (d, t) => prog.step(d, t));
+      prog.calc();
+      await new Promise(r => requestAnimationFrame(() => setTimeout(r, 120)));
+      Object.assign(state, { data, range, group, rate, cur, meters: sel, paramKeys, generated: Date.now(), paramMeter: {} });
+      render();
+      prog.finish();
+      $(".status").textContent = "Updated " + fmtTime(state.generated) + " PKT";
+    } catch (e) {
+      prog.hide();
+      showError("Could not create the report.", e.message);
+    } finally { $(".run").disabled = false; }
+  });
+
+  /* ---------- Report ---------- */
+  function compute() {
+    const { data, range, group, rate, meters } = state;
+    const list = meters.map(m => data[m.id]);
+    const multiDay = dayStart(range.start) !== dayStart(range.stop - 1);
+    const bks = buckets(range, group).map(b => {
+      let kwh = 0, has = false; const per = {};
+      list.forEach(d => {
+        let k = 0;
+        d.hours.forEach(h => { if (h.t >= b.s && h.t < b.e && h.src) { k += h.kwh; has = true; } });
+        per[d.m.id] = k; kwh += k;
+      });
+      return { ...b, kwh, cost: kwh * rate, has, per, label: bucketLabel(b, group, multiDay), axis: axisLabel(b, group, multiDay) };
+    });
+    const total = list.reduce((s, d) => s + d.total, 0);
+    const withData = bks.filter(b => b.has);
+    const peak = withData.reduce((p, b) => (!p || b.kwh > p.kwh) ? b : p, null);
+    const lowest = withData.reduce((p, b) => (!p || b.kwh < p.kwh) ? b : p, null);
+    bks.forEach(b => b.peak = b === peak);
+    const ranked = list.filter(d => d.hasData).sort((a, b) => b.total - a.total);
+    ranked.forEach((d, i) => d.color = PALETTE[i % PALETTE.length]);
+    const blocks = DAY_BLOCKS.map(([name, a, z, color]) => ({ name: name + " (" + pad(a) + ":00–" + pad(z) + ":00)", short: name.toLowerCase(), hours: pad(a) + ":00 to " + pad(z) + ":00", color,
+      value: list.reduce((s, d) => s + d.hours.filter(h => h.src && P(h.t).getUTCHours() >= a && P(h.t).getUTCHours() < z).reduce((x, h) => x + h.kwh, 0), 0) }));
+    return { list, bks, total, cost: total * rate, withData, peak, lowest, ranked, blocks, multiDay, missing: list.filter(d => !d.hasData) };
+  }
+
+  function render() {
+    const { range, group, rate, cur, meters } = state;
+    const C = state.c = compute();
+    const many = meters.length > 1;
+    const gw = GROUP_WORD[group];
+    const head = `
+      <div class="rep-head">
+        <div class="rep-id">
+          <span class="rep-logo-tile"><img class="rep-logo" src="${document.getElementById("brandLogo").src}" alt="Toyo Packaging"></span>
+          <div>
+            <h3>${esc(S.title)} energy and cost report${many ? "" : ": " + esc(meters[0].label)}</h3>
+            <p class="meta"><b>Period:</b> ${esc(fmtRange(range))}<br>
+              <b>${many ? "Meters" : "Meter"}:</b> ${many ? esc(meters.map(m => m.label).join(", ")) : esc(meters[0].label + " (" + meters[0].info + ")")}<br>
+              <b>Per unit cost:</b> ${esc(cur)} ${fmt(rate, 2)} per kWh &nbsp;&nbsp;<b>Cost per:</b> ${gw} &nbsp;&nbsp;<b>Generated:</b> ${esc(fmtDateTime(state.generated))} PKT</p>
+          </div>
+        </div>
+        <div class="rep-tools">
+          <button type="button" class="btn f-print">PRINT REPORT</button>
+          <button type="button" class="btn f-csv">DOWNLOAD CSV</button>
+        </div>
+      </div>`;
+
+    let body;
+    if (!C.ranked.length) {
+      body = `<p>No readings in this period for the selected ${S.nouns}. Choose another period, or check that the logger was running.</p>`;
+    } else {
+      const avg = C.withData.length ? C.total / C.withData.length : 0;
+      const kpis = `<div class="kpis">
+        <div class="kpi main"><div class="k">Total energy</div><div class="v">${fmtKwh(C.total)}<small>kWh</small></div>
+          <div class="s">${C.ranked.length} of ${meters.length} ${many ? S.nouns : S.noun} with readings</div></div>
+        <div class="kpi cost"><div class="k">Total cost</div><div class="v">${esc(money(C.cost, cur))}</div>
+          <div class="s">At ${esc(cur)} ${fmt(rate, 2)} per kWh</div></div>
+        <div class="kpi" style="--c:${PALETTE[2]}"><div class="k">Average per ${gw}</div><div class="v">${esc(money(avg * rate, cur))}</div>
+          <div class="s">${fmtKwh(avg)} kWh, over ${C.withData.length} ${gw}${C.withData.length === 1 ? "" : "s"} with readings</div></div>
+        <div class="kpi peak"><div class="k">Highest ${gw}</div><div class="v">${esc(money(C.peak.cost, cur))}</div>
+          <div class="s">${fmtKwh(C.peak.kwh)} kWh, ${esc(C.peak.label)}</div></div>
+      </div>`;
+
+      const pieTitle = many ? "COST BY " + S.noun.toUpperCase() : "COST BY TIME OF DAY";
+      const slices = many ? C.ranked.filter(d => d.total > 0).map(d => ({ name: d.m.label, value: d.total * rate, color: d.color }))
+                          : C.blocks.filter(b => b.value > 0).map(b => ({ name: b.name, value: b.value * rate, color: b.color }));
+      const legend = slices.map(s => `<li><span class="dot" style="--c:${s.color}"></span><span>${esc(s.name)}<br><small style="color:var(--muted)">${esc(money(s.value, cur))}, ${fmtKwh(s.value / rate)} kWh</small></span><span class="pct">${pct(C.cost > 0 ? s.value / C.cost : 0)}</span></li>`).join("");
+
+      body = kpis + `
+        <div class="card summary"><h2>SUMMARY</h2><div class="sum-text"></div></div>
+        <div class="charts">
+          <div class="card"><h2>${pieTitle}</h2><p class="sub">Share of the total cost</p>
+            ${C.cost > 0 ? `<div class="donut-wrap">${donutChart(slices, C.cost, short(C.cost), cur + " total", v => money(v, cur))}<ul class="legend">${legend}</ul></div>` : "<p>No energy recorded in this period.</p>"}
+          </div>
+          <div class="card">
+            <div class="card-head"><h2>${state.metric === "cost" ? "COST" : "ENERGY"} PER ${gw.toUpperCase()}</h2></div>
+            <div class="card-tools"><label>Show <select class="f-metric"><option value="cost">Cost (${esc(cur)})</option><option value="kwh">Energy (kWh)</option></select></label>
+              <span class="print-only"></span></div>
+            <div class="col-chart"></div>
+            <p class="note"><span class="dot" style="--c:var(--red)"></span> highest ${gw} &nbsp;&nbsp; <span class="dot" style="--c:var(--bar-empty)"></span> no readings</p>
+          </div>
+        </div>
+        ${periodTable(C)}
+        ${many ? meterTable(C) : ""}
+        ${state.paramKeys.length ? `<h2 class="sec-title">ELECTRICAL PARAMETERS</h2>` + state.paramKeys.map(k => `<div class="card param" data-param="${k}"></div>`).join("") : ""}
+        <div class="card explain" style="margin-top:16px"><h2>HOW THIS REPORT IS CALCULATED</h2>${explanation(C)}</div>`;
+    }
+    $(".results").innerHTML = head + `<div class="rep-body">${body}
+      <p class="rep-foot">Toyo Packaging, Advanced Energy Management System. Source: Toyo energy cloud. All times PKT.</p></div>`;
+    $(".f-print").addEventListener("click", () => window.print());
+    $(".f-csv").addEventListener("click", downloadCsv);
+    if (!C.ranked.length) return;
+    const met = $(".f-metric"); met.value = state.metric;
+    met.addEventListener("change", () => { state.metric = met.value; drawColumns(); });
+    drawColumns();
+    state.paramKeys.forEach(renderParam);
+    el.querySelector(".sum-text").innerHTML = summary(C);
+  }
+
+  function drawColumns() {
+    const C = state.c, cur = state.cur, gw = GROUP_WORD[state.group];
+    const cost = state.metric === "cost";
+    el.querySelector(".card-head h2").textContent = (cost ? "COST" : "ENERGY") + " PER " + gw.toUpperCase();
+    el.querySelector(".card-tools .print-only").textContent = cost ? "In " + cur : "In kWh";
+    el.querySelector(".col-chart").innerHTML = columnChart(C.bks.map(b => ({
+      axis: b.axis, has: b.has, peak: b.peak, value: cost ? b.cost : b.kwh,
+      tip: b.label + ": " + (b.has ? fmtKwh(b.kwh) + " kWh, " + money(b.cost, cur) : "no readings")
+    })), cost ? cur : "kWh");
+  }
+
+  function periodTable(C) {
+    const { cur, group } = state;
+    const gw = GROUP_WORD[group];
+    const showPer = state.meters.length > 1 && state.meters.length <= 6;
+    const rows = C.bks.map(b => `<tr${b.peak ? ' class="peak"' : ""}>
+        <td>${esc(b.label)}${b.peak ? '<span class="tag-peak">HIGHEST</span>' : ""}</td>
+        <td class="n kwh">${b.has ? fmtKwh(b.kwh) : "–"}</td>
+        <td class="n cost">${b.has ? esc(money(b.cost, cur)) : "–"}</td>
+        <td class="n">${b.has && C.total > 0 ? pct(b.kwh / C.total) + `<span class="share"><i style="width:${(b.kwh / C.total * 100).toFixed(1)}%;--c:var(--amber)"></i></span>` : "–"}</td>
+        ${showPer ? state.meters.map(m => `<td class="n">${b.has ? fmtKwh(b.per[m.id]) : "–"}</td>`).join("") : ""}
+        <td class="flag">${b.has ? "" : "No readings"}</td></tr>`).join("");
+    return `<div class="card" style="margin-top:16px"><h2>COST PER ${gw.toUpperCase()}</h2>
+      <p class="sub">Energy and cost of every ${gw}. The highest ${gw} is marked.${showPer ? " Meter columns are in kWh." : ""}</p>
+      <div class="tablebox" style="margin-top:0"><table>
+        <thead><tr><th>${gw === "hour" ? "Hour (PKT)" : gw === "day" ? "Day" : "Month"}</th><th class="n">Energy (kWh)</th><th class="n">Cost (${esc(cur)})</th><th class="n">Share</th>
+          ${showPer ? state.meters.map(m => `<th class="n">${esc(m.label)}</th>`).join("") : ""}<th>Note</th></tr></thead>
+        <tbody>${rows}<tr class="sum"><td>Total</td><td class="n">${fmtKwh(C.total)}</td><td class="n">${esc(money(C.cost, cur))}</td><td class="n">100%</td>
+          ${showPer ? state.meters.map(m => `<td class="n">${fmtKwh(state.data[m.id].total)}</td>`).join("") : ""}<td></td></tr></tbody>
+      </table></div></div>`;
+  }
+
+  function methodNote(d) {
+    const parts = [];
+    if (!d.hasData) return "No readings in this period";
+    if (d.method === "power") parts.push("Calculated from active power (energy counter not counting)");
+    else if (d.method === "mixed") parts.push(d.fromPower + " hour(s) calculated from active power");
+    if (d.badReadings) parts.push(d.badReadings + " wrong counter reading(s) skipped");
+    const gaps = d.noData; if (gaps) parts.push(gaps + " hour(s) without readings");
+    return parts.join(". ");
+  }
+
+  function meterTable(C) {
+    const { cur, rate } = state;
+    const rows = [...C.ranked, ...C.missing].map(d => `<tr>
+      <td><span class="dot" style="--c:${d.color || "var(--grid)"}"></span>&nbsp; ${esc(d.m.label)}</td>
+      <td class="n kwh">${d.hasData ? fmtKwh(d.total) : "–"}</td><td class="n cost">${d.hasData ? esc(money(d.total * rate, cur)) : "–"}</td>
+      <td class="n">${d.hasData && C.total > 0 ? pct(d.total / C.total) + `<span class="share"><i style="width:${(d.total / C.total * 100).toFixed(1)}%;--c:${d.color}"></i></span>` : "–"}</td>
+      <td class="flag">${esc(methodNote(d))}</td></tr>`).join("");
+    return `<div class="card" style="margin-top:16px"><h2>COST BY ${S.noun.toUpperCase()}</h2><p class="sub">Highest first</p>
+      <div class="tablebox" style="margin-top:0"><table>
+      <thead><tr><th>${S.noun[0].toUpperCase() + S.noun.slice(1)}</th><th class="n">Energy (kWh)</th><th class="n">Cost (${esc(cur)})</th><th class="n">Share</th><th>Note</th></tr></thead>
+      <tbody>${rows}<tr class="sum"><td>Total</td><td class="n">${fmtKwh(C.total)}</td><td class="n">${esc(money(C.cost, cur))}</td><td class="n">100%</td><td></td></tr></tbody>
+      </table></div></div>`;
+  }
+
+  /* Highest (or lowest) reading of one parameter over all selected meters */
+  function extreme(p, which) {
+    let best = null;
+    state.meters.forEach(m => p.fields.forEach(k => {
+      const s = state.data[m.id].params[k]; if (!s || !s[which]) return;
+      const v = s[which].v;
+      if (!best || (which === "peak" ? v > best.v : v < best.v)) best = { v, t: s[which].t, m, k };
+    }));
+    return best;
+  }
+
+  function hlBox(p, x, kindText, cls) {
+    const { cur, rate } = state;
+    const d = state.data[x.m.id], h = hourOf(d, x.t);
+    const hs = Math.floor(x.t / HOUR) * HOUR;
+    return `<div class="hl${cls ? " " + cls : ""}">
+      <div><div class="k">${kindText}</div><div class="v">${fmt(x.v, p.unit === "V" ? 1 : 2)}<small>${p.unit}</small></div>
+        <div class="s">${esc(x.m.label)}${p.fields.length > 1 ? ", phase " + PHASE[x.k] : ""}</div></div>
+      <div><div class="k">Date and time</div><div class="v">${fmtTime(x.t)}</div><div class="s">${esc(fmtDate(x.t))} PKT</div></div>
+      <div><div class="k">Time frame</div><div class="v">${fmtTime(hs)}–${endTime(hs + HOUR)}</div><div class="s">The hour of this reading</div></div>
+      <div><div class="k">Energy in that hour</div><div class="v">${h && h.src ? fmtKwh(h.kwh) : "–"}<small>kWh</small></div><div class="s">${esc(x.m.label)}</div></div>
+      <div><div class="k">Cost in that hour</div><div class="v">${h && h.src ? esc(money(h.kwh * rate, cur)) : "–"}</div><div class="s">At ${esc(cur)} ${fmt(rate, 2)} per kWh</div></div>
+    </div>`;
+  }
+
+  function renderParam(key) {
+    const p = PARAMS.find(x => x.key === key);
+    const box = el.querySelector(`.param[data-param="${key}"]`);
+    const { cur, rate, meters, group } = state;
+    const C = state.c, gw = GROUP_WORD[group];
+    const avail = meters.filter(m => p.fields.some(k => state.data[m.id].params[k]));
+    if (!avail.length) {
+      box.innerHTML = `<h2>${esc(p.label.toUpperCase())}</h2><p class="sub">Not in the database for the selected ${S.nouns}${meters.some(m => p.fields.some(k => !m.fields[k])) ? " (some meters do not log this value)" : ""}.</p>`;
+      return;
+    }
+    const pk = extreme(p, "peak"), lo = p.low ? extreme(p, "low") : null;
+    const chartMeterId = state.paramMeter[key] || (pk ? pk.m.id : avail[0].id);
+    const cm = avail.find(m => m.id === chartMeterId) || avail[0];
+    const d = state.data[cm.id];
+    // values per bucket: average of hourly averages, and highest hourly maximum
+    const fieldsHere = p.fields.filter(k => d.params[k]);
+    const series = [];
+    let mark = null;
+    fieldsHere.forEach(k => {
+      const s = d.params[k];
+      const avgV = C.bks.map(b => { const v = [...s.mean].filter(([t]) => t >= b.s && t < b.e).map(([, v]) => v); return v.length ? v.reduce((a, c) => a + c, 0) / v.length : null; });
+      const maxV = C.bks.map(b => { const v = [...s.hmax].filter(([t]) => t >= b.s && t < b.e).map(([, v]) => v); return v.length ? Math.max(...v) : null; });
+      const name = p.fields.length > 1 ? PHASE[k] : p.label;
+      series.push({ name: name + " average", color: PHASE_COLORS[k], values: avgV });
+      if (fieldsHere.length === 1 || group !== "hour") series.push({ name: name + " highest", color: PHASE_COLORS[k], values: maxV, dash: true });
+      if (s.peak && (!mark || s.peak.v > mark.v)) {
+        const i = C.bks.findIndex(b => s.peak.t >= b.s && s.peak.t < b.e);
+        mark = { i, v: s.peak.v, text: "Highest " + fmt(s.peak.v, p.unit === "V" ? 1 : 2) + " " + p.unit + (p.fields.length > 1 ? " (" + PHASE[k] + ")" : "") };
+      }
+    });
+    const legendLine = series.map(s => `<span><i class="${s.dash ? "dash" : ""}" style="--c:${s.color}"></i>${esc(s.name)}</span>`).join("");
+    const rows = avail.flatMap(m => p.fields.map(k => {
+      const s = state.data[m.id].params[k];
+      if (!s) return `<tr><td>${esc(m.label)}</td><td>${PHASE[k]}</td><td colspan="7" class="flag">Not logged</td></tr>`;
+      const h = s.peak ? hourOf(state.data[m.id], s.peak.t) : null;
+      const isTop = pk && pk.m.id === m.id && pk.k === k;
+      const dec = p.unit === "V" ? 1 : 2;
+      return `<tr${isTop ? ' class="peak"' : ""}><td>${esc(m.label)}</td><td>${PHASE[k]}</td>
+        <td class="n kwh">${s.peak ? fmt(s.peak.v, dec) : "–"}${isTop ? '<span class="tag-peak">HIGHEST</span>' : ""}</td>
+        <td>${s.peak ? esc(fmtDateTime(s.peak.t)) : "–"}</td>
+        <td class="n">${s.low ? fmt(s.low.v, dec) : "–"}</td><td>${s.low ? esc(fmtDateTime(s.low.t)) : "–"}</td>
+        <td class="n">${fmt(s.avg, dec)}</td>
+        <td class="n">${h && h.src ? fmtKwh(h.kwh) : "–"}</td><td class="n cost">${h && h.src ? esc(money(h.kwh * rate, cur)) : "–"}</td></tr>`;
+    })).join("");
+
+    box.innerHTML = `
+      <div class="card-head"><h2>${esc(p.label.toUpperCase())} (${p.unit})</h2></div>
+      <p class="sub">Highest reading in the period, with the energy and cost of that hour</p>
+      ${pk ? hlBox(p, pk, "Highest value") : ""}
+      ${lo ? hlBox(p, lo, "Lowest value", "low") : ""}
+      <div class="card-tools">
+        ${avail.length > 1 ? `<label>Chart for <select class="f-pm">${avail.map(m => `<option value="${m.id}"${m.id === cm.id ? " selected" : ""}>${esc(m.label)}</option>`).join("")}</select></label>` : ""}
+        <span class="print-only">Chart: ${esc(cm.label)}</span>
+        <span class="hint-s" style="margin:0">Line: average per ${gw}. Dashed: highest per ${gw}.</span>
+      </div>
+      ${lineChart(C.bks.map(b => b.axis), series, p.unit, mark)}
+      <div class="legend-inline">${legendLine}<span><i style="--c:var(--red)"></i>highest reading</span></div>
+      <div class="tablebox"><table>
+        <thead><tr><th>${S.noun[0].toUpperCase() + S.noun.slice(1)}</th><th>Phase</th><th class="n">Highest (${p.unit})</th><th>Time of highest</th>
+          <th class="n">Lowest (${p.unit})</th><th>Time of lowest</th><th class="n">Average (${p.unit})</th>
+          <th class="n">kWh in hour of highest</th><th class="n">Cost in hour of highest</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div>`;
+    const sel = box.querySelector(".f-pm");
+    if (sel) sel.addEventListener("change", () => { state.paramMeter[key] = sel.value; renderParam(key); });
+  }
+
+  /* ---------- Summary and explanation ---------- */
+  function summary(C) {
+    const { cur, rate, range, meters, group } = state;
+    const gw = GROUP_WORD[group];
+    const many = meters.length > 1;
+    const who = many ? "The " + meters.length + " selected " + S.nouns : esc(meters[0].label);
+    const out = [];
+    out.push(`${who} used <b>${fmtKwh(C.total)} kWh</b> from ${esc(fmtRange(range))}. At ${esc(cur)} ${fmt(rate, 2)} per kWh this costs <b>${esc(money(C.cost, cur))}</b>.`);
+    const hrs = C.list[0].hours.length;
+    if (C.withData.length > 1) {
+      const avg = C.total / C.withData.length;
+      out.push(`On average that is ${fmtKwh(avg)} kWh and ${esc(money(avg * rate, cur))} per ${gw}${group !== "hour" ? `, or ${esc(money(C.cost / hrs, cur))} per hour` : ""}.`);
+      out.push(`The most expensive ${gw} was <b>${esc(C.peak.label)}</b>: ${fmtKwh(C.peak.kwh)} kWh costing <b>${esc(money(C.peak.cost, cur))}</b>, ${pct(C.total > 0 ? C.peak.kwh / C.total : 0)} of the total cost. ` +
+        `The lowest was ${esc(C.lowest.label)} with ${fmtKwh(C.lowest.kwh)} kWh (${esc(money(C.lowest.cost, cur))}).`);
+    }
+    if (many && C.ranked.length > 1) {
+      const t = C.ranked[0];
+      out.push(`<b>${esc(t.m.label)}</b> had the largest share: ${fmtKwh(t.total)} kWh, ${esc(money(t.total * rate, cur))}, ${pct(t.total / C.total)} of the cost. ` +
+        (C.ranked.length > 2 ? `Next were ${C.ranked.slice(1, 3).map(d => esc(d.m.label) + " (" + pct(d.total / C.total) + ")").join(" and ")}.` : ""));
+    }
+    const topBlock = [...C.blocks].sort((a, b) => b.value - a.value)[0];
+    if (topBlock.value > 0 && hrs >= 12) out.push(`Most energy was used in the ${topBlock.short}, ${topBlock.hours}: ${pct(topBlock.value / C.total)} of the total, ${esc(money(topBlock.value * rate, cur))}.`);
+
+    state.paramKeys.forEach(key => {
+      const p = PARAMS.find(x => x.key === key);
+      const pk = extreme(p, "peak"); if (!pk) return;
+      const h = hourOf(state.data[pk.m.id], pk.t), hs = Math.floor(pk.t / HOUR) * HOUR;
+      const dec = p.unit === "V" ? 1 : 2;
+      const where = (many ? esc(pk.m.label) : "") + (p.fields.length > 1 ? (many ? ", " : "") + "phase " + PHASE[pk.k] : "");
+      let s = `${esc(p.label)} was highest at <b>${fmt(pk.v, dec)} ${p.unit}</b> on ${esc(fmtDate(pk.t))} at ${fmtTime(pk.t)}${where ? " (" + where + ")" : ""}.`;
+      if (h && h.src && p.unit !== "V") s += ` In the hour ${fmtTime(hs)}–${endTime(hs + HOUR)} ${many ? "this " + S.noun : "it"} used ${fmtKwh(h.kwh)} kWh, costing ${esc(money(h.kwh * rate, cur))}.`;
+      if (key === "iPhase") {
+        state.meters.forEach(m => {
+          const a = ["i1", "i2", "i3"].map(k => state.data[m.id].params[k] && state.data[m.id].params[k].avg);
+          if (a.every(isNum) && Math.max(...a) > 2) {
+            const mean = (a[0] + a[1] + a[2]) / 3, dev = Math.max(...a.map(x => Math.abs(x - mean))) / mean;
+            if (dev > 0.1) s += ` <span class="warn">Phase currents of ${esc(m.label)} are unbalanced: on average L1 ${a[0].toFixed(1)} A, L2 ${a[1].toFixed(1)} A, L3 ${a[2].toFixed(1)} A (${pct(dev)} away from the average).</span>`;
+          }
+        });
+      }
+      if (key === "vPhase") {
+        const lo = extreme(p, "low");
+        if (lo) {
+          s += ` The lowest voltage was ${fmt(lo.v, 1)} V on ${esc(fmtDateTime(lo.t))}${many ? " (" + esc(lo.m.label) + ")" : ""}.`;
+          if (pk.v > 253 || lo.v < 207) s += ` <span class="warn">This is outside the normal 230 V ±10% range (207 V to 253 V).</span>`;
+          else s += " All readings stayed within the normal 230 V ±10% range.";
+        }
+      }
+      out.push(s);
+    });
+
+    const calc = C.list.filter(d => d.method === "power").map(d => esc(d.m.label));
+    if (calc.length) out.push(`<span class="warn">Energy of ${calc.join(", ")} was calculated from active power, because ${calc.length > 1 ? "their energy counters" : "its energy counter"} did not count in this period.</span>`);
+    const empty = C.bks.length - C.withData.length;
+    if (empty) out.push(`<span class="warn">${empty} ${gw}${empty > 1 ? "s" : ""} had no readings from any selected ${S.noun}.</span>`);
+    if (C.missing.length) out.push(`<span class="warn">No readings at all from ${C.missing.map(d => esc(d.m.label)).join(", ")}.</span>`);
+    return out.map(x => `<p>${x}</p>`).join("");
+  }
+
+  function explanation(C) {
+    const { cur, rate } = state;
+    const methods = C.list.filter(d => d.hasData);
+    const ctr = methods.filter(d => d.method !== "power").map(d => esc(d.m.label));
+    const pw = methods.filter(d => d.method === "power").map(d => esc(d.m.label));
+    return `
+      <p><b>Energy (kWh).</b> For every hour, energy is the increase of the meter's energy counter in that hour${ctr.length ? ` (used for ${ctr.join(", ")})` : ""}. ` +
+      `Where a meter has no counter, the counter does not count, or a reading is clearly wrong (it goes down or jumps more than ${fmt(CONFIG.maxKwhPerHour, 0)} kWh in an hour), ` +
+      `the energy is calculated from the average active power in that hour: average kW × 1 hour${pw.length ? ` (used for ${pw.join(", ")})` : ""}. ` +
+      `If a meter sent no readings for some time, the energy used during that gap appears in the next hour with readings.</p>
+      <p><b>Cost.</b> Cost = energy in kWh × the per unit cost, here ${esc(cur)} ${fmt(rate, 2)} per kWh. This is a flat rate. It does not include fixed charges, taxes, or separate peak and off-peak rates.</p>
+      <p><b>Cost per ${GROUP_WORD[state.group]}.</b> The hourly energy is added up for each ${GROUP_WORD[state.group]} (by Pakistan time). Share is that ${GROUP_WORD[state.group]}'s part of the total. The ${GROUP_WORD[state.group]} with the most energy, and so the highest cost, is marked in red.</p>
+      ${state.paramKeys.length ? `<p><b>Electrical parameters.</b> “Highest” and “lowest” are single readings stored by the logger, with their exact time. The time frame is the clock hour that contains this reading, and its energy and cost are that meter's energy and cost in that hour. “Average” is the average of the hourly averages. In the chart the line is the average per ${GROUP_WORD[state.group]} and the dashed line is the highest hourly value in each ${GROUP_WORD[state.group]}.</p>` : ""}
+      ${S.noun === "meter" && state.meters.length > 1 ? "<p><b>Totals.</b> The total adds up the selected meters. If one selected meter feeds another selected meter, that energy is counted twice.</p>" : ""}`;
+  }
+
+  /* ---------- CSV ---------- */
+  function downloadCsv() {
+    const { range, cur, rate, meters, group } = state, C = state.c;
+    const q = s => '"' + String(s).replace(/"/g, '""') + '"';
+    const line = a => a.map(q).join(",");
+    const L = [line(["Toyo Packaging", S.title + " energy and cost report"]), line(["Period", fmtRange(range)]),
+      line(["Per unit cost", cur + " " + rate.toFixed(2) + " per kWh"]), line(["Generated", fmtDateTime(state.generated) + " PKT"]), ""];
+    L.push(line([GROUP_WORD[group][0].toUpperCase() + GROUP_WORD[group].slice(1), "Energy kWh", "Cost " + cur, "Share %", ...meters.map(m => m.label + " kWh")]));
+    C.bks.forEach(b => L.push(line([b.label, b.has ? b.kwh.toFixed(2) : "", b.has ? b.cost.toFixed(2) : "", b.has && C.total ? (b.kwh / C.total * 100).toFixed(1) : "",
+      ...meters.map(m => b.has ? b.per[m.id].toFixed(2) : "")])));
+    L.push(line(["Total", C.total.toFixed(2), C.cost.toFixed(2), "100", ...meters.map(m => state.data[m.id].total.toFixed(2))]), "");
+    L.push(line([S.noun, "Energy kWh", "Cost " + cur, "Note"]));
+    C.list.forEach(d => L.push(line([d.m.label, d.total.toFixed(2), (d.total * rate).toFixed(2), methodNote(d)])));
+    if (state.paramKeys.length) {
+      L.push("", line(["Parameter", S.noun, "Phase", "Highest", "Time of highest", "Lowest", "Time of lowest", "Average", "kWh in hour of highest", "Cost in hour of highest"]));
+      state.paramKeys.forEach(key => {
+        const p = PARAMS.find(x => x.key === key);
+        meters.forEach(m => p.fields.forEach(k => {
+          const s = state.data[m.id].params[k]; if (!s) return;
+          const h = s.peak ? hourOf(state.data[m.id], s.peak.t) : null;
+          L.push(line([p.label + " (" + p.unit + ")", m.label, PHASE[k], s.peak ? s.peak.v.toFixed(2) : "", s.peak ? fmtDateTime(s.peak.t) : "",
+            s.low ? s.low.v.toFixed(2) : "", s.low ? fmtDateTime(s.low.t) : "", s.avg.toFixed(2),
+            h && h.src ? h.kwh.toFixed(2) : "", h && h.src ? (h.kwh * rate).toFixed(2) : ""]));
+        }));
+      });
+    }
+    const blob = new Blob(["\ufeff" + L.join("\r\n")], { type: "text/csv" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "Toyo " + S.title + " cost report " + toDateStr(range.start) + ".csv";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+
+  updateRangeText(true);
+  updateCount();
+}
+
+
+/* ================================================================
+   MACHINE COMPARISON (third tab)
+   Compares 2 or more machines over the same period: energy, cost,
+   average active power and highest active power peak.
+   ================================================================ */
+function hBars(items, fmtV) {
+  const max = Math.max(1e-9, ...items.map(x => x.value));
+  return `<div class="hbars">${items.map(x => `
+    <span class="nm" title="${esc(x.name)}">${esc(x.name)}</span>
+    <div class="track"><div class="fill" style="width:${(Math.max(0, x.value) / max * 100).toFixed(1)}%;--c:${x.color}"></div></div>
+    <span class="val">${esc(fmtV(x.value))}</span>`).join("")}</div>`;
+}
+
+/* Two columns per machine: average and highest active power */
+function powerColumns(rows, unit) {   // rows: {name, color, avg, peak, top}
+  const W = 900, H = 300, ml = 60, mr = 12, mt = 26, mb = 46;
+  const pw = W - ml - mr, ph = H - mt - mb, n = rows.length, slot = pw / Math.max(1, n);
+  const bw = Math.max(4, Math.min(slot * 0.32, 44));
+  const { top, step } = niceScale(0, Math.max(0, ...rows.map(r => r.peak || 0), ...rows.map(r => r.avg || 0)));
+  let g = "";
+  for (let v = 0; v <= top + step / 2; v += step) {
+    const y = mt + ph - v / top * ph;
+    g += `<line class="gl" x1="${ml}" x2="${W - mr}" y1="${y.toFixed(1)}" y2="${y.toFixed(1)}"/><text class="ax" x="${ml - 8}" y="${(y + 4).toFixed(1)}" text-anchor="end">${short(v)}</text>`;
+  }
+  rows.forEach((r, i) => {
+    const cx = ml + i * slot + slot / 2;
+    [["avg", cx - bw - 2, r.avg, 0.45], ["peak", cx + 2, r.peak, 1]].forEach(([k, x, v, op]) => {
+      if (!isNum(v)) return;
+      const h = Math.max(1, v / top * ph), y = mt + ph - h;
+      g += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="2" fill="${r.color}" fill-opacity="${op}"` +
+           `${k === "peak" && r.top ? ' stroke="#ff786e" stroke-width="2.5"' : ""}><title>${esc(r.name + (k === "avg" ? " average: " : " highest: ") + fmt(v, 2) + " " + unit)}</title></rect>` +
+           `<text class="vl" x="${(x + bw / 2).toFixed(1)}" y="${(y - 5).toFixed(1)}" text-anchor="middle">${short(v)}</text>`;
+    });
+    g += `<text class="ax" x="${cx.toFixed(1)}" y="${H - mb + 18}" text-anchor="middle">${esc(r.name.length > 14 ? r.name.slice(0, 13) + "…" : r.name)}</text>`;
+  });
+  g += `<text class="ax" x="${ml - 52}" y="${mt - 10}">${esc(unit)}</text>`;
+  return `<svg class="colchart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Average and highest active power per machine">${g}</svg>`;
+}
+
+function buildCompare() {
+  const el = document.getElementById("sec-cmp");
+  const today = toDateStr(Date.now());
+  const groupList = (g, title) => `<p class="grp-h">${title}</p><div class="dev-list">
+      ${METERS.filter(m => m.group === g).map(m => `<label><input type="checkbox" value="${m.id}"> ${esc(m.label)}</label>`).join("")}</div>`;
+  el.innerHTML = `
+    <p class="intro">Compare machines side by side over the same period: how much energy each one used, what it cost, its average active power and its highest active power peak. Choose the period, enter the per unit cost and pick 2 or more machines.</p>
+    <div class="controls">
+      <fieldset class="panel">
+        <legend>PERIOD</legend>
+        <label>Period
+          <select class="f-preset">
+            <option value="today">Today</option><option value="yesterday">Yesterday</option><option value="last24">Last 24 hours</option>
+            <option value="last7">Last 7 days</option><option value="thismonth">This month</option><option value="lastmonth">Last month</option>
+            <option value="last3m">Last 3 months</option><option value="custom">Choose dates and times</option>
+          </select>
+        </label>
+        <div class="custom four" hidden>
+          <label>From date <input type="date" class="f-fd" value="${today}" max="${today}"></label>
+          <label>From time <input type="time" class="f-ft" value="00:00" step="3600"></label>
+          <label>To date <input type="date" class="f-td" value="${today}" max="${today}"></label>
+          <label>To time <input type="time" class="f-tt" value="23:59"></label>
+        </div>
+        <label>Compare per
+          <select class="f-group"><option value="hour">Hour</option><option value="day">Day</option><option value="month">Month</option></select>
+        </label>
+        <p class="range-text"></p>
+      </fieldset>
+
+      <fieldset class="panel">
+        <legend>COST</legend>
+        <div class="rate-row">
+          <label>Currency <input type="text" class="f-cur" maxlength="5" value="${esc(savedCur())}"></label>
+          <label>Per unit cost (per kWh) <input type="number" class="f-rate rate-big" min="0" step="0.01" inputmode="decimal" placeholder="e.g. 52.50" value="${esc(savedRate())}"></label>
+        </div>
+        <p class="hint-s">The same per unit cost is used for every machine, so cost follows energy. It is shared with the other tabs.</p>
+      </fieldset>
+
+      <fieldset class="panel">
+        <legend>RANK MACHINES BY</legend>
+        <label class="chk"><input type="radio" name="cmp-order" value="energy" checked> Energy and cost <small>kWh</small></label>
+        <label class="chk"><input type="radio" name="cmp-order" value="peak"> Highest active power peak <small>kW</small></label>
+        <label class="chk"><input type="radio" name="cmp-order" value="avg"> Average active power <small>kW</small></label>
+        <p class="hint-s">Tables and bar charts list the machines in this order. Every report includes all three.</p>
+      </fieldset>
+
+      <fieldset class="panel wide">
+        <legend>MACHINES TO COMPARE</legend>
+        <div class="dev-tools">
+          <button type="button" class="linkbtn sel-dist">Select all distribution</button>
+          <button type="button" class="linkbtn sel-none">Clear</button>
+          <span class="dev-count"></span>
+        </div>
+        ${groupList("dist", "Distribution")}
+        ${groupList("gen", "Generation")}
+      </fieldset>
+    </div>
+    <div class="actions">
+      <button type="button" class="btn primary run">COMPARE MACHINES</button>
+      <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-label="Download progress" hidden>
+        <div class="p-top"><span class="p-title">Downloading data, please wait…</span><span class="p-pct">0%</span></div>
+        <div class="p-track"><div class="p-fill"></div></div>
+        <div class="p-sub">Connecting to the data server</div>
+      </div>
+      <div class="banner" role="alert" hidden><strong class="b-head"></strong><span class="b-text"></span></div>
+      <span class="status" role="status" aria-live="polite"></span>
+    </div>
+    <div class="results panel"></div>`;
+
+  const $ = s => el.querySelector(s);
+  const boxes = [...el.querySelectorAll(".dev-list input")];
+  const state = { metric: "cost" };
+  const selection = () => ({ preset: $(".f-preset").value, fromDate: $(".f-fd").value, fromTime: $(".f-ft").value, toDate: $(".f-td").value, toTime: $(".f-tt").value });
+  function updateRangeText(setGroup) {
+    $(".custom").hidden = $(".f-preset").value !== "custom";
+    try { const r = rangeFor(selection(), Date.now()); if (setGroup) $(".f-group").value = defaultGroup(r); $(".range-text").textContent = "Period: " + fmtRange(r); }
+    catch (e) { $(".range-text").textContent = e.message; }
+  }
+  function updateCount() {
+    const n = boxes.filter(b => b.checked).length;
+    $(".dev-count").textContent = n + " selected" + (n < 2 ? ", choose at least 2" : "");
+  }
+  $(".f-preset").addEventListener("change", () => updateRangeText(true));
+  [".f-fd", ".f-ft", ".f-td", ".f-tt"].forEach(s => ["change", "input"].forEach(ev => $(s).addEventListener(ev, () => updateRangeText(true))));
+  $(".sel-dist").addEventListener("click", () => { boxes.forEach(b => b.checked = METERS.find(m => m.id === b.value).group === "dist"); updateCount(); });
+  $(".sel-none").addEventListener("click", () => { boxes.forEach(b => b.checked = false); updateCount(); });
+  boxes.forEach(b => b.addEventListener("change", updateCount));
+  [".f-rate", ".f-cur"].forEach(s => $(s).addEventListener("input", () => {
+    saveRate($(".f-rate").value, $(".f-cur").value.trim() || CONFIG.currency);
+    document.querySelectorAll(".f-rate").forEach(x => { if (x !== $(".f-rate")) x.value = $(".f-rate").value; });
+    document.querySelectorAll(".f-cur").forEach(x => { if (x !== $(".f-cur")) x.value = $(".f-cur").value; });
+  }));
+  el.querySelectorAll('input[name="cmp-order"]').forEach(r => r.addEventListener("change", () => { if (state.data) render(); }));
+
+  const prog = makeProgress($(".progress"));
+  const showError = (h, t) => { $(".b-head").textContent = h; $(".b-text").textContent = t; $(".banner").hidden = false; };
+
+  $(".run").addEventListener("click", async () => {
+    $(".banner").hidden = true; $(".status").textContent = "";
+    const ids = boxes.filter(b => b.checked).map(b => b.value);
+    const rate = Number($(".f-rate").value), cur = $(".f-cur").value.trim() || CONFIG.currency;
+    let range, group;
+    try {
+      range = rangeFor(selection(), Date.now());
+      group = $(".f-group").value;
+      if (!(rate > 0)) throw new Error("Enter the per unit cost (the price of 1 kWh) in the Cost box.");
+      if (ids.length < 2) throw new Error("Select at least 2 machines to compare.");
+      if (group === "hour" && range.stop - range.start > 62 * DAY) throw new Error("Comparing per hour works for up to 62 days. Choose per day or per month for longer periods.");
+    } catch (e) { showError("Check the selection.", e.message); return; }
+    $(".run").disabled = true; prog.start();
+    try {
+      const sel = METERS.filter(m => ids.includes(m.id));
+      const data = await loadAll(sel, range, ["pTotal"], (d, t) => prog.step(d, t));
+      prog.calc();
+      await new Promise(r => requestAnimationFrame(() => setTimeout(r, 120)));
+      Object.assign(state, { data, range, group, rate, cur, meters: sel, generated: Date.now() });
+      render(); prog.finish();
+      $(".status").textContent = "Updated " + fmtTime(state.generated) + " PKT";
+    } catch (e) { prog.hide(); showError("Could not create the comparison.", e.message); }
+    finally { $(".run").disabled = false; }
+  });
+
+  /* ---------- calculation ---------- */
+  function compute() {
+    const { data, range, group, rate, meters } = state;
+    const multiDay = dayStart(range.start) !== dayStart(range.stop - 1);
+    const bks = buckets(range, group).map(b => ({ ...b, label: bucketLabel(b, group, multiDay), axis: axisLabel(b, group, multiDay) }));
+    const list = meters.map((m, i) => {
+      const d = data[m.id];
+      const r = { m, d, color: PALETTE[i % PALETTE.length], kwh: d.total, cost: d.total * rate, has: d.hasData };
+      const pt = d.params.pTotal;
+      if (pt) {
+        r.avg = Math.abs(pt.avg);
+        // highest power in either direction (a reversed CT shows load as negative power)
+        const hi = pt.peak, lo = pt.low;
+        const useLow = lo && (!hi || Math.abs(lo.v) > Math.abs(hi.v));
+        r.peak = useLow ? { v: Math.abs(lo.v), t: lo.t, reverse: true } : hi ? { v: hi.v, t: hi.t } : null;
+        r.series = bks.map(b => { const v = [...pt.mean].filter(([t]) => t >= b.s && t < b.e).map(([, v]) => Math.abs(v)); return v.length ? v.reduce((a, c) => a + c, 0) / v.length : null; });
+      } else {
+        const hrs = d.hours.filter(h => h.src).length;
+        r.avg = hrs ? d.total / hrs : null; r.peak = null; r.series = bks.map(() => null);
+      }
+      r.peakHour = r.peak ? hourOf(d, r.peak.t) : null;
+      r.lf = r.peak && r.peak.v > 0 && isNum(r.avg) ? Math.min(1, r.avg / r.peak.v) : null;
+      r.bk = bks.map(b => {
+        let k = 0, has = false;
+        d.hours.forEach(h => { if (h.t >= b.s && h.t < b.e && h.src) { k += h.kwh; has = true; } });
+        return has ? k : null;
+      });
+      const bi = r.bk.reduce((best, v, i) => (v !== null && (best < 0 || v > r.bk[best])) ? i : best, -1);
+      r.topBk = bi >= 0 ? { b: bks[bi], kwh: r.bk[bi] } : null;
+      r.leads = 0;
+      return r;
+    });
+    bks.forEach((b, i) => {
+      const vals = list.map(r => r.bk[i]);
+      const mx = Math.max(...vals.filter(v => v !== null));
+      b.leader = vals.some(v => v !== null && v > 0) ? list.findIndex(r => r.bk[i] === mx) : -1;
+      if (b.leader >= 0) list[b.leader].leads++;
+      b.total = vals.reduce((s, v) => s + (v || 0), 0);
+      b.has = vals.some(v => v !== null);
+    });
+    const total = list.reduce((s, r) => s + r.kwh, 0);
+    list.forEach(r => r.share = total > 0 ? r.kwh / total : 0);
+    const withData = list.filter(r => r.has);
+    const byEnergy = [...withData].sort((a, b) => b.kwh - a.kwh);
+    const withPeak = withData.filter(r => r.peak);
+    const byPeak = [...withPeak].sort((a, b) => b.peak.v - a.peak.v);
+    const topPeak = byPeak[0] || null;
+    list.forEach(r => r.topPeak = r === topPeak);
+    const order = (el.querySelector('input[name="cmp-order"]:checked') || {}).value || "energy";
+    const key = { energy: r => r.kwh, peak: r => r.peak ? r.peak.v : -1, avg: r => isNum(r.avg) ? r.avg : -1 }[order];
+    const ranked = [...withData].sort((a, b) => key(b) - key(a));
+    return { bks, list, total, cost: total * rate, withData, byEnergy, byPeak, topPeak, ranked, order, multiDay,
+             missing: list.filter(r => !r.has) };
+  }
+
+  /* ---------- report ---------- */
+  function render() {
+    const { range, rate, cur, group } = state;
+    const C = state.c = compute();
+    const gw = GROUP_WORD[group];
+    const orderText = { energy: "energy and cost", peak: "highest active power peak", avg: "average active power" }[C.order];
+    const head = `
+      <div class="rep-head">
+        <div class="rep-id">
+          <span class="rep-logo-tile"><img class="rep-logo" src="${document.getElementById("brandLogo").src}" alt="Toyo Packaging"></span>
+          <div>
+            <h3>Machine comparison: energy, cost and active power</h3>
+            <p class="meta"><b>Period:</b> ${esc(fmtRange(range))}<br>
+              <b>Machines:</b> ${esc(state.meters.map(m => m.label).join(", "))}<br>
+              <b>Per unit cost:</b> ${esc(cur)} ${fmt(rate, 2)} per kWh &nbsp;&nbsp;<b>Compared per:</b> ${gw} &nbsp;&nbsp;<b>Ranked by:</b> ${orderText}
+              &nbsp;&nbsp;<b>Generated:</b> ${esc(fmtDateTime(state.generated))} PKT</p>
+          </div>
+        </div>
+        <div class="rep-tools">
+          <button type="button" class="btn f-print">PRINT REPORT</button>
+          <button type="button" class="btn f-csv">DOWNLOAD CSV</button>
+        </div>
+      </div>`;
+    let body;
+    if (C.withData.length < 1) {
+      body = "<p>No readings in this period for the selected machines. Choose another period, or check that the logger was running.</p>";
+    } else {
+      const top = C.byEnergy[0], low = C.byEnergy[C.byEnergy.length - 1];
+      const kpis = `<div class="kpis">
+        <div class="kpi main"><div class="k">Compared total</div><div class="v">${fmtKwh(C.total)}<small>kWh</small></div>
+          <div class="s">${C.withData.length} of ${C.list.length} machines with readings</div></div>
+        <div class="kpi cost"><div class="k">Compared cost</div><div class="v">${esc(money(C.cost, cur))}</div>
+          <div class="s">At ${esc(cur)} ${fmt(rate, 2)} per kWh</div></div>
+        <div class="kpi" style="--c:${top.color}"><div class="k">Highest consumer</div><div class="v">${esc(top.m.label)}</div>
+          <div class="s">${fmtKwh(top.kwh)} kWh, ${esc(money(top.cost, cur))}, ${pct(top.share)}${C.byEnergy.length > 1 && low.kwh > 0 ? `<br>${(top.kwh / low.kwh).toFixed(1)}× ${esc(low.m.label)}` : ""}</div></div>
+        <div class="kpi peak"><div class="k">Highest power peak</div><div class="v">${C.topPeak ? fmt(C.topPeak.peak.v, 2) + "<small>kW</small>" : "–"}</div>
+          <div class="s">${C.topPeak ? esc(C.topPeak.m.label) + ", " + esc(fmtDateTime(C.topPeak.peak.t)) + " PKT" : "No power readings"}</div></div>
+      </div>`;
+      const slices = C.byEnergy.filter(r => r.kwh > 0).map(r => ({ name: r.m.label, value: r.cost, color: r.color }));
+      const legend = slices.map(s => `<li><span class="dot" style="--c:${s.color}"></span><span>${esc(s.name)}<br><small style="color:var(--muted)">${esc(money(s.value, cur))}, ${fmtKwh(s.value / rate)} kWh</small></span><span class="pct">${pct(C.cost > 0 ? s.value / C.cost : 0)}</span></li>`).join("");
+      body = kpis + `
+        <div class="card summary"><h2>SUMMARY</h2><div class="sum-text">${summary(C)}</div></div>
+        ${comparisonTable(C)}
+        <div class="charts">
+          <div class="card"><h2>COST SHARE</h2><p class="sub">Each machine's part of the compared cost</p>
+            ${C.cost > 0 ? `<div class="donut-wrap">${donutChart(slices, C.cost, short(C.cost), cur + " total", v => money(v, cur))}<ul class="legend">${legend}</ul></div>` : "<p>No energy recorded.</p>"}
+          </div>
+          <div class="card"><h2>COST AND ENERGY BY MACHINE</h2><p class="sub">Ranked by ${orderText}. Bar length is cost; kWh is in the table.</p>
+            ${hBars(C.ranked.map(r => ({ name: r.m.label, value: r.cost, color: r.color })), v => money(v, cur))}
+          </div>
+        </div>
+        <div class="card" style="margin-top:16px"><h2>AVERAGE AND HIGHEST ACTIVE POWER</h2>
+          <p class="sub">Light column: average active power. Solid column: highest single reading. The highest peak of all machines has a red outline.</p>
+          ${C.withData.some(r => r.peak) ? powerColumns(C.ranked.map(r => ({ name: r.m.label, color: r.color, avg: r.avg, peak: r.peak ? r.peak.v : null, top: r.topPeak })), "kW") : "<p>No active power readings for these machines.</p>"}
+        </div>
+        <div class="card" style="margin-top:16px">
+          <div class="card-head"><h2 class="per-title"></h2></div>
+          <div class="card-tools"><label>Show <select class="f-metric"><option value="cost">Cost (${esc(cur)})</option><option value="kwh">Energy (kWh)</option></select></label><span class="print-only"></span></div>
+          <div class="per-chart"></div>
+          <div class="legend-inline">${C.list.map(r => `<span><i style="--c:${r.color}"></i>${esc(r.m.label)}</span>`).join("")}</div>
+        </div>
+        <div class="card" style="margin-top:16px"><h2>ACTIVE POWER TREND</h2>
+          <p class="sub">Average active power per ${gw} for each machine. The circle marks the highest peak.</p>
+          ${powerTrend(C)}
+          <div class="legend-inline">${C.list.map(r => `<span><i style="--c:${r.color}"></i>${esc(r.m.label)}</span>`).join("")}</div>
+        </div>
+        ${periodTable(C)}
+        <div class="card explain" style="margin-top:16px"><h2>HOW THIS COMPARISON IS CALCULATED</h2>${explanation()}</div>`;
+    }
+    $(".results").innerHTML = head + `<div class="rep-body">${body}
+      <p class="rep-foot">Toyo Packaging, Advanced Energy Management System. Source: Toyo energy cloud. All times PKT.</p></div>`;
+    $(".f-print").addEventListener("click", () => window.print());
+    $(".f-csv").addEventListener("click", downloadCsv);
+    const met = $(".f-metric");
+    if (met) { met.value = state.metric; met.addEventListener("change", () => { state.metric = met.value; drawPer(); }); drawPer(); }
+  }
+
+  function drawPer() {
+    const C = state.c, cur = state.cur, cost = state.metric === "cost", gw = GROUP_WORD[state.group];
+    $(".per-title").textContent = (cost ? "COST" : "ENERGY") + " PER " + gw.toUpperCase() + ", MACHINE BY MACHINE";
+    $(".card-tools .print-only").textContent = cost ? "In " + cur : "In kWh";
+    $(".per-chart").innerHTML = lineChart(C.bks.map(b => b.axis),
+      C.list.map(r => ({ name: r.m.label, color: r.color, values: r.bk.map(v => v === null ? null : cost ? v * state.rate : v) })),
+      cost ? cur : "kWh", null) || "<p>No readings.</p>";
+  }
+
+  function powerTrend(C) {
+    let mark = null;
+    if (C.topPeak) {
+      const i = C.bks.findIndex(b => C.topPeak.peak.t >= b.s && C.topPeak.peak.t < b.e);
+      mark = { i, v: C.topPeak.peak.v, text: "Highest " + fmt(C.topPeak.peak.v, 1) + " kW (" + C.topPeak.m.label + ")" };
+    }
+    return lineChart(C.bks.map(b => b.axis), C.list.map(r => ({ name: r.m.label, color: r.color, values: r.series })), "kW", mark)
+      || "<p>No active power readings for these machines.</p>";
+  }
+
+  function comparisonTable(C) {
+    const { cur, rate, group } = state, gw = GROUP_WORD[group];
+    const minK = Math.min(...C.byEnergy.map(r => r.kwh).filter(v => v > 0));
+    const rows = [...C.ranked, ...C.missing].map((r, i) => {
+      if (!r.has) return `<tr><td><span class="dot" style="--c:var(--grid)"></span>&nbsp; ${esc(r.m.label)}</td><td colspan="11" class="flag">No readings in this period</td></tr>`;
+      const ph = r.peakHour, hs = r.peak ? Math.floor(r.peak.t / HOUR) * HOUR : 0;
+      return `<tr${i === 0 ? ' class="peak"' : ""}>
+        <td><span class="dot" style="--c:${r.color}"></span>&nbsp; ${esc(r.m.label)}${i === 0 ? '<span class="tag-peak">#1</span>' : ""}</td>
+        <td class="n kwh">${fmtKwh(r.kwh)}</td><td class="n cost">${esc(money(r.cost, cur))}</td>
+        <td class="n">${pct(r.share)}<span class="share"><i style="width:${(r.share * 100).toFixed(1)}%;--c:${r.color}"></i></span></td>
+        <td class="n">${r.kwh > 0 && isFinite(minK) ? (r.kwh / minK).toFixed(1) + "×" : "–"}</td>
+        <td class="n">${isNum(r.avg) ? fmt(r.avg, 2) : "–"}</td>
+        <td class="n kwh">${r.peak ? fmt(r.peak.v, 2) : "–"}${r.topPeak ? '<span class="tag-peak">HIGHEST</span>' : ""}</td>
+        <td>${r.peak ? esc(fmtDateTime(r.peak.t)) + (r.peak.reverse ? " (reverse)" : "") : "–"}</td>
+        <td class="n">${ph && ph.src ? fmtKwh(ph.kwh) : "–"}</td>
+        <td class="n cost">${ph && ph.src ? esc(money(ph.kwh * rate, cur)) : "–"}</td>
+        <td class="n">${isNum(r.lf) ? pct(r.lf) : "–"}</td>
+        <td>${r.topBk ? esc(r.topBk.b.label) + "<br><small style=\"color:var(--muted)\">" + fmtKwh(r.topBk.kwh) + " kWh, " + esc(money(r.topBk.kwh * rate, cur)) + "</small>" : "–"}</td></tr>`;
+    }).join("");
+    return `<div class="card" style="margin-top:16px"><h2>SIDE-BY-SIDE COMPARISON</h2>
+      <p class="sub">“× lowest” shows how many times more energy than the lowest machine. Load factor = average ÷ highest power. Peak hour = the clock hour of the highest reading.</p>
+      <div class="tablebox" style="margin-top:0"><table>
+        <thead><tr><th>Machine</th><th class="n">Energy (kWh)</th><th class="n">Cost (${esc(cur)})</th><th class="n">Share</th><th class="n">× lowest</th>
+          <th class="n">Average power (kW)</th><th class="n">Highest power (kW)</th><th>Time of highest</th>
+          <th class="n">kWh in peak hour</th><th class="n">Cost in peak hour</th><th class="n">Load factor</th><th>Highest-cost ${gw}</th></tr></thead>
+        <tbody>${rows}<tr class="sum"><td>Total</td><td class="n">${fmtKwh(C.total)}</td><td class="n">${esc(money(C.cost, cur))}</td><td class="n">100%</td><td colspan="8"></td></tr></tbody>
+      </table></div></div>`;
+  }
+
+  function periodTable(C) {
+    const { cur, rate, group } = state, gw = GROUP_WORD[group];
+    const rows = C.bks.map(b => `<tr><td>${esc(b.label)}</td>
+      ${C.list.map((r, i) => { const v = r.bk[C.bks.indexOf(b)];
+        return `<td class="n${i === b.leader ? " lead" : ""}">${v === null ? "–" : fmtKwh(v) + "<br><small>" + esc(money(v * rate, cur)) + "</small>"}</td>`; }).join("")}
+      <td class="n kwh">${b.has ? fmtKwh(b.total) + "<br><small>" + esc(money(b.total * rate, cur)) + "</small>" : "–"}</td>
+      <td>${b.leader >= 0 ? esc(C.list[b.leader].m.label) : "–"}</td></tr>`).join("");
+    return `<div class="card" style="margin-top:16px"><h2>MACHINE BY MACHINE, PER ${gw.toUpperCase()}</h2>
+      <p class="sub">kWh with cost below. The machine that used the most in each ${gw} is highlighted.</p>
+      <div class="tablebox" style="margin-top:0"><table class="cmp-table">
+        <thead><tr><th>${gw === "hour" ? "Hour (PKT)" : gw === "day" ? "Day" : "Month"}</th>${C.list.map(r => `<th class="n"><span class="dot" style="--c:${r.color}"></span> ${esc(r.m.label)}</th>`).join("")}<th class="n">Total</th><th>Highest</th></tr></thead>
+        <tbody>${rows}<tr class="sum"><td>Total</td>${C.list.map(r => `<td class="n">${fmtKwh(r.kwh)}<br><small>${esc(money(r.cost, cur))}</small></td>`).join("")}
+          <td class="n">${fmtKwh(C.total)}<br><small>${esc(money(C.cost, cur))}</small></td><td></td></tr></tbody>
+      </table></div></div>`;
+  }
+
+  function summary(C) {
+    const { cur, rate, range, group } = state, gw = GROUP_WORD[group];
+    const out = [];
+    out.push(`From ${esc(fmtRange(range))} the ${C.list.length} compared machines used <b>${fmtKwh(C.total)} kWh</b> together, costing <b>${esc(money(C.cost, cur))}</b> at ${esc(cur)} ${fmt(rate, 2)} per kWh.`);
+    const E = C.byEnergy;
+    if (E.length > 1) {
+      const top = E[0], low = E[E.length - 1];
+      out.push(`<b>${esc(top.m.label)}</b> used the most: ${fmtKwh(top.kwh)} kWh costing <b>${esc(money(top.cost, cur))}</b>, ${pct(top.share)} of the compared total. ` +
+        `<b>${esc(low.m.label)}</b> used the least: ${fmtKwh(low.kwh)} kWh, ${esc(money(low.cost, cur))}. ` +
+        (low.kwh > 0 ? `${esc(top.m.label)} used ${(top.kwh / low.kwh).toFixed(1)} times as much, a cost difference of ${esc(money(top.cost - low.cost, cur))}.` : ""));
+      if (E.length > 2) out.push(`In between: ${E.slice(1, -1).map(r => esc(r.m.label) + " " + fmtKwh(r.kwh) + " kWh (" + esc(money(r.cost, cur)) + ")").join(", ")}.`);
+    }
+    const P = C.byPeak;
+    if (P.length) {
+      const t = P[0], ph = t.peakHour, hs = Math.floor(t.peak.t / HOUR) * HOUR;
+      let s = `The highest active power peak was <b>${fmt(t.peak.v, 2)} kW on ${esc(t.m.label)}</b>, on ${esc(fmtDate(t.peak.t))} at ${fmtTime(t.peak.t)} PKT.`;
+      if (ph && ph.src) s += ` In that hour (${fmtTime(hs)}–${endTime(hs + HOUR)}) ${esc(t.m.label)} used ${fmtKwh(ph.kwh)} kWh, costing ${esc(money(ph.kwh * rate, cur))}.`;
+      if (P.length > 1) s += ` The lowest peak was on ${esc(P[P.length - 1].m.label)} (${fmt(P[P.length - 1].peak.v, 2)} kW).`;
+      out.push(s);
+      const sameHour = P.filter(r => Math.floor(r.peak.t / HOUR) === Math.floor(t.peak.t / HOUR));
+      if (sameHour.length > 1) out.push(`<span class="warn">${sameHour.map(r => esc(r.m.label)).join(", ")} all reached their highest power in the same hour. Peaks that happen together raise the plant's maximum demand.</span>`);
+      const A = C.withData.filter(r => isNum(r.avg)).sort((a, b) => b.avg - a.avg);
+      if (A.length > 1) out.push(`Average active power was highest on ${esc(A[0].m.label)} (${fmt(A[0].avg, 2)} kW) and lowest on ${esc(A[A.length - 1].m.label)} (${fmt(A[A.length - 1].avg, 2)} kW).`);
+      const L = C.withData.filter(r => isNum(r.lf) && r.peak.v > 1).sort((a, b) => b.lf - a.lf);
+      if (L.length > 1) out.push(`${esc(L[0].m.label)} ran the steadiest load (average is ${pct(L[0].lf)} of its peak). ${esc(L[L.length - 1].m.label)} was the most uneven (${pct(L[L.length - 1].lf)}), so short peaks matter more there.`);
+    }
+    const leads = [...C.withData].sort((a, b) => b.leads - a.leads);
+    const nb = C.bks.filter(b => b.leader >= 0).length;
+    if (nb > 1 && leads[0].leads) out.push(`${esc(leads[0].m.label)} was the biggest user in ${leads[0].leads} of ${nb} ${gw}s.`);
+    const calc = C.list.filter(r => r.d.method === "power").map(r => esc(r.m.label));
+    if (calc.length) out.push(`<span class="warn">Energy of ${calc.join(", ")} was calculated from active power, because ${calc.length > 1 ? "their energy counters" : "its energy counter"} did not count in this period.</span>`);
+    if (C.missing.length) out.push(`<span class="warn">No readings at all from ${C.missing.map(r => esc(r.m.label)).join(", ")}, so ${C.missing.length > 1 ? "they are" : "it is"} left out of the comparison.</span>`);
+    return out.map(x => `<p>${x}</p>`).join("");
+  }
+
+  function explanation() {
+    const { cur, rate, group } = state, gw = GROUP_WORD[group];
+    return `
+      <p><b>Energy and cost.</b> Each machine's energy comes from the hourly increase of its kWh counter. Where the counter does not count or a reading is clearly wrong, that hour is calculated from the average active power. Cost = kWh × ${esc(cur)} ${fmt(rate, 2)}. Every machine uses the same rate, so the cost ranking is the same as the energy ranking.</p>
+      <p><b>Active power.</b> “Average power” is the average of the hourly averages over the period. “Highest power” is the single highest reading the logger stored, with its exact time. If a meter's CT is reversed, its load shows as negative power; the comparison uses the size of the reading and marks it “reverse”. The peak hour's kWh and cost are that machine's energy in the clock hour of its peak.</p>
+      <p><b>Load factor</b> is average power ÷ highest power. Near 100% means the machine runs at a steady load. A low value means short, high peaks compared with its normal running.</p>
+      <p><b>Per ${gw}.</b> The hourly energy of each machine is added up for each ${gw} by Pakistan time. Hours without readings are left empty; with counter meters, energy used during a gap appears in the next hour with readings.</p>`;
+  }
+
+  function downloadCsv() {
+    const { range, cur, rate, group } = state, C = state.c;
+    const q = s => '"' + String(s).replace(/"/g, '""') + '"', line = a => a.map(q).join(",");
+    const L = [line(["Toyo Packaging", "Machine comparison"]), line(["Period", fmtRange(range)]), line(["Per unit cost", cur + " " + rate.toFixed(2) + " per kWh"]),
+      line(["Generated", fmtDateTime(state.generated) + " PKT"]), "",
+      line(["Machine", "Energy kWh", "Cost " + cur, "Share %", "Average power kW", "Highest power kW", "Time of highest", "kWh in peak hour", "Cost in peak hour", "Load factor %", "Highest-cost " + GROUP_WORD[group], "kWh in it"])];
+    [...C.ranked, ...C.missing].forEach(r => L.push(line([r.m.label, r.kwh.toFixed(2), r.cost.toFixed(2), (r.share * 100).toFixed(1),
+      isNum(r.avg) ? r.avg.toFixed(2) : "", r.peak ? r.peak.v.toFixed(2) : "", r.peak ? fmtDateTime(r.peak.t) : "",
+      r.peakHour && r.peakHour.src ? r.peakHour.kwh.toFixed(2) : "", r.peakHour && r.peakHour.src ? (r.peakHour.kwh * rate).toFixed(2) : "",
+      isNum(r.lf) ? (r.lf * 100).toFixed(1) : "", r.topBk ? r.topBk.b.label : "", r.topBk ? r.topBk.kwh.toFixed(2) : ""])));
+    L.push("", line([GROUP_WORD[group], ...C.list.flatMap(r => [r.m.label + " kWh", r.m.label + " " + cur]), "Total kWh", "Total " + cur]));
+    C.bks.forEach((b, i) => L.push(line([b.label, ...C.list.flatMap(r => r.bk[i] === null ? ["", ""] : [r.bk[i].toFixed(2), (r.bk[i] * rate).toFixed(2)]),
+      b.total.toFixed(2), (b.total * rate).toFixed(2)])));
+    const blob = new Blob(["\ufeff" + L.join("\r\n")], { type: "text/csv" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = "Toyo machine comparison " + toDateStr(range.start) + ".csv";
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+
+  updateRangeText(true);
+  updateCount();
+}
+
+
+document.querySelectorAll(".seg button").forEach(btn => btn.addEventListener("click", () => {
+  document.querySelectorAll(".seg button").forEach(b => b.setAttribute("aria-selected", String(b === btn)));
+  ["dist", "gen", "cmp"].forEach(k => document.getElementById("sec-" + k).hidden = btn.dataset.tab !== k);
+}));
+
+buildSection("dist");
+buildSection("gen");
+buildCompare();
+
+function tickClock() {
+  const t = P(Date.now());
+  document.getElementById("siteDate").textContent = DAYS[t.getUTCDay()] + ", " + t.getUTCDate() + " " + MONTHS[t.getUTCMonth()] + " " + t.getUTCFullYear();
+  document.getElementById("siteTime").textContent = pad(t.getUTCHours()) + ":" + pad(t.getUTCMinutes()) + ":" + pad(t.getUTCSeconds());
+}
+tickClock(); setInterval(tickClock, 1000);
+document.getElementById("backLink").href = CONFIG.dashboardPage;
+document.getElementById("footSrc").textContent = "TOYO ENERGY CLOUD";
+</script>
+</body>
+</html>
