@@ -999,7 +999,7 @@
             barChart = new Chart(document.getElementById('loadDistributionChart'), {
                 type: 'bar',
                 data: {
-                    labels: METERS.map((m, i) => codeOfMeter(i)),
+                    labels: METERS.map(m => m.label.split(' ')),   // full device name, two-word names wrap onto 2 lines
                     datasets: ['A', 'B', 'C'].map((ph, i) => ({
                         label: `Phase ${ph}`, data: METERS.map(() => 0),
                         backgroundColor: barGradient(PHASE_COLORS[i]), hoverBackgroundColor: PHASE_COLORS[i],
@@ -1010,13 +1010,13 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     scales: {
-                        x: { grid: { display: false }, border: { color: 'rgba(110, 150, 220, 0.25)' }, ticks: { autoSkip: false, maxRotation: 0, color: '#c9d6ee' } },
+                        x: { grid: { display: false }, border: { color: 'rgba(110, 150, 220, 0.25)' }, ticks: { autoSkip: false, maxRotation: 0, color: '#c9d6ee', font: { size: 11 } } },
                         y: { beginAtZero: true, border: { display: false }, ticks: { maxTicksLimit: 6 } }
                     },
                     plugins: {
                         legend: { position: 'top', align: 'end', labels: { boxWidth: 16, boxHeight: 10, color: '#c9d6ee', font: { size: 11 } } },
                         tooltip: { mode: 'index', intersect: false, callbacks: {
-                            title: items => items.length ? `${items[0].label} · ${METERS[items[0].dataIndex].label}` : '',
+                            title: items => items.length ? METERS[items[0].dataIndex].label : '',
                             label: c => ` ${c.dataset.label}: ${fmt(c.parsed.y)} kW`
                         } }
                     }
