@@ -4,471 +4,605 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Toyo Packaging - Advanced Energy Management System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <style>
         :root {
-            --primary: #3a86ff; --secondary: #4cc9f0; --accent1: #8338ec; --dark: #2b2d42;
-            --light: #f8f9fa; --gray: #e9ecef; --success: #2ecc71; --warning: #f39c12;
-            --danger: #e74c3c; --trend-orange: #ff7f50;
+            --bg: #061227; --bg-2: #081a36;
+            --card: #0c1e3b; --card-2: #0a1932; --card-hi: #102648;
+            --line: rgba(80, 130, 210, 0.22); --line-soft: rgba(110, 150, 220, 0.12);
+            --text: #eef3ff; --text-2: #c9d6ee; --muted: #8ea3c6; --dim: #5f7599;
+            --blue: #3b82f6; --blue-2: #2563eb; --cyan: #22d3ee; --green: #22c55e; --green-l: #4ade80;
+            --yellow: #facc15; --orange: #f5a524; --red: #ef4444; --amber: #fbbf24;
+            /* names used by the dashboard script */
+            --primary: #3b82f6; --success: #22c55e; --warning: #fbbf24; --danger: #ef4444; --dark: #eef3ff;
+            --sidebar-w: 236px;
         }
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
-        body { background-color: #f5f7ff; color: var(--dark); min-height: 100vh; display: flex; flex-direction: column; }
-        
-        /* --- Container Layout --- */
-        .container { 
-            width: 100%;
-            min-height: 100vh; 
-            display: flex;
-            flex-direction: column;
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; }
+        html { background: #050f22; }
+        body {
+            min-height: 100vh; color: var(--text);
+            background:
+                radial-gradient(1100px 520px at 75% -12%, rgba(37, 99, 235, 0.22), transparent 60%),
+                radial-gradient(800px 500px at 10% 110%, rgba(34, 211, 238, 0.06), transparent 60%),
+                linear-gradient(180deg, #071630 0%, #050f22 100%);
+            background-attachment: fixed;
         }
-        .main-content { padding: 30px; display: flex; flex-direction: column; gap: 25px; flex: 1; }
-        
-        /* --- Header Styling --- */
-        .header { 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            padding: 5px 10px; 
-            background: transparent; 
-        }
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-        }
-        .header-logo {
-            height: 68px;
-            width: auto;
-            object-fit: contain;
-            border-radius: 6px;
-        }
-        .header h2 { 
-            font-size: 1.6rem; 
-            color: var(--dark); 
-            font-weight: 700;
-        }
-        .header-right-title {
-            font-size: 1.2rem;
-            font-weight: 700;
-            color: var(--primary);
-            background: white; 
-            padding: 10px 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.02);
-            border: 1px solid #e2e8f0;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
+        button { font: inherit; }
+        .num, .kpi-value, .gen-val, .ie-val { font-variant-numeric: tabular-nums; }
 
-        /* --- Navigation Section --- */
-        .nav-section {
-            background: white;
-            padding: 20px 25px;
-            border-radius: 14px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.02);
-            border: 1px solid #e2e8f0;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
+        /* ===================== Layout ===================== */
+        .app { display: flex; min-height: 100vh; }
+        .sidebar {
+            width: var(--sidebar-w); flex-shrink: 0; position: sticky; top: 0; height: 100vh;
+            background: linear-gradient(180deg, #0a1e40 0%, #081733 55%, #071530 100%);
+            border-right: 1px solid var(--line); display: flex; flex-direction: column; overflow: hidden;
         }
-        .nav-instruction {
-            font-size: 0.95rem;
-            color: #6c757d;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-weight: 500;
-        }
-        .nav-instruction i { color: var(--warning); }
-        .horizontal-menu { display: flex; flex-wrap: wrap; gap: 15px; list-style: none; }
-        .horizontal-item { flex: 1; min-width: 200px; }
-        .horizontal-item a {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 12px 16px;
-            color: #4a5568;
-            text-decoration: none;
-            font-weight: 600;
-            font-size: 0.9rem;
-            border-radius: 10px;
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        
-        .nav-icon-box {
-            width: 34px; height: 34px; border-radius: 8px;
-            display: flex; align-items: center; justify-content: center;
-            color: white; font-size: 0.9rem; flex-shrink: 0;
-        }
-        
-        .icon-dashboard { background: linear-gradient(135deg, #3a86ff, #00b4d8); }
-        .icon-harmonics { background: linear-gradient(135deg, #8338ec, #ff007f); }
-        .icon-power { background: linear-gradient(135deg, #ff9f1c, #ff6b6b); }
-        .icon-alerts { background: linear-gradient(135deg, #e74c3c, #ff5252); }
-        .icon-reporting { background: linear-gradient(135deg, #2ecc71, #00b56c); }
-        .icon-cost { background: linear-gradient(135deg, #f4b400, #ff7f0e); }
+        .main { flex: 1; min-width: 0; padding: 20px 24px 28px; display: flex; flex-direction: column; gap: 16px; }
 
-        .horizontal-item a:hover, .horizontal-item.active a {
-            background-color: #f0f7ff;
-            color: var(--primary);
-            border: 2px solid var(--primary);
+        /* ===================== Sidebar ===================== */
+        .brand { display: flex; align-items: center; gap: 10px; padding: 22px 18px 26px; }
+        .brand svg { width: 42px; height: 42px; flex-shrink: 0; filter: drop-shadow(0 4px 10px rgba(59,130,246,0.35)); }
+        .logo-tile { display: flex; align-items: center; justify-content: center; background: #fff; border-radius: 10px; padding: 4px 10px; height: 68px; box-shadow: 0 0 0 1px #ffffff22, 0 6px 18px #0005; }
+        .logo-img { display: block; height: 60px; width: auto; max-width: 100%; }
+        .brand-name { font-size: 1.45rem; font-weight: 800; line-height: 1.08; letter-spacing: -0.01em; color: #fff; }
+        .nav { list-style: none; display: flex; flex-direction: column; gap: 8px; padding: 0 12px; }
+        .nav a {
+            display: flex; align-items: center; gap: 13px; padding: 11px 14px; border-radius: 9px;
+            color: var(--text-2); text-decoration: none; font-weight: 500; font-size: 0.95rem;
+            border: 1px solid transparent; transition: background 0.2s, color 0.2s, border-color 0.2s;
         }
+        .nav a i { width: 20px; text-align: center; font-size: 1.05rem; color: #b8c8e6; }
+        .nav a:hover { background: rgba(59, 130, 246, 0.12); color: #fff; }
+        .nav li.active a {
+            background: linear-gradient(90deg, #1d4ed8 0%, #2563eb 100%); color: #fff; font-weight: 600;
+            border-color: rgba(147, 197, 253, 0.35); box-shadow: 0 6px 18px rgba(37, 99, 235, 0.35);
+        }
+        .nav li.active a i { color: #fff; }
+        .sb-foot { margin-top: auto; position: relative; min-height: 290px; display: flex; flex-direction: column; justify-content: flex-end; }
+        .sb-art { position: absolute; inset: 0; width: 100%; height: 100%; }
+        .sb-status { position: relative; padding: 0 18px 20px; }
+        #db-status { display: flex; align-items: center; gap: 9px; font-weight: 700; font-size: 0.95rem; color: var(--green-l); }
+        #db-status::before { content: ''; width: 10px; height: 10px; border-radius: 50%; background: currentColor; box-shadow: 0 0 10px currentColor; flex-shrink: 0; }
+        .sb-update { font-size: 0.74rem; color: var(--text-2); margin-top: 7px; }
 
-        /* --- Cards & Grid Layout --- */
-        .dashboard-cards { display: flex; flex-direction: column; gap: 20px; }
-        
-        .top-cards-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 15px; }
-        
-        .meters-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-            gap: 15px;
+        /* ===================== Header ===================== */
+        .topbar { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; padding: 2px 0 2px; }
+        .topbar h1 { font-size: 1.75rem; font-weight: 800; letter-spacing: -0.015em; color: #fff; line-height: 1.2; }
+        .topbar .subtitle { font-size: 0.86rem; color: var(--text-2); margin-top: 5px; }
+        .top-actions { display: flex; align-items: center; gap: 12px; position: relative; }
+        .date-pill {
+            display: flex; align-items: center; gap: 10px; padding: 9px 14px; border-radius: 9px;
+            background: rgba(12, 30, 59, 0.85); border: 1px solid var(--line); font-size: 0.84rem; color: var(--text-2); white-space: nowrap;
         }
+        .date-pill i { color: var(--text-2); }
+        .bell {
+            width: 40px; height: 40px; border-radius: 10px; border: 1px solid transparent; background: transparent;
+            color: var(--text-2); font-size: 1.1rem; cursor: pointer; position: relative;
+        }
+        .bell:hover, .bell[aria-expanded="true"] { background: rgba(12, 30, 59, 0.85); border-color: var(--line); color: #fff; }
+        .bell-dot { position: absolute; top: 8px; right: 9px; width: 8px; height: 8px; border-radius: 50%; background: var(--red); box-shadow: 0 0 0 2px var(--bg); }
+        .bell-dot[hidden] { display: none; }
+        .bell-pop {
+            position: absolute; right: 0; top: 48px; z-index: 50; width: 290px; padding: 14px 16px; border-radius: 12px;
+            background: var(--card-hi); border: 1px solid var(--line); box-shadow: 0 18px 40px rgba(0,0,0,0.45); font-size: 0.84rem; color: var(--text-2); line-height: 1.5;
+        }
+        .bell-pop[hidden] { display: none; }
+        .bell-pop strong { display: block; color: #fff; margin-bottom: 4px; font-size: 0.9rem; }
 
-        .card { 
-            background: white; 
-            border-radius: 12px; 
-            box-shadow: 0 4px 20px rgba(0,0,0,0.03); 
-            padding: 20px; 
-            border: 1px solid #e2e8f0; 
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
+        /* ===================== Cards ===================== */
+        .card {
+            background: linear-gradient(180deg, rgba(16, 38, 74, 0.92) 0%, rgba(10, 26, 52, 0.92) 100%);
+            border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035), 0 10px 26px rgba(0, 0, 0, 0.22);
+            min-width: 0;
         }
-        .card.big-card { padding: 25px; border: 2px solid var(--primary); }
-        .card.big-card.secondary-accent { border: 2px solid var(--accent1); }
-        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .card-title { font-size: 0.95rem; font-weight: 600; color: #6c757d; }
-        .card-value { font-size: 1.8rem; font-weight: 700; color: var(--dark); }
-        .card-subtext { font-size: 0.85rem; color: #718096; margin-top: 5px; }
-        .card-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+        .card-title { display: flex; align-items: center; gap: 9px; font-size: 1rem; font-weight: 700; color: #fff; }
+        .card-title small { font-size: 0.8rem; font-weight: 500; color: var(--text-2); }
+        .card-title .ic-sun { color: var(--yellow); }
+        .card-title .ic-dist { color: var(--orange); }
+        .card-title .ic-meter { color: var(--yellow); }
+
+        /* KPI row */
+        .kpi-row { display: grid; grid-template-columns: 1.12fr 1fr 1fr 1fr; gap: 14px; }
+        .kpi { display: flex; flex-direction: column; justify-content: space-between; gap: 10px; min-height: 104px; }
+        .kpi-head { display: flex; align-items: flex-start; gap: 12px; }
+        .kpi-icon { font-size: 1.55rem; line-height: 1; margin-top: 1px; width: 26px; text-align: center; }
+        .kpi-title { font-size: 0.98rem; font-weight: 700; color: #fff; line-height: 1.25; }
+        .kpi-title span { display: block; font-weight: 500; color: var(--text-2); font-size: 0.9rem; }
+        .kpi-value { font-size: 1.9rem; font-weight: 800; color: #fff; letter-spacing: -0.01em; padding-left: 2px; white-space: nowrap; }
+        .kpi-value .unit, .unit { font-size: 0.62em; font-weight: 600; color: var(--text-2); margin-left: 5px; letter-spacing: 0; }
+        .kpi-value.green { color: var(--green-l); }
+        .kpi-value.amber { color: var(--amber); }
+        .kpi-value.center { text-align: center; padding-left: 0; }
+        .ic-yellow { color: var(--yellow); filter: drop-shadow(0 0 8px rgba(250,204,21,0.45)); }
+        .ic-blue { color: var(--blue); filter: drop-shadow(0 0 8px rgba(59,130,246,0.45)); }
+        .ic-cyan { color: var(--cyan); filter: drop-shadow(0 0 8px rgba(34,211,238,0.45)); }
+        .ic-green { color: var(--green); filter: drop-shadow(0 0 8px rgba(34,197,94,0.45)); }
+
+        /* Row 2 */
+        .row2 { display: grid; grid-template-columns: 1.6fr 1.15fr 0.78fr; gap: 14px; }
+        .gen-body { display: grid; grid-template-columns: 1fr 1px 0.62fr; gap: 18px; margin-top: 12px; align-items: center; }
+        .gen-list { display: flex; flex-direction: column; gap: 10px; }
+        .gen-row { display: grid; grid-template-columns: 24px 1fr auto; align-items: center; gap: 10px; font-size: 0.9rem; color: var(--text-2); }
+        .gen-row .g-ic { color: #a9bbdb; font-size: 0.95rem; display: flex; justify-content: center; }
+        .gen-row .g-ic svg { width: 17px; height: 17px; }
+        .gen-val { font-weight: 700; color: #fff; white-space: nowrap; }
+        .gen-val.off { color: var(--dim); font-weight: 600; }
+        .vdiv { align-self: stretch; background: var(--line); }
+        .gen-total { text-align: center; }
+        .gen-total-label { font-size: 0.9rem; color: var(--text-2); }
+        .gen-total-value { font-size: 1.5rem; font-weight: 800; color: var(--cyan); margin-top: 6px; white-space: nowrap; text-shadow: 0 0 18px rgba(34,211,238,0.35); }
+        .gen-total-value .unit { color: var(--cyan); font-size: 0.8em; }
+        .dist-body { display: flex; flex-direction: column; gap: 18px; margin-top: 18px; }
+        .dist-row { display: grid; grid-template-columns: 30px 1fr auto; align-items: center; gap: 12px; font-size: 0.92rem; color: var(--text-2); }
+        .dist-row i { color: #a9bbdb; font-size: 1.05rem; text-align: center; }
+        .card-foot { margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--line-soft); font-size: 0.74rem; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 14px; }
+        .card-foot b { color: var(--text-2); font-weight: 600; }
+        .ie-card { display: flex; flex-direction: column; padding: 6px 16px; }
+        .ie-row { display: grid; grid-template-columns: 22px 1fr auto; align-items: center; gap: 10px; padding: 13px 0; border-bottom: 1px solid var(--line-soft); font-size: 0.92rem; color: var(--text-2); }
+        .ie-row:last-child { border-bottom: none; }
+        .ie-row > i { font-size: 1.05rem; text-align: center; }
+        .ie-val { font-weight: 700; color: var(--green-l); white-space: nowrap; text-align: right; }
+        .ie-val .unit { color: var(--green-l); opacity: 0.85; }
+        .ie-online { display: grid; grid-template-columns: 22px 1fr; gap: 10px; align-items: start; padding: 13px 0 10px; font-size: 0.92rem; color: var(--text-2); }
+        .ie-online > i { font-size: 1.05rem; color: var(--green); margin-top: 2px; text-align: center; }
+        .ie-online .ie-count { display: block; color: #fff; font-weight: 700; margin-top: 3px; font-size: 0.95rem; }
+
+        /* Charts row */
+        .charts-row { display: grid; grid-template-columns: 1.27fr 1fr; gap: 14px; }
+        .chart-box { position: relative; height: 250px; margin-top: 10px; }
+        .share-body { display: grid; grid-template-columns: minmax(180px, 1fr) auto; align-items: center; gap: 18px; margin-top: 10px; }
+        .share-chart { position: relative; height: 250px; }
+        .share-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
+        .share-center b { font-size: 1.3rem; font-weight: 800; color: #fff; font-variant-numeric: tabular-nums; }
+        .share-center span { font-size: 0.78rem; color: var(--text-2); margin-top: 2px; }
+        .share-legend { list-style: none; display: flex; flex-direction: column; gap: 9px; font-size: 0.86rem; color: var(--text-2); padding-right: 6px; max-height: 250px; overflow-y: auto; }
+        .share-legend li { display: flex; align-items: center; gap: 9px; white-space: nowrap; }
+        .share-legend .dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+        .share-legend b { color: #fff; font-weight: 600; }
+
+        /* Meters table + details */
+        .bottom-row { display: grid; grid-template-columns: 1.65fr 0.82fr; gap: 14px; height: 470px; }
+        .bottom-row > .card { display: flex; flex-direction: column; min-height: 0; }
+        .meters-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+        .guide { position: relative; }
+        .guide-btn { width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--line); background: transparent; color: var(--muted); cursor: help; }
+        .guide-btn:hover, .guide-btn:focus-visible { color: #fff; border-color: var(--blue); }
+        .guide-pop {
+            display: none; position: absolute; right: 0; top: 38px; z-index: 40; width: 380px; padding: 14px 16px; border-radius: 12px;
+            background: var(--card-hi); border: 1px solid var(--line); box-shadow: 0 18px 40px rgba(0,0,0,0.5);
+            font-size: 0.8rem; color: var(--text-2); line-height: 1.5; flex-direction: column; gap: 9px;
+        }
+        .guide:hover .guide-pop, .guide:focus-within .guide-pop { display: flex; }
+        .guide-pop strong { color: #fff; }
+        .table-wrap { margin-top: 10px; flex: 1 1 0; min-height: 0; overflow: auto; border-radius: 8px; }
+        .table-wrap::-webkit-scrollbar, .share-legend::-webkit-scrollbar, .md-overlay::-webkit-scrollbar { width: 8px; height: 8px; }
+        .table-wrap::-webkit-scrollbar-thumb, .share-legend::-webkit-scrollbar-thumb, .md-overlay::-webkit-scrollbar-thumb { background: rgba(110,150,220,0.25); border-radius: 8px; }
+        .mtable { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+        .mtable th {
+            position: sticky; top: 0; z-index: 1; background: #0e2244; text-align: left; font-weight: 600; font-size: 0.8rem;
+            color: var(--text-2); padding: 9px 10px; border-bottom: 1px solid var(--line); white-space: nowrap;
+        }
+        .mtable td { padding: 8px 10px; border-bottom: 1px solid var(--line-soft); color: var(--text); white-space: nowrap; }
+        .mtable th.num, .mtable td.num { text-align: right; }
+        .mtable td.num { font-weight: 600; }
+        .mtable tbody tr { cursor: pointer; transition: background 0.15s; }
+        .mtable tbody tr:hover { background: rgba(59, 130, 246, 0.08); }
+        .mtable tbody tr.selected { background: rgba(59, 130, 246, 0.16); box-shadow: inset 3px 0 0 var(--blue); }
+        .mtable tbody tr:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
+        .mtable tbody tr.is-offline td:not(:nth-child(3)) { color: var(--dim); }
+        .m-badge {
+            display: inline-block; min-width: 38px; text-align: center; padding: 3px 9px; border-radius: 7px; font-size: 0.78rem; font-weight: 700; color: #fff;
+            background: linear-gradient(180deg, #2563eb, #1d4ed8); border: 1px solid rgba(147,197,253,0.35); box-shadow: 0 2px 8px rgba(37,99,235,0.3);
+        }
+        .mtable tr.is-offline .m-badge { background: #1e3358; border-color: var(--line); box-shadow: none; color: var(--muted); }
+        .desc { display: flex; align-items: center; gap: 8px; }
+        .row-notes { display: inline-flex; gap: 4px; }
+        .note-ic { width: 20px; height: 20px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-size: 0.66rem; cursor: help; }
+        .negative { color: var(--amber) !important; }
 
         .status-badge {
-            font-size: 0.75rem;
-            padding: 4px 10px;
-            border-radius: 12px;
-            font-weight: bold;
+            display: inline-block; font-size: 0.74rem; font-weight: 600; padding: 3px 11px; border-radius: 999px; line-height: 1.35;
+            border: 1px solid transparent; white-space: nowrap;
         }
-        .badge-online { background: #e6ffec; color: var(--success); }
-        .badge-offline { background: #fff5e6; color: var(--warning); }
+        .badge-online { background: rgba(34, 197, 94, 0.14); color: var(--green-l); border-color: rgba(34, 197, 94, 0.55); }
+        .badge-offline { background: rgba(251, 191, 36, 0.1); color: var(--amber); border-color: rgba(251, 191, 36, 0.45); }
 
-        .charts-row { display: grid; grid-template-columns: 1.5fr 1fr; gap: 20px; }
-        .chart-container { background: white; border-radius: 12px; padding: 25px; box-shadow: 0 4px 20px rgba(0,0,0,0.03); border: 1px solid #e2e8f0; }
-        .chart-title { font-size: 1.2rem; font-weight: 600; margin-bottom: 20px; }
-        .chart-box { height: 300px; position: relative; width: 100%; }
-        .footer { text-align: center; padding: 20px; color: #6c757d; font-size: 0.9rem; border-top: 1px solid #e0e7ff; margin-top: auto; }
+        /* indicator chips */
+        .note { font-size: 0.72rem; font-weight: 600; padding: 3px 9px; border-radius: 999px; display: inline-flex; align-items: center; gap: 5px; cursor: help; border: 1px solid transparent; }
+        .note-reverse  { background: rgba(251, 191, 36, 0.12); color: #fcd34d; border-color: rgba(251, 191, 36, 0.35); }
+        .note-reactive { background: rgba(59, 130, 246, 0.14); color: #93c5fd; border-color: rgba(59, 130, 246, 0.4); }
+        .note-energy   { background: rgba(239, 68, 68, 0.13); color: #fca5a5; border-color: rgba(239, 68, 68, 0.4); }
+        .note-idle     { background: rgba(148, 163, 184, 0.12); color: #cbd5e1; border-color: rgba(148, 163, 184, 0.3); }
+        .note-source   { background: rgba(34, 211, 238, 0.1); color: #67e8f9; border-color: rgba(34, 211, 238, 0.3); }
 
-        @media (max-width: 992px) { 
-            .header { flex-direction: column; gap: 15px; align-items: flex-start; }
-            .charts-row, .top-cards-row { grid-template-columns: 1fr; } 
+        .detail-card { padding: 14px 16px 16px; }
+        .pd-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+        .pd-arrow { width: 30px; height: 30px; border-radius: 8px; border: 1px solid transparent; background: transparent; color: #fff; cursor: pointer; font-size: 0.95rem; }
+        .pd-arrow:hover { background: rgba(59,130,246,0.15); border-color: var(--line); }
+        .pd-name { font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
+        .pd-scroll { flex: 1 1 0; min-height: 0; overflow-y: auto; margin-right: -8px; padding-right: 8px; }
+        .pd-scroll::-webkit-scrollbar { width: 6px; }
+        .pd-scroll::-webkit-scrollbar-thumb { background: rgba(110,150,220,0.25); border-radius: 6px; }
+        .pd-rows { margin-top: 10px; display: flex; flex-direction: column; }
+        .pd-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 7px 0; font-size: 0.86rem; color: var(--text-2); }
+        .pd-row b { color: #fff; font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
+        .pd-sep { border-top: 1px dashed var(--line); margin: 6px 0 2px; }
+        .pd-notes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+        .pd-notes:empty { display: none; }
+        .pd-seen { font-size: 0.74rem; color: var(--muted); margin-top: 10px; }
+        .pd-open {
+            margin-top: 12px; width: 100%; padding: 9px 12px; border-radius: 9px; border: 1px solid rgba(147,197,253,0.35); cursor: pointer;
+            background: linear-gradient(90deg, #1d4ed8, #2563eb); color: #fff; font-weight: 600; font-size: 0.85rem;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
         }
-        .live-power { font-size: 0.9rem; font-weight: 600; color: var(--primary); margin-top: 6px; }
-        .last-seen { font-size: 0.75rem; color: #a0aec0; margin-top: 4px; }
-            .section-title { font-size: 1.1rem; font-weight: 700; color: var(--dark); display: flex; align-items: center; gap: 10px; }
-        .section-title small { font-weight: 500; color: #a0aec0; font-size: 0.85rem; }
-        .meter-card { border-left: 5px solid var(--primary); gap: 6px; }
-        .meter-card.offline { opacity: 0.6; }
-        .meter-name { font-size: 0.95rem; font-weight: 700; color: var(--dark); }
-        .meter-unit { font-size: 0.75rem; color: #a0aec0; font-weight: 500; }
-        .meter-kw { font-size: 1.6rem; font-weight: 700; color: var(--dark); }
-        .meter-kw.negative { color: var(--warning); }
-        .meter-row { display: flex; justify-content: space-between; font-size: 0.82rem; color: #4a5568; }
-        .meter-row span:first-child { color: #a0aec0; }
-        .phase-bars { display: flex; gap: 4px; margin-top: 4px; }
-        .phase-bar { flex: 1; height: 6px; border-radius: 3px; background: #edf2f7; overflow: hidden; }
-        .phase-bar > div { height: 100%; border-radius: 3px; transition: width 0.4s; }
-        .last-seen { font-size: 0.72rem; color: #a0aec0; }
-        .charts-row.wide { grid-template-columns: 1.6fr 1fr; }
-        .meter-notes { display: flex; flex-wrap: wrap; gap: 6px; min-height: 0; }
-        .note { font-size: 0.72rem; font-weight: 600; padding: 3px 8px; border-radius: 10px;
-                display: inline-flex; align-items: center; gap: 5px; cursor: help; }
-        .note-reverse  { background: #fff4e6; color: #d97706; }
-        .note-reactive { background: #e8f1ff; color: #1e63d6; }
-        .note-energy   { background: #fdecec; color: #c62828; }
-        .note-idle     { background: #f1f5f9; color: #64748b; }
-        .legend-panel { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 18px;
-                        display: flex; flex-wrap: wrap; gap: 10px 22px; align-items: center; font-size: 0.8rem; color: #4a5568; }
-        .legend-panel strong { color: var(--dark); }
+        .pd-open:hover { filter: brightness(1.1); }
+        .pd-open:focus-visible, .pd-arrow:focus-visible, .bell:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
 
-        /* --- Generation / Distribution sections --- */
-        .group-section { display: flex; flex-direction: column; gap: 15px; }
-        .group-total { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; padding: 0; overflow: hidden; }
-        .group-total.generation { border: 2px solid var(--success); }
-        .group-total.distribution { border: 2px solid var(--primary); }
-        .group-total > div { padding: 16px 20px; border-right: 1px solid #e2e8f0; }
-        .group-total > div:last-child { border-right: none; }
-        .group-total .gt-label { font-size: 0.8rem; color: #718096; font-weight: 600; }
-        .group-total .gt-value { font-size: 1.5rem; font-weight: 700; color: var(--dark); margin-top: 4px; }
-        .group-total .gt-value.negative { color: var(--warning); }
-        .meter-card.unassigned { border-left-color: #cbd5e0; border-style: dashed; border-left-style: solid; background: #fafbfc; }
-        .unassigned-text { font-size: 0.85rem; color: #a0aec0; line-height: 1.5; }
-        .source-tag { font-size: 0.68rem; font-weight: 600; color: #718096; background: #edf2f7; padding: 2px 7px; border-radius: 8px; }
-        @media (max-width: 768px) {
-            .group-total { grid-template-columns: 1fr 1fr; }
-            .group-total > div:nth-child(2) { border-right: none; }
-            .group-total > div:nth-child(-n+2) { border-bottom: 1px solid #e2e8f0; }
-        }
+        /* ===================== Loading progress (first sync) ===================== */
+        .load-card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 18px 13px; }
+        .load-card[hidden] { display: none; }
+        .load-top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+        .load-title { font-size: 0.92rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 9px; }
+        .load-title i { color: var(--blue); }
+        .load-pct { font-size: 1.25rem; font-weight: 800; color: var(--cyan); font-variant-numeric: tabular-nums; }
+        .load-track { height: 8px; margin: 9px 0 8px; background: rgba(110,150,220,0.15); border-radius: 6px; overflow: hidden; }
+        .load-fill { height: 100%; width: 0; border-radius: 6px; background: linear-gradient(90deg, var(--cyan), var(--blue)); transition: width 0.2s linear; position: relative; overflow: hidden; }
+        .load-fill::after { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(115deg, rgba(255,255,255,0.2) 0 10px, transparent 10px 20px); }
+        @media (prefers-reduced-motion: no-preference) { .load-card.busy .load-fill::after { animation: loadStripes 0.8s linear infinite; } }
+        @keyframes loadStripes { from { background-position: 0 0; } to { background-position: 46px 0; } }
+        .load-sub { font-size: 0.8rem; color: var(--muted); display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+        .load-card.done { border-color: rgba(34,197,94,0.5); }
+        .load-card.done .load-fill { background: var(--green); }
+        .load-card.done .load-pct, .load-card.done .load-title i { color: var(--green-l); }
+        .load-card.failed { border-color: rgba(239,68,68,0.55); }
+        .load-card.failed .load-pct, .load-card.failed .load-title i { color: var(--red); }
 
-
-
-        /* --- Meter detail view (opens on card click) --- */
-        .meter-card[data-src] { cursor: pointer; transition: box-shadow 0.2s, border-color 0.2s; }
-        .meter-card[data-src]:hover { box-shadow: 0 6px 24px rgba(58,134,255,0.13); border-color: #c7dbff; }
-        .meter-card[data-src]:focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
-        .card-open-hint { font-size: 0.74rem; font-weight: 600; color: var(--primary); display: flex; align-items: center; gap: 6px; margin-top: 2px; }
+        /* ===================== Meter detail view (dark) ===================== */
         body.md-open { overflow: hidden; }
-
-        .md-overlay { --md-pad: 24px; position: fixed; inset: 0; z-index: 1000; background: rgba(30,35,60,0.55); overflow-y: auto; padding: var(--md-pad); }
+        .md-overlay { --md-pad: 24px; position: fixed; inset: 0; z-index: 1000; background: rgba(2, 8, 20, 0.72); backdrop-filter: blur(3px); overflow-y: auto; padding: var(--md-pad); }
         .md-overlay[hidden] { display: none; }
-        .md-panel { max-width: 1320px; margin: 0 auto; background: #f5f7ff; border-radius: 16px; box-shadow: 0 24px 60px rgba(0,0,0,0.25); overflow: clip; animation: mdIn 0.22s ease-out; }
+        .md-panel { max-width: 1320px; margin: 0 auto; background: #081a36; border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 30px 70px rgba(0,0,0,0.55); overflow: clip; animation: mdIn 0.22s ease-out; }
         @keyframes mdIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
         @media (prefers-reduced-motion: reduce) { .md-panel { animation: none; } }
-
-        .md-head { position: sticky; top: calc(-1 * var(--md-pad)); z-index: 3; background: white; border-top: 6px solid var(--md-color, var(--primary));
-                   border-bottom: 1px solid #e2e8f0; padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; }
-        .md-title { font-size: 1.35rem; font-weight: 700; color: var(--dark); }
-        .md-sub { font-size: 0.82rem; color: #718096; margin-top: 2px; }
+        .md-head { position: sticky; top: calc(-1 * var(--md-pad)); z-index: 3; background: #0c1e3b; border-top: 5px solid var(--md-color, var(--blue));
+                   border-bottom: 1px solid var(--line); padding: 14px 24px; display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; }
+        .md-title { font-size: 1.35rem; font-weight: 800; color: #fff; }
+        .md-sub { font-size: 0.82rem; color: var(--muted); margin-top: 2px; }
         .md-head-right { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
-        .md-seen { font-size: 0.8rem; color: #718096; }
-        .md-close { width: 40px; height: 40px; border-radius: 10px; border: 1px solid #e2e8f0; background: #f8fafc; color: #4a5568; font-size: 1.1rem; cursor: pointer; }
-        .md-close:hover { background: #f0f7ff; color: var(--primary); border-color: var(--primary); }
-        .md-close:focus-visible, .md-seg button:focus-visible, .md-btn:focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
-
-        .md-body { padding: 22px 24px 28px; display: flex; flex-direction: column; gap: 20px; }
-        .md-section { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+        .md-seen { font-size: 0.8rem; color: var(--muted); }
+        .md-close { width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--line); background: rgba(255,255,255,0.03); color: var(--text-2); font-size: 1.1rem; cursor: pointer; }
+        .md-close:hover { background: rgba(59,130,246,0.15); color: #fff; border-color: var(--blue); }
+        .md-close:focus-visible, .md-seg button:focus-visible, .md-btn:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+        .md-body { padding: 22px 24px 28px; display: flex; flex-direction: column; gap: 18px; }
+        .md-section { background: linear-gradient(180deg, rgba(16,38,74,0.9), rgba(10,26,52,0.9)); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; display: flex; flex-direction: column; gap: 16px; }
         .md-sec-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
-        .md-sec-head h3 { font-size: 1.08rem; font-weight: 700; color: var(--dark); display: flex; align-items: center; gap: 9px; }
-        .md-sec-head h3 i { color: var(--md-color, var(--primary)); }
-        .md-sec-note { font-size: 0.8rem; color: #94a3b8; }
-
+        .md-sec-head h3 { font-size: 1.05rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 9px; }
+        .md-sec-head h3 i { color: var(--md-color, var(--blue)); }
+        .md-sec-note { font-size: 0.8rem; color: var(--muted); }
         .md-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); gap: 12px; }
-        .md-tile { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; }
-        .md-tile-main { grid-column: span 2; background: #f0f7ff; border-color: #c7dbff; }
-        .md-tl { font-size: 0.78rem; font-weight: 600; color: #718096; }
-        .md-tv { font-size: 1.4rem; font-weight: 700; color: var(--dark); margin-top: 4px; font-variant-numeric: tabular-nums; }
-        .md-tile-main .md-tv { font-size: 2.1rem; }
-        .md-tv.negative { color: var(--warning); }
-        .md-unit { font-size: 0.8rem; font-weight: 600; color: #94a3b8; margin-left: 4px; }
-        .md-ts { font-size: 0.75rem; color: #94a3b8; margin-top: 3px; }
-
+        .md-tile { background: rgba(6, 18, 39, 0.55); border: 1px solid var(--line-soft); border-radius: 10px; padding: 12px 14px; }
+        .md-tile-main { grid-column: span 2; background: rgba(37, 99, 235, 0.14); border-color: rgba(59,130,246,0.45); }
+        .md-tl { font-size: 0.78rem; font-weight: 600; color: var(--muted); }
+        .md-tv { font-size: 1.4rem; font-weight: 800; color: #fff; margin-top: 4px; font-variant-numeric: tabular-nums; }
+        .md-tile-main .md-tv { font-size: 2.1rem; color: var(--cyan); }
+        .md-tv.negative { color: var(--amber); }
+        .md-unit { font-size: 0.8rem; font-weight: 600; color: var(--muted); margin-left: 4px; }
+        .md-ts { font-size: 0.75rem; color: var(--muted); margin-top: 3px; }
         .md-table-wrap { overflow-x: auto; }
-        .md-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; font-variant-numeric: tabular-nums; }
-        .md-table th { text-align: right; font-size: 0.76rem; font-weight: 600; color: #718096; padding: 8px 10px; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
-        .md-table td { text-align: right; padding: 9px 10px; border-bottom: 1px solid #edf2f7; white-space: nowrap; color: #2d3748; }
+        .md-table { width: 100%; border-collapse: collapse; font-size: 0.86rem; font-variant-numeric: tabular-nums; }
+        .md-table th { text-align: right; font-size: 0.76rem; font-weight: 600; color: var(--muted); padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+        .md-table td { text-align: right; padding: 9px 10px; border-bottom: 1px solid var(--line-soft); white-space: nowrap; color: var(--text); }
         .md-table th:first-child, .md-table td:first-child { text-align: left; }
-        .md-table tr.md-total td { font-weight: 700; background: #f8fafc; border-bottom: none; }
-        .md-table .na { color: #cbd5e0; }
+        .md-table tr.md-total td { font-weight: 700; background: rgba(59,130,246,0.08); border-bottom: none; }
+        .md-table .na { color: var(--dim); }
         .md-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 7px; vertical-align: middle; }
-        .md-small { font-size: 0.72rem; color: #94a3b8; font-weight: 500; }
-
-        .md-note { font-size: 0.8rem; color: #64748b; background: #f8fafc; border: 1px dashed #cbd5e0; border-radius: 8px; padding: 9px 12px; line-height: 1.5; }
+        .md-small { font-size: 0.72rem; color: var(--muted); font-weight: 500; }
+        .md-note { font-size: 0.8rem; color: var(--text-2); background: rgba(6,18,39,0.5); border: 1px dashed var(--line); border-radius: 8px; padding: 9px 12px; line-height: 1.5; }
         .md-note:empty { display: none; }
-        .md-error { font-size: 0.82rem; color: var(--danger); font-weight: 600; }
+        .md-error { font-size: 0.82rem; color: #fca5a5; font-weight: 600; }
         .md-error:empty { display: none; }
-
         .md-grid-2 { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; }
         .md-grid-3 { display: grid; grid-template-columns: 1.6fr 1fr 1fr; gap: 16px; }
-        .md-chart-card { border: 1px solid #edf2f7; border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-        .md-chart-title { font-size: 0.92rem; font-weight: 600; color: var(--dark); }
-        .md-chart-sub { font-size: 0.76rem; color: #94a3b8; }
+        .md-chart-card { border: 1px solid var(--line-soft); background: rgba(6,18,39,0.35); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+        .md-chart-title { font-size: 0.92rem; font-weight: 600; color: #fff; }
+        .md-chart-sub { font-size: 0.76rem; color: var(--muted); }
         .md-chart { position: relative; height: 270px; }
         .md-chart.tall { height: 320px; }
         .md-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 20px;
-                    font-size: 0.85rem; color: #94a3b8; background: rgba(255,255,255,0.92); }
+                    font-size: 0.85rem; color: var(--muted); background: rgba(8, 22, 46, 0.92); border-radius: 8px; }
         .md-empty[hidden] { display: none; }
-
         .md-controls { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
-        .md-seg { display: inline-flex; flex-wrap: wrap; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; background: #f8fafc; }
-        .md-seg button { border: none; background: transparent; padding: 8px 12px; font-size: 0.82rem; font-weight: 600; color: #4a5568; cursor: pointer; border-right: 1px solid #e2e8f0; }
+        .md-seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: rgba(6,18,39,0.5); }
+        .md-seg button { border: none; background: transparent; padding: 8px 12px; font-size: 0.82rem; font-weight: 600; color: var(--text-2); cursor: pointer; border-right: 1px solid var(--line-soft); }
         .md-seg button:last-child { border-right: none; }
-        .md-seg button[aria-pressed="true"] { background: var(--primary); color: white; }
-        .md-controls label { font-size: 0.82rem; font-weight: 600; color: #4a5568; display: inline-flex; align-items: center; gap: 6px; }
-        .md-controls input, .md-controls select { font: inherit; font-weight: 500; font-size: 0.85rem; padding: 6px 8px; border: 1px solid #cbd5e0; border-radius: 8px; background: white; color: var(--dark); }
+        .md-seg button:hover { color: #fff; }
+        .md-seg button[aria-pressed="true"] { background: linear-gradient(90deg, #1d4ed8, #2563eb); color: #fff; }
+        .md-controls label { font-size: 0.82rem; font-weight: 600; color: var(--text-2); display: inline-flex; align-items: center; gap: 6px; }
+        .md-controls input, .md-controls select { font: inherit; font-weight: 500; font-size: 0.85rem; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: #0a1932; color: #fff; color-scheme: dark; }
         .md-custom { display: inline-flex; flex-wrap: wrap; gap: 10px; align-items: center; }
         .md-custom[hidden] { display: none; }
-        .md-btn { font: inherit; font-size: 0.85rem; font-weight: 600; padding: 7px 14px; border-radius: 8px; border: none; background: var(--primary); color: white; cursor: pointer; }
-
-        .md-details summary { cursor: pointer; font-size: 0.88rem; font-weight: 600; color: var(--primary); padding: 4px 0; }
+        .md-btn { font: inherit; font-size: 0.85rem; font-weight: 600; padding: 7px 14px; border-radius: 8px; border: none; background: var(--blue-2); color: #fff; cursor: pointer; }
+        .md-details summary { cursor: pointer; font-size: 0.88rem; font-weight: 600; color: #93c5fd; padding: 4px 0; }
         .md-details[open] summary { margin-bottom: 10px; }
 
-        @media (max-width: 992px) {
+        /* ===================== Responsive ===================== */
+        @media (max-width: 1360px) {
+            .row2 { grid-template-columns: 1fr 1fr; }
+            .ie-card { grid-column: span 2; display: grid; grid-template-columns: repeat(3, 1fr); column-gap: 24px; }
+            .ie-row { border-bottom: none; }
+        }
+        @media (max-width: 1180px) {
+            .kpi-row { grid-template-columns: 1fr 1fr; }
+            .charts-row, .bottom-row { grid-template-columns: 1fr; }
+            .bottom-row { height: auto; }
+            .bottom-row > .card { height: 460px; }
+        }
+        @media (max-width: 900px) {
+            .app { flex-direction: column; }
+            .sidebar { width: 100%; height: auto; position: static; }
+            .brand { padding: 16px 16px 12px; }
+            .nav { flex-direction: row; flex-wrap: wrap; padding: 0 12px 12px; }
+            .nav li { flex: 1 1 140px; }
+            .sb-foot { min-height: 0; }
+            .sb-art { display: none; }
+            .sb-status { padding: 0 16px 14px; display: flex; gap: 14px; align-items: baseline; flex-wrap: wrap; }
+            .sb-update { margin-top: 0; }
+            .main { padding: 16px; }
+            .topbar { flex-direction: column; }
             .md-grid-2, .md-grid-3 { grid-template-columns: 1fr; }
         }
         @media (max-width: 640px) {
+            .kpi-row, .row2 { grid-template-columns: 1fr; }
+            .ie-card { grid-column: auto; display: flex; }
+            .gen-body { grid-template-columns: 1fr; }
+            .vdiv { height: 1px; }
+            .share-body { grid-template-columns: 1fr; }
             .md-overlay { --md-pad: 0px; }
             .md-panel { border-radius: 0; min-height: 100%; }
             .md-body { padding: 14px; }
             .md-section { padding: 14px; }
             .md-tile-main { grid-column: span 1; }
+            .guide-pop { width: 290px; }
         }
-
-        /* --- Loading progress (first sync) --- */
-        .load-card { background: white; border: 1px solid #c7dbff; border-radius: 14px; padding: 14px 20px 15px;
-                     box-shadow: 0 4px 20px rgba(58,134,255,0.08); }
-        .load-card[hidden] { display: none; }
-        .load-top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
-        .load-title { font-size: 0.95rem; font-weight: 700; color: var(--dark); display: flex; align-items: center; gap: 9px; }
-        .load-title i { color: var(--primary); }
-        .load-pct { font-size: 1.35rem; font-weight: 700; color: var(--primary); font-variant-numeric: tabular-nums; }
-        .load-track { height: 10px; margin: 9px 0 8px; background: #edf2f7; border-radius: 6px; overflow: hidden; }
-        .load-fill { height: 100%; width: 0; border-radius: 6px; background: linear-gradient(90deg, #00b4d8, var(--primary));
-                     transition: width 0.2s linear; position: relative; overflow: hidden; }
-        .load-fill::after { content: ''; position: absolute; inset: 0;
-                     background: repeating-linear-gradient(115deg, rgba(255,255,255,0.28) 0 10px, transparent 10px 20px); }
-        @media (prefers-reduced-motion: no-preference) { .load-card.busy .load-fill::after { animation: loadStripes 0.8s linear infinite; } }
-        @keyframes loadStripes { from { background-position: 0 0; } to { background-position: 46px 0; } }
-        .load-sub { font-size: 0.82rem; color: #718096; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-        .load-card.done { border-color: #a7e9c3; }
-        .load-card.done .load-fill { background: var(--success); }
-        .load-card.done .load-pct, .load-card.done .load-title i { color: var(--success); }
-        .load-card.failed { border-color: #f5b7b1; }
-        .load-card.failed .load-pct, .load-card.failed .load-title i { color: var(--danger); }
     </style>
 </head>
 <body>
+<div class="app">
 
-    <div class="container">
-        <main class="main-content">
+    <!-- ===================== Sidebar ===================== -->
+    <aside class="sidebar">
+        <div class="brand"><span class="logo-tile"><img class="logo-img" src="data:image/png;base64,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" alt="Toyo Packaging"></span></div>
 
-            <header class="header">
-                <div class="header-left">
-                    <img src="data:image/png;base64,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" alt="Toyo Packaging Logo" class="header-logo">
-                    <h2>Advanced Energy Management System</h2>
-                </div>
-                <div class="header-right-title">
-                    <i class="fas fa-cloud"></i> <span id="db-status">Cloud Syncing...</span><span id="pkt-clock" style="font-size:0.8rem;font-weight:600;color:#94a3b8;margin-left:8px;">-- PKT</span>
-                </div>
-            </header>
+        <ul class="nav">
+            <li class="active"><a href="#"><i class="fas fa-house"></i><span>Main Dashboard</span></a></li>
+            <li><a href="Rep.html"><i class="far fa-file-lines"></i><span>Energy &amp; Cost Reports</span></a></li>
+        </ul>
 
-            <div class="load-card busy" id="load-card" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Loading dashboard data">
-                <div class="load-top">
-                    <span class="load-title"><i class="fas fa-cloud-arrow-down" id="load-icon"></i><span id="load-title">Connecting to the cloud…</span></span>
-                    <span class="load-pct" id="load-pct">0%</span>
+        <div class="sb-foot">
+            <svg class="sb-art" viewBox="0 0 240 300" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+                <defs>
+                    <linearGradient id="sbSky" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0" stop-color="#0a1e40" stop-opacity="0"/>
+                        <stop offset="0.5" stop-color="#16407f" stop-opacity="0.55"/>
+                        <stop offset="1" stop-color="#0b2148"/>
+                    </linearGradient>
+                    <radialGradient id="sbGlow" cx="0.5" cy="0.5" r="0.5">
+                        <stop offset="0" stop-color="#f59e0b" stop-opacity="0.5"/>
+                        <stop offset="1" stop-color="#f59e0b" stop-opacity="0"/>
+                    </radialGradient>
+                    <linearGradient id="sbPv" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0" stop-color="#3b82f6"/><stop offset="1" stop-color="#1e3a8a"/>
+                    </linearGradient>
+                    <pattern id="sbCells1" width="9" height="6" patternUnits="userSpaceOnUse" patternTransform="skewX(-30)">
+                        <rect width="9" height="6" fill="url(#sbPv)"/><path d="M9 0V6M0 6H9" stroke="#a5c8ff" stroke-opacity="0.55" stroke-width="0.6"/>
+                    </pattern>
+                    <pattern id="sbCells2" width="13" height="8" patternUnits="userSpaceOnUse" patternTransform="skewX(-30)">
+                        <rect width="13" height="8" fill="url(#sbPv)"/><path d="M13 0V8M0 8H13" stroke="#a5c8ff" stroke-opacity="0.55" stroke-width="0.8"/>
+                    </pattern>
+                    <pattern id="sbCells3" width="18" height="11" patternUnits="userSpaceOnUse" patternTransform="skewX(-30)">
+                        <rect width="18" height="11" fill="url(#sbPv)"/><path d="M18 0V11M0 11H18" stroke="#a5c8ff" stroke-opacity="0.6" stroke-width="1"/>
+                    </pattern>
+                    <linearGradient id="sbFade" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0.55" stop-color="#071530" stop-opacity="0"/>
+                        <stop offset="1" stop-color="#071530" stop-opacity="0.92"/>
+                    </linearGradient>
+                </defs>
+                <rect width="240" height="300" fill="url(#sbSky)"/>
+                <ellipse cx="110" cy="128" rx="150" ry="50" fill="url(#sbGlow)"/>
+                <!-- factory -->
+                <g fill="#0a1a33">
+                    <rect x="22" y="46" width="8" height="90"/>
+                    <rect x="38" y="66" width="7" height="70"/>
+                    <rect x="164" y="56" width="9" height="80"/>
+                    <rect x="182" y="78" width="6" height="58"/>
+                    <path d="M0 140V112h18V98h34v18l20-13v13l20-13v13l20-13v13l20-13v13h18V92h40v24h24V104h26v36z"/>
+                </g>
+                <g fill="#fbbf24">
+                    <rect x="6" y="120" width="5" height="3" opacity="0.9"/><rect x="24" y="108" width="5" height="3" opacity="0.8"/>
+                    <rect x="36" y="120" width="5" height="3"/><rect x="60" y="122" width="4" height="3" opacity="0.7"/>
+                    <rect x="78" y="124" width="4" height="3"/><rect x="98" y="122" width="4" height="3" opacity="0.8"/>
+                    <rect x="118" y="124" width="4" height="3"/><rect x="138" y="122" width="4" height="3" opacity="0.7"/>
+                    <rect x="158" y="104" width="5" height="3"/><rect x="170" y="112" width="5" height="3" opacity="0.8"/>
+                    <rect x="160" y="122" width="5" height="3" opacity="0.9"/><rect x="176" y="124" width="5" height="3"/>
+                    <rect x="204" y="118" width="5" height="3" opacity="0.85"/><rect x="220" y="124" width="5" height="3"/>
+                </g>
+                <rect y="138" width="240" height="14" fill="#091a36"/>
+                <!-- solar arrays -->
+                <polygon points="6,152 234,152 244,176 -4,176" fill="url(#sbCells1)"/>
+                <polygon points="-14,186 254,186 268,222 -28,222" fill="url(#sbCells2)"/>
+                <polygon points="-40,234 280,234 302,300 -62,300" fill="url(#sbCells3)"/>
+                <rect width="240" height="300" fill="url(#sbFade)"/>
+            </svg>
+            <div class="sb-status">
+                <div id="db-status" style="color: var(--primary);">Cloud Syncing...</div>
+                <div class="sb-update">Last Update: <span id="last-update">--</span></div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ===================== Main ===================== -->
+    <main class="main">
+        <header class="topbar">
+            <div>
+                <h1>Advanced Energy Management System</h1>
+                <div class="subtitle">Facility Electrical &amp; Solar Monitoring Dashboard</div>
+            </div>
+            <div class="top-actions">
+                <div class="date-pill"><i class="far fa-calendar"></i><span id="pkt-clock">--</span></div>
+                <button class="bell" id="bell-btn" aria-label="Meter alerts" aria-expanded="false" aria-controls="bell-pop">
+                    <i class="far fa-bell"></i><span class="bell-dot" id="bell-dot" hidden></span>
+                </button>
+                <div class="bell-pop" id="bell-pop" hidden>
+                    <strong>Meter status</strong>
+                    <span id="meters-offline-list">Waiting for data...</span>
                 </div>
-                <div class="load-track"><div class="load-fill" id="load-fill"></div></div>
-                <div class="load-sub"><span id="load-sub">Step 1 of 3: requesting live meter values</span><span id="load-time">0 s</span></div>
+            </div>
+        </header>
+
+        <div class="load-card busy" id="load-card" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Loading dashboard data">
+            <div class="load-top">
+                <span class="load-title"><i class="fas fa-cloud-arrow-down" id="load-icon"></i><span id="load-title">Connecting to the cloud…</span></span>
+                <span class="load-pct" id="load-pct">0%</span>
+            </div>
+            <div class="load-track"><div class="load-fill" id="load-fill"></div></div>
+            <div class="load-sub"><span id="load-sub">Step 1 of 3: requesting live meter values</span><span id="load-time">0 s</span></div>
+        </div>
+
+        <!-- KPI cards -->
+        <section class="kpi-row">
+            <div class="card kpi" title="Import + export, sum of all meters">
+                <div class="kpi-head">
+                    <i class="fas fa-bolt kpi-icon ic-yellow"></i>
+                    <div class="kpi-title">Total Energy of Facility <span>(Cumulative)</span></div>
+                </div>
+                <div class="kpi-value" id="facility-total-kwh">-- <span class="unit">kWh</span></div>
+            </div>
+            <div class="card kpi" title="Sum of all distribution feeders">
+                <div class="kpi-head">
+                    <i class="fas fa-chart-simple kpi-icon ic-blue"></i>
+                    <div class="kpi-title">Total Live Load</div>
+                </div>
+                <div class="kpi-value" id="facility-live-kw">-- <span class="unit">kW</span></div>
+            </div>
+            <div class="card kpi" title="From Metallizer (Janitza main master)">
+                <div class="kpi-head">
+                    <i class="fas fa-wave-square kpi-icon ic-cyan"></i>
+                    <div class="kpi-title">Grid Frequency</div>
+                </div>
+                <div class="kpi-value" id="sys-freq">-- <span class="unit">Hz</span></div>
+            </div>
+            <div class="card kpi">
+                <div class="kpi-head">
+                    <i class="fas fa-layer-group kpi-icon ic-green"></i>
+                    <div class="kpi-title">Meters Online</div>
+                </div>
+                <div class="kpi-value green center" id="meters-online">-- / --</div>
+            </div>
+        </section>
+
+        <!-- Generation / Distribution / Import-Export -->
+        <section class="row2">
+            <div class="card">
+                <div class="card-title"><i class="fas fa-sun ic-sun"></i> Generation <small>(Current)</small></div>
+                <div class="gen-body">
+                    <div class="gen-list" id="gen-list"></div>
+                    <div class="vdiv"></div>
+                    <div class="gen-total">
+                        <div class="gen-total-label">Total Generation</div>
+                        <div class="gen-total-value" id="gen-total-kw">-- <span class="unit">kW</span></div>
+                    </div>
+                </div>
             </div>
 
-            <section class="nav-section">
-                <div class="nav-instruction">
-                    <i class="fas fa-circle-info"></i>
-                    <span><strong>Quick Navigation:</strong> Switch between analytics pages and reporting tools.</span>
+            <div class="card">
+                <div class="card-title"><i class="fas fa-circle-nodes ic-dist"></i> Distribution <small>(Current Load)</small></div>
+                <div class="dist-body">
+                    <div class="dist-row"><i class="fas fa-diagram-project"></i><span>Production Feeders</span><span class="gen-val" id="dist-prod-kw">-- kW</span></div>
+                    <div class="dist-row"><i class="fas fa-sitemap"></i><span>Utility Feeders</span><span class="gen-val" id="dist-util-kw">-- kW</span></div>
                 </div>
-                <ul class="horizontal-menu">
-                    <li class="horizontal-item active">
-                        <a href="#">
-                            <div class="nav-icon-box icon-dashboard"><i class="fas fa-chart-pie"></i></div>
-                            <span>Main Dashboard</span>
-                        </a>
-                    </li>
-                    <li class="horizontal-item">
-                        <a href="Rep.html">
-                            <div class="nav-icon-box icon-cost"><i class="fas fa-coins"></i></div>
-                            <span>Energy &amp; Cost Reports</span>
-                        </a>
-                    </li>
-                </ul>
-            </section>
-
-            <div class="dashboard-cards">
-                <!-- Top Summary Cards -->
-                <div class="top-cards-row">
-                    <div class="card big-card">
-                        <div class="card-header">
-                            <div class="card-title">Total Energy of Facility (Cumulative)</div>
-                            <div class="card-icon" style="background: #e3f2fd;"><i class="fas fa-calculator" style="color: var(--primary);"></i></div>
-                        </div>
-                        <div class="card-value" id="facility-total-kwh">0.00 kWh</div>
-                        <div class="card-subtext">Import + export, sum of all meters</div>
-                    </div>
-                    <div class="card big-card">
-                        <div class="card-header">
-                            <div class="card-title">Total Live Load</div>
-                            <div class="card-icon" style="background: #fff4e6;"><i class="fas fa-bolt" style="color: var(--warning);"></i></div>
-                        </div>
-                        <div class="card-value" id="facility-live-kw">0.00 kW</div>
-                        <div class="card-subtext">Sum of all distribution feeders</div>
-                    </div>
-                    <div class="card big-card secondary-accent">
-                        <div class="card-header">
-                            <div class="card-title">Grid Frequency</div>
-                            <div class="card-icon" style="background: #efeaff;"><i class="fas fa-wave-square" style="color: var(--accent1);"></i></div>
-                        </div>
-                        <div class="card-value" id="sys-freq">0.0 Hz</div>
-                        <div class="card-subtext">From Metallizer (Janitza main master)</div>
-                    </div>
-                    <div class="card big-card secondary-accent">
-                        <div class="card-header">
-                            <div class="card-title">Meters Online</div>
-                            <div class="card-icon" style="background: #e6ffec;"><i class="fas fa-network-wired" style="color: var(--success);"></i></div>
-                        </div>
-                        <div class="card-value" id="meters-online">0 / 0</div>
-                        <div class="card-subtext" id="meters-offline-list">Waiting for data...</div>
-                    </div>
+                <div class="card-foot">
+                    <span>Feeders online <b id="dist-online">-- / --</b></span>
+                    <span>Import <b id="dist-total-imp">-- kWh</b></span>
+                    <span>Export <b id="dist-total-exp">-- kWh</b></span>
                 </div>
-
-                <!-- Meter Cards -->
-                <!-- Generation -->
-                <div class="group-section">
-                    <div class="section-title"><i class="fas fa-solar-panel" style="color: var(--success);"></i> Generation <small>KE, Genset, Solar 1, Solar 2</small></div>
-                    <div class="card group-total generation">
-                        <div><div class="gt-label">Total generation (live)</div><div class="gt-value" id="gen-total-kw">-- kW</div></div>
-                        <div><div class="gt-label">Energy import</div><div class="gt-value" id="gen-total-imp">-- kWh</div></div>
-                        <div><div class="gt-label">Energy export</div><div class="gt-value" id="gen-total-exp">-- kWh</div></div>
-                        <div><div class="gt-label">Sources online</div><div class="gt-value" id="gen-online">-- / --</div></div>
-                    </div>
-                    <div class="meters-grid" id="grid-generation"></div>
-                </div>
-
-                <!-- Distribution -->
-                <div class="group-section">
-                    <div class="section-title"><i class="fas fa-diagram-project" style="color: var(--primary);"></i> Distribution <small>Production and utility feeders</small></div>
-                    <div class="card group-total distribution">
-                        <div><div class="gt-label">Total distribution load (live)</div><div class="gt-value" id="dist-total-kw">-- kW</div></div>
-                        <div><div class="gt-label">Energy import</div><div class="gt-value" id="dist-total-imp">-- kWh</div></div>
-                        <div><div class="gt-label">Energy export</div><div class="gt-value" id="dist-total-exp">-- kWh</div></div>
-                        <div><div class="gt-label">Feeders online</div><div class="gt-value" id="dist-online">-- / --</div></div>
-                    </div>
-                    <div class="meters-grid" id="grid-distribution"></div>
-                </div>
-
-                <!-- Other meters (not counted in either total) -->
-                <div class="group-section" id="section-other">
-                    <div class="section-title"><i class="fas fa-gauge-high" style="color: #718096;"></i> Other Meters <small>Not counted in Generation or Distribution totals</small></div>
-                    <div class="meters-grid" id="grid-other"></div>
-                </div>
-                <div class="legend-panel">
-                    <strong><i class="fas fa-circle-info" style="color: var(--warning);"></i> Indicator guide:</strong>
-                    <span><span class="note note-idle"><i class="fas fa-power-off"></i> No load</span> feeder is not drawing current; tiny power readings are shown as 0.00 kW</span>
-                    <span><span class="note note-reverse"><i class="fas fa-right-left"></i> Reverse power</span> power flows back through the meter (export). If this feeder should only consume, check the CT direction / S1-S2 wiring</span>
-                    <span><span class="note note-reactive"><i class="fas fa-wave-square"></i> Mostly reactive</span> current is mostly reactive (low power factor), e.g. capacitor bank or idle motors</span>
-                    <span><span class="note note-energy"><i class="fas fa-triangle-exclamation"></i> Energy not counting</span> current flows but energy counters read 0. Compare with the meter display</span>
-                    <span>Hover over any indicator on a card for details.</span>
-                </div>
-
-                <!-- Charts Section -->
-                <div class="charts-row wide">
-                    <div class="chart-container">
-                        <div class="chart-title">Active Power per Meter and Phase (kW)</div>
-                        <div class="chart-box" style="height: 340px;"><canvas id="loadDistributionChart"></canvas></div>
-                    </div>
-                    <div class="chart-container">
-                        <div class="chart-title">Meter Power Share Ratio</div>
-                        <div class="chart-box" style="height: 340px;"><canvas id="departmentChart"></canvas></div>
-                    </div>
-                </div>
-
-                <footer class="footer"><p>Toyo Packaging &mdash; Advanced Energy Management System</p></footer>
             </div>
-        </main>
-    </div>
 
+            <div class="card ie-card" title="Energy counters of the generation sources">
+                <div class="ie-row"><i class="fas fa-arrow-down" style="color: var(--blue);"></i><span>Import</span><span class="ie-val" id="gen-total-imp">-- <span class="unit">kWh</span></span></div>
+                <div class="ie-row"><i class="fas fa-arrow-up" style="color: var(--green);"></i><span>Export</span><span class="ie-val" id="gen-total-exp">-- <span class="unit">kWh</span></span></div>
+                <div class="ie-online"><i class="fas fa-wifi"></i><span>Online Sources<span class="ie-count" id="gen-online">-- / --</span></span></div>
+            </div>
+        </section>
 
-    <!-- ===== Meter detail view (opens when a meter card is clicked) ===== -->
+        <!-- Charts -->
+        <section class="charts-row">
+            <div class="card">
+                <div class="card-title">Active Power per Meter and Phase (kW)</div>
+                <div class="chart-box"><canvas id="loadDistributionChart"></canvas></div>
+            </div>
+            <div class="card">
+                <div class="card-title">Meter Power Share Ratio</div>
+                <div class="share-body">
+                    <div class="share-chart">
+                        <canvas id="departmentChart"></canvas>
+                        <div class="share-center"><b id="share-total">-- kW</b><span>Total Load</span></div>
+                    </div>
+                    <ul class="share-legend" id="share-legend"></ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Meters table + details -->
+        <section class="bottom-row">
+            <div class="card">
+                <div class="meters-head">
+                    <div class="card-title">Meters <small>(Click a meter for details)</small></div>
+                    <div class="guide">
+                        <button class="guide-btn" aria-label="Indicator guide"><i class="fas fa-circle-info"></i></button>
+                        <div class="guide-pop" role="tooltip">
+                            <strong>Indicator guide</strong>
+                            <span><span class="note note-idle"><i class="fas fa-power-off"></i> No load</span> feeder is not drawing current; tiny power readings are shown as 0.0 kW</span>
+                            <span><span class="note note-reverse"><i class="fas fa-right-left"></i> Reverse power</span> power flows back through the meter (export). If this feeder should only consume, check the CT direction / S1-S2 wiring</span>
+                            <span><span class="note note-reactive"><i class="fas fa-wave-square"></i> Mostly reactive</span> current is mostly reactive (low power factor), e.g. capacitor bank or idle motors</span>
+                            <span><span class="note note-energy"><i class="fas fa-triangle-exclamation"></i> Energy not counting</span> current flows but energy counters read 0. Compare with the meter display</span>
+                            <span>Hover over an indicator in the table for details. Click a meter to open trends and energy.</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="table-wrap">
+                    <table class="mtable">
+                        <thead>
+                            <tr><th>Meter</th><th>Description</th><th>Status</th><th class="num">Total Power (kW)</th><th class="num">A (kW)</th><th class="num">B (kW)</th><th class="num">C (kW)</th></tr>
+                        </thead>
+                        <tbody id="meter-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card detail-card" aria-live="polite">
+                <div class="pd-head">
+                    <div class="card-title"><i class="fas fa-gauge-high ic-meter"></i> <span id="pd-title">Meter Details</span></div>
+                    <button class="pd-arrow" id="pd-open-arrow" aria-label="Open full meter details" title="Open full details"><i class="fas fa-chevron-right"></i></button>
+                </div>
+                <div class="pd-name" id="pd-name"></div>
+                <div class="pd-scroll">
+                    <div class="pd-rows" id="pd-rows"></div>
+                    <div class="pd-notes" id="pd-notes"></div>
+                    <div class="pd-seen" id="pd-seen"></div>
+                </div>
+                <button class="pd-open" id="pd-open"><i class="fas fa-chart-line"></i> Live values, trends and energy</button>
+            </div>
+        </section>
+    </main>
+</div>
+
+    <!-- ===== Meter detail view (opens from the Meters table / Meter Details panel) ===== -->
     <div class="md-overlay" id="md-overlay" hidden>
         <div class="md-panel" role="dialog" aria-modal="true" aria-labelledby="md-title">
             <div class="md-head">
@@ -685,20 +819,22 @@
         // "tag" must match meter_name in ems_combined_logger.py.
         // "label" is only the display name: rename freely (e.g. "Main Compressor").
         // "group": "generation" | "distribution" | "other" decides the section and which total it counts in.
+        // "sub" (distribution only): "production" | "utility" decides the line in the Distribution card.
+        // "icon" (generation only): Font Awesome icon name, or "pylon" for the transmission-tower icon.
         const METERS = [
             // --- Generation ---
-            { group: "generation",   tag: "Janitza_Unit_09",     label: "Solar 1",     info: "Janitza Unit 9 · Gateway",     measurement: "janitza_feeder",     fields: JANITZA_FIELDS, color: '#f4a100' },
-            { group: "generation",   tag: "Janitza_Unit_10",     label: "Solar 2",     info: "Janitza Unit 10 · Gateway",    measurement: "janitza_feeder",     fields: JANITZA_FIELDS, color: '#2ca02c' },
+            { group: "generation",   tag: "Janitza_Unit_09",     label: "Solar 1",     info: "Janitza Unit 9 · Gateway",     measurement: "janitza_feeder",     fields: JANITZA_FIELDS, color: '#f59e0b', icon: 'fa-solar-panel' },
+            { group: "generation",   tag: "Janitza_Unit_10",     label: "Solar 2",     info: "Janitza Unit 10 · Gateway",    measurement: "janitza_feeder",     fields: JANITZA_FIELDS, color: '#84cc16', icon: 'fa-solar-panel' },
             // --- Distribution ---
-            { group: "distribution", tag: "Janitza_Main_Master", label: "Metallizer",  info: "Janitza Main Master · UMG 96-PQ-L", measurement: "janitza_umg96pql", fields: JANITZA_FIELDS, color: '#1f77b4' },
-            { group: "distribution", tag: "Janitza_Unit_02",     label: "Holo",     info: "Janitza Unit 2 · Gateway",     measurement: "janitza_feeder",     fields: JANITZA_FIELDS, color: '#ff7f0e' },
-            { group: "distribution", tag: "Janitza_Unit_03",     label: "Silliting",   info: "Janitza Unit 3 · Gateway",     measurement: "janitza_feeder",     fields: JANITZA_FIELDS, color: '#17becf' },
-            { group: "distribution", tag: "Janitza_Unit_04",     label: "Super Combi", info: "Janitza Unit 4 · Gateway",     measurement: "janitza_feeder",     fields: JANITZA_FIELDS, color: '#bcbd22' },
-            { group: "distribution", tag: "Janitza_Unit_05",     label: "Rotomec",        info: "Janitza Unit 5 · Gateway",     measurement: "janitza_feeder",     fields: JANITZA_FIELDS, color: '#d62728' },
-            { group: "distribution", tag: "Janitza_Unit_06",     label: "Utilities",   info: "Janitza Unit 6 · Gateway",     measurement: "janitza_feeder",     fields: JANITZA_FIELDS, color: '#9467bd' },
-            { group: "distribution", tag: "Janitza_Unit_07",     label: "Super Simplex", info: "Janitza Unit 7 · Gateway",   measurement: "janitza_feeder",     fields: JANITZA_FIELDS, color: '#8c564b' },
-            { group: "distribution", tag: "Janitza_Unit_08",     label: "Bag Making",  info: "Janitza Unit 8 · Gateway",     measurement: "janitza_feeder",     fields: JANITZA_FIELDS, color: '#e377c2' },
-            { group: "distribution", tag: "EEM_570R",            label: "Mosque",      info: "EEM 570R · 192.168.10.8",      measurement: "eem570r_meter_data", fields: EEM_FIELDS,     color: '#2c3e50' }
+            { group: "distribution", sub: "production", tag: "Janitza_Main_Master", label: "Metallizer",  info: "Janitza Main Master · UMG 96-PQ-L", measurement: "janitza_umg96pql", fields: JANITZA_FIELDS, color: '#3b82f6' },
+            { group: "distribution", sub: "production", tag: "Janitza_Unit_02",     label: "Holo",     info: "Janitza Unit 2 · Gateway",     measurement: "janitza_feeder",     fields: JANITZA_FIELDS, color: '#38bdf8' },
+            { group: "distribution", sub: "production", tag: "Janitza_Unit_03",     label: "Silliting",   info: "Janitza Unit 3 · Gateway",     measurement: "janitza_feeder",     fields: JANITZA_FIELDS, color: '#2dd4bf' },
+            { group: "distribution", sub: "production", tag: "Janitza_Unit_04",     label: "Super Combi", info: "Janitza Unit 4 · Gateway",     measurement: "janitza_feeder",     fields: JANITZA_FIELDS, color: '#facc15' },
+            { group: "distribution", sub: "production", tag: "Janitza_Unit_05",     label: "Rotomec",        info: "Janitza Unit 5 · Gateway",     measurement: "janitza_feeder",     fields: JANITZA_FIELDS, color: '#f472b6' },
+            { group: "distribution", sub: "utility",    tag: "Janitza_Unit_06",     label: "Utilities",   info: "Janitza Unit 6 · Gateway",     measurement: "janitza_feeder",     fields: JANITZA_FIELDS, color: '#a78bfa' },
+            { group: "distribution", sub: "production", tag: "Janitza_Unit_07",     label: "Super Simplex", info: "Janitza Unit 7 · Gateway",   measurement: "janitza_feeder",     fields: JANITZA_FIELDS, color: '#fb923c' },
+            { group: "distribution", sub: "production", tag: "Janitza_Unit_08",     label: "Bag Making",  info: "Janitza Unit 8 · Gateway",     measurement: "janitza_feeder",     fields: JANITZA_FIELDS, color: '#4ade80' },
+            { group: "distribution", sub: "utility",    tag: "EEM_570R",            label: "Mosque",      info: "EEM 570R · 192.168.10.8",      measurement: "eem570r_meter_data", fields: EEM_FIELDS,     color: '#94a3b8' }
         ];
 
         // Generation sources without a meter yet (shown as cards, not counted in totals)
@@ -708,13 +844,14 @@
         // "device" must match device_name in measurement "isolarcloud_device".
         // These count in the Generation total. "position" = place in the Generation row.
         const ISOLAR_SOURCES = [
-            { device: "Grid - 1", label: "KE",     info: "Grid supply (K-Electric) · Sungrow meter", color: '#e53935', position: 0 },
-            { device: "Genset",   label: "Genset", info: "Generator · Sungrow meter",                color: '#6b7280', position: 1 }
+            { device: "Grid - 1", label: "KE",     info: "Grid supply (K-Electric) · Sungrow meter", color: '#ef4444', position: 0, icon: 'pylon' },
+            { device: "Genset",   label: "Genset", info: "Generator · Sungrow meter",                color: '#9ca3af', position: 1, icon: 'fa-gas-pump' }
         ];
         const ISOLAR_FIELDS = ["meter_active_power_kw", "reactive_power_kvar", "feed_in_power_kw",
                                "phase_a_voltage_v", "online", "data_age_s"];
 
-        const PHASE_COLORS = ['#e53935', '#f4b400', '#1e63d6'];
+        const PHASE_COLORS = ['#22d3ee', '#f5a524', '#3b82f6'];   // Phase A, B, C
+        const CARD_BG = '#0c1e3b';                                // chart segment borders on dark cards
 
         const meterKey = (measurement, tag) => `${measurement}|${tag}`;
 
@@ -769,132 +906,152 @@
 
         let barChart, doughnutChart;
 
-        // ---------- Build meter cards ----------
-        function buildMeterCards() {
-            const html = { generation: [], distribution: [], other: [] };
-            METERS.forEach((m, i) => html[m.group].push(meterCardHtml(m, i)));
-            UNASSIGNED_SOURCES.forEach(u => html.generation.splice(u.position, 0, `
-                <div class="card meter-card unassigned">
-                    <div class="card-header" style="margin-bottom: 4px;">
-                        <div>
-                            <div class="meter-name">${u.label}</div>
-                            <div class="meter-unit">${u.info}</div>
-                        </div>
-                        <span class="status-badge" style="background:#edf2f7;color:#718096;">Unassigned</span>
-                    </div>
-                    <div class="meter-kw" style="color:#cbd5e0;">-- kW</div>
-                    <div class="unassigned-text">No meter assigned yet. This source is not included in the generation total.</div>
-                </div>`));
-            ISOLAR_SOURCES.forEach((s, j) => html.generation.splice(s.position, 0, isolarCardHtml(s, j)));
-            ['generation', 'distribution', 'other'].forEach(g =>
-                document.getElementById(`grid-${g}`).innerHTML = html[g].join(''));
-            document.getElementById('section-other').style.display = html.other.length ? '' : 'none';
+        // ---------- Sources shown in the dashboard (KE, Genset, Solar, feeders) ----------
+        // Order: Generation (iSolarCloud sources at their "position"), then Distribution, then Other.
+        // Each source gets a short code M1, M2, ... used in the table and the charts.
+        const SOURCES = (() => {
+            const fromMeter = (m, i) => ({ id: `m${i}`, kind: 'meter', idx: i, label: m.label, info: m.info, color: m.color,
+                                           group: m.group, sub: m.sub, icon: m.icon, badgeId: `badge-${i}` });
+            const byGroup = g => METERS.map((m, i) => [m, i]).filter(([m]) => m.group === g).map(([m, i]) => fromMeter(m, i));
+            const gen = byGroup('generation');
+            ISOLAR_SOURCES.forEach((s, j) => gen.splice(s.position, 0, {
+                id: `s${j}`, kind: 'isolar', idx: j, label: s.label, info: s.info, color: s.color,
+                group: 'generation', icon: s.icon, badgeId: `isl-badge-${j}` }));
+            const all = [...gen, ...byGroup('distribution'), ...byGroup('other')];
+            all.forEach((s, k) => s.code = `M${k + 1}`);
+            return all;
+        })();
+        const SRC_BY_ID = Object.fromEntries(SOURCES.map(s => [s.id, s]));
+        const codeOfMeter = i => SRC_BY_ID[`m${i}`].code;
+        const DIST_IDX = METERS.map((m, i) => i).filter(i => METERS[i].group === 'distribution');
+        const STATE = {};                               // latest computed values per source id
+        let SEL = SOURCES.length ? SOURCES[0].id : null; // source shown in the Meter Details panel
+
+        const PYLON_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 7 22M12 2l5 20M5 7h14M4 12h16M8.6 7 15 12M15.4 7 9 12M9.8 15.5l5.6 4.5M14.2 15.5 8.6 20"/></svg>`;
+        const iconHtml = ic => ic === 'pylon' ? PYLON_SVG : `<i class="fas ${ic || 'fa-bolt'}"></i>`;
+        const esc = s => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+
+        function buildLayout() {
+            document.getElementById('gen-list').innerHTML = SOURCES.filter(s => s.group === 'generation').map(s => `
+                <div class="gen-row" title="${esc(s.info)}">
+                    <span class="g-ic">${iconHtml(s.icon)}</span><span>${s.label}</span>
+                    <span class="gen-val off" id="gr-${s.id}">-- kW</span>
+                </div>`).join('');
+            document.getElementById('meter-tbody').innerHTML = SOURCES.map(s => `
+                <tr data-src="${s.id}" tabindex="0" title="${esc(s.label + ' · ' + s.info)}" class="is-offline">
+                    <td><span class="m-badge">${s.code}</span></td>
+                    <td><span class="desc">${s.label}<span class="row-notes" id="rn-${s.id}"></span></span></td>
+                    <td><span class="status-badge badge-offline" id="${s.badgeId}">Offline</span></td>
+                    <td class="num" id="rp-${s.id}">--</td>
+                    <td class="num" id="ra-${s.id}">--</td>
+                    <td class="num" id="rb-${s.id}">--</td>
+                    <td class="num" id="rc-${s.id}">--</td>
+                </tr>`).join('');
+            renderRows();
+            renderPanel();
         }
 
-        function isolarCardHtml(s, j) {
-            const row = (label, id, dflt, hidden = false) =>
-                `<div class="meter-row" id="isl-row-${id}-${j}"${hidden ? ' style="display:none;"' : ''}><span>${label}</span><span id="isl-${id}-${j}">${dflt}</span></div>`;
-            return `
-                <div class="card meter-card offline" id="isl-card-${j}" data-src="s${j}" tabindex="0" role="button" aria-label="Open live details for ${s.label}" style="border-left-color: ${s.color};">
-                    <div class="card-header" style="margin-bottom: 4px;">
-                        <div>
-                            <div class="meter-name">${s.label}</div>
-                            <div class="meter-unit">${s.info}</div>
-                        </div>
-                        <span class="status-badge badge-offline" id="isl-badge-${j}">Offline</span>
-                    </div>
-                    <div class="meter-kw" id="isl-kw-${j}">-- kW</div>
-                    <div class="phase-bars" title="Current per phase">
-                        <div class="phase-bar"><div id="isl-bar-${j}-1" style="width:0%; background:${PHASE_COLORS[0]};"></div></div>
-                        <div class="phase-bar"><div id="isl-bar-${j}-2" style="width:0%; background:${PHASE_COLORS[1]};"></div></div>
-                        <div class="phase-bar"><div id="isl-bar-${j}-3" style="width:0%; background:${PHASE_COLORS[2]};"></div></div>
-                    </div>
-                    ${row('Current L1/L2/L3', 'i', '-- A')}
-                    ${row('Voltage L-N (avg)', 'v', '-- V')}
-                    ${row('Voltage L-L (avg)', 'vll', '-- V')}
-                    ${row('Reactive power', 'q', '-- kvar')}
-                    ${row('Apparent power', 's', '-- kVA')}
-                    ${row('Power factor', 'pf', '--')}
-                    ${row('Frequency', 'hz', '-- Hz')}
-                    ${row('Energy import', 'imp', '-- kWh', true)}
-                    ${row('Energy export', 'exp', '-- kWh', true)}
-                    <div class="isl-timing" style="border-top: 1px dashed #e2e8f0; margin-top: 4px; padding-top: 6px; display: flex; flex-direction: column; gap: 4px;">
-                        ${row('Portal reading time', 'measured', '--')}
-                        ${row('Next portal reading', 'nextread', '--')}
-                        ${row('Next check by logger', 'nextcheck', '--')}
-                    </div>
-                    <div class="meter-notes" id="isl-notes-${j}"><span class="source-tag" title="Read from the Sungrow iSolarCloud portal. The portal gets a new reading from the Logger1000 about every 5 minutes; the logger checks the portal every minute, so the values here match the iSolarCloud page.">iSolarCloud · same values as portal</span></div>
-                    <div class="last-seen" id="isl-seen-${j}">Last update: --</div>
-                    <div class="card-open-hint"><i class="fas fa-up-right-and-down-left-from-center"></i> Click for live values, trends and energy</div>
-                </div>`;
+        function selectSource(id) {
+            if (!SRC_BY_ID[id] || id === SEL) return;
+            SEL = id;
+            renderRows();
+            renderPanel();
         }
 
-        function meterCardHtml(m, i) {
-            return `
-                <div class="card meter-card offline" id="card-${i}" data-src="m${i}" tabindex="0" role="button" aria-label="Open live details for ${m.label}" style="border-left-color: ${m.color};">
-                    <div class="card-header" style="margin-bottom: 4px;">
-                        <div>
-                            <div class="meter-name">${m.label}</div>
-                            <div class="meter-unit">${m.info}</div>
-                        </div>
-                        <span class="status-badge badge-offline" id="badge-${i}">Offline</span>
-                    </div>
-                    <div class="meter-kw" id="kw-${i}">-- kW</div>
-                    <div class="phase-bars" title="Current per phase">
-                        <div class="phase-bar"><div id="bar-${i}-1" style="width:0%; background:${PHASE_COLORS[0]};"></div></div>
-                        <div class="phase-bar"><div id="bar-${i}-2" style="width:0%; background:${PHASE_COLORS[1]};"></div></div>
-                        <div class="phase-bar"><div id="bar-${i}-3" style="width:0%; background:${PHASE_COLORS[2]};"></div></div>
-                    </div>
-                    <div class="meter-row"><span>Current L1/L2/L3</span><span id="i-${i}">-- A</span></div>
-                    <div class="meter-row"><span>Voltage L-N (avg)</span><span id="v-${i}">-- V</span></div>
-                    <div class="meter-row"><span>Energy import</span><span id="imp-${i}">-- kWh</span></div>
-                    <div class="meter-row"><span>Energy export</span><span id="exp-${i}">-- kWh</span></div>
-                    <div class="meter-row"><span>Power factor (P/S)</span><span id="pf-${i}">--</span></div>
-                    <div class="meter-notes" id="notes-${i}"></div>
-                    <div class="last-seen" id="seen-${i}">Last update: --</div>
-                    <div class="card-open-hint"><i class="fas fa-up-right-and-down-left-from-center"></i> Click for live values, trends and energy</div>
-                </div>`;
+        // value with a small unit, e.g. 1,842.6 kW
+        function setVal(id, v, unit, dec) {
+            const el = document.getElementById(id);
+            el.innerHTML = (typeof v === 'number' && !isNaN(v) ? fmt(v, dec) : '--') + (unit ? ` <span class="unit">${unit}</span>` : '');
+        }
+
+        // bars a little lighter at the top, like the design
+        function barGradient(color) {
+            return ctx => {
+                const chart = ctx.chart, a = chart.chartArea;
+                if (!a) return color;
+                const g = chart.ctx.createLinearGradient(0, a.top, 0, a.bottom);
+                g.addColorStop(0, color); g.addColorStop(1, color + 'a6');
+                return g;
+            };
+        }
+
+        function formatPktLong(date, withSeconds) {
+            const p = Object.fromEntries(new Intl.DateTimeFormat('en-US', {
+                timeZone: 'Asia/Karachi', hourCycle: 'h23', weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
+                hour: '2-digit', minute: '2-digit', second: '2-digit'
+            }).formatToParts(date).map(x => [x.type, x.value]));
+            return { day: `${p.weekday}, ${p.month} ${p.day}, ${p.year}`, date: `${p.month} ${p.day}, ${p.year}`,
+                     time: withSeconds ? `${p.hour}:${p.minute}:${p.second}` : `${p.hour}:${p.minute}` };
         }
 
         document.addEventListener('DOMContentLoaded', function() {
-            buildMeterCards();
+            Chart.defaults.font.family = "'Inter', 'Segoe UI', sans-serif";
+            Chart.defaults.color = '#8ea3c6';
+            Chart.defaults.borderColor = 'rgba(110, 150, 220, 0.12)';
+            Object.assign(Chart.defaults.plugins.tooltip, {
+                backgroundColor: 'rgba(8, 22, 46, 0.96)', borderColor: 'rgba(80, 130, 210, 0.45)', borderWidth: 1,
+                titleColor: '#ffffff', bodyColor: '#c9d6ee', padding: 10
+            });
+
+            buildLayout();
             initMeterDetail();
 
             barChart = new Chart(document.getElementById('loadDistributionChart'), {
                 type: 'bar',
                 data: {
-                    labels: METERS.map(m => m.label),
-                    datasets: ['L1', 'L2', 'L3'].map((ph, i) => ({
+                    labels: METERS.map((m, i) => codeOfMeter(i)),
+                    datasets: ['A', 'B', 'C'].map((ph, i) => ({
                         label: `Phase ${ph}`, data: METERS.map(() => 0),
-                        borderColor: '#ffffff', borderWidth: { top: 1 },
-                        backgroundColor: PHASE_COLORS[i], borderRadius: 3
+                        backgroundColor: barGradient(PHASE_COLORS[i]), hoverBackgroundColor: PHASE_COLORS[i],
+                        borderRadius: { topLeft: 3, topRight: 3 }, categoryPercentage: 0.72, barPercentage: 0.88
                     }))
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     scales: {
-                        x: { stacked: true, ticks: { autoSkip: false, maxRotation: 45, minRotation: 0 } },
-                        y: { stacked: true, title: { display: true, text: 'kW' } }
+                        x: { grid: { display: false }, border: { color: 'rgba(110, 150, 220, 0.25)' }, ticks: { autoSkip: false, maxRotation: 0, color: '#c9d6ee' } },
+                        y: { beginAtZero: true, border: { display: false }, ticks: { maxTicksLimit: 6 } }
                     },
-                    plugins: { tooltip: { mode: 'index', intersect: false } }
+                    plugins: {
+                        legend: { position: 'top', align: 'end', labels: { boxWidth: 16, boxHeight: 10, color: '#c9d6ee', font: { size: 11 } } },
+                        tooltip: { mode: 'index', intersect: false, callbacks: {
+                            title: items => items.length ? `${items[0].label} · ${METERS[items[0].dataIndex].label}` : '',
+                            label: c => ` ${c.dataset.label}: ${fmt(c.parsed.y)} kW`
+                        } }
+                    }
                 }
             });
 
             doughnutChart = new Chart(document.getElementById('departmentChart'), {
                 type: 'doughnut',
                 data: {
-                    labels: METERS.map(m => m.label),
-                    datasets: [{ data: METERS.map(() => 0), backgroundColor: METERS.map(m => m.color),
-                                borderColor: '#ffffff', borderWidth: 2 }]
+                    labels: DIST_IDX.map(i => codeOfMeter(i)),
+                    datasets: [{ data: DIST_IDX.map(() => 0), backgroundColor: DIST_IDX.map(i => METERS[i].color),
+                                 borderColor: CARD_BG, borderWidth: 2, hoverOffset: 4 }]
                 },
                 options: {
-                    responsive: true, maintainAspectRatio: false, cutout: '60%',
+                    responsive: true, maintainAspectRatio: false, cutout: '66%',
                     plugins: {
-                        legend: { position: 'right', labels: { boxWidth: 12, font: { size: 11 } } },
-                        tooltip: { callbacks: { label: (c) => ` ${c.label}: ${c.parsed.toFixed(2)} kW` } }
+                        legend: { display: false },
+                        tooltip: { callbacks: {
+                            title: items => items.length ? `${items[0].label} · ${METERS[DIST_IDX[items[0].dataIndex]].label}` : '',
+                            label: c => ` ${fmt(c.parsed)} kW`
+                        } }
                     }
                 }
+            });
+            renderShareLegend(DIST_IDX.map(() => 0));
+
+            // bell: which meters are offline
+            const bell = document.getElementById('bell-btn'), pop = document.getElementById('bell-pop');
+            bell.addEventListener('click', e => {
+                e.stopPropagation();
+                pop.hidden = !pop.hidden;
+                bell.setAttribute('aria-expanded', String(!pop.hidden));
+            });
+            document.addEventListener('click', e => {
+                if (!pop.hidden && !pop.contains(e.target)) { pop.hidden = true; bell.setAttribute('aria-expanded', 'false'); }
             });
 
             loadBar.start();
@@ -903,7 +1060,8 @@
             setInterval(updateIsolarCounters, 1000);
 
             function updatePktClock() {
-                document.getElementById('pkt-clock').innerText = formatPkt(new Date()) + ' PKT';
+                const t = formatPktLong(new Date(), false);
+                document.getElementById('pkt-clock').innerText = `${t.day}  ${t.time}`;
             }
             updatePktClock();
             setInterval(updatePktClock, 1000);
@@ -998,9 +1156,11 @@
                 ]);
                 lastFast = { meters, isolar, detail };
                 renderMerged();
+                const lu = formatPktLong(new Date(), true);
+                document.getElementById('last-update').innerText = `${lu.date} ${lu.time}`;
                 if (!loadBar.active) {
-                    document.getElementById('db-status').innerText = "Connected";
-                    document.getElementById('db-status').style.color = "var(--primary)";
+                    document.getElementById('db-status').innerText = "System Online";
+                    document.getElementById('db-status').style.color = "var(--green-l)";
                 }
                 if (first) {
                     firstLiveDone = true;
@@ -1011,7 +1171,7 @@
                 if (!lastKnown || Date.now() - historyAt > LAST_KNOWN_REFRESH_MS) loadHistory();
             } catch (err) {
                 console.error("Data fetch error:", err);
-                document.getElementById('db-status').innerText = "Cloud offline";
+                document.getElementById('db-status').innerText = "Cloud Offline";
                 document.getElementById('db-status').style.color = "var(--danger)";
                 if (first) loadBar.fail('Check the internet connection. The page tries again every few seconds.');
             } finally {
@@ -1033,15 +1193,15 @@
                 if (lastFast) renderMerged();
                 if (loadBar.active) {
                     loadBar.finish('All data loaded', 'Live values update every 5 seconds');
-                    document.getElementById('db-status').innerText = "Connected";
-                    document.getElementById('db-status').style.color = "var(--primary)";
+                    document.getElementById('db-status').innerText = "System Online";
+                    document.getElementById('db-status').style.color = "var(--green-l)";
                 }
             } catch (err) {
                 console.error("History fetch error:", err);
                 if (loadBar.active) {
                     loadBar.finish('Live values loaded', 'Last known values of offline meters could not be loaded yet; the page will try again.');
-                    document.getElementById('db-status').innerText = "Connected";
-                    document.getElementById('db-status').style.color = "var(--primary)";
+                    document.getElementById('db-status').innerText = "System Online";
+                    document.getElementById('db-status').style.color = "var(--green-l)";
                 }
                 historyAt = Date.now() - LAST_KNOWN_REFRESH_MS + 60 * 1000;   // retry in about a minute
             } finally {
@@ -1057,6 +1217,22 @@
         }
 
         const fmt = (v, d = 2) => v.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+
+        // Indicators that explain unusual readings
+        const NOTE = {
+            idle: () => ({ cls: 'note-idle', icon: 'fa-power-off', label: 'No load',
+                title: 'This feeder is not drawing current. Small power values caused by measurement noise are shown as 0.0 kW.' }),
+            reverse: () => ({ cls: 'note-reverse', icon: 'fa-right-left', label: 'Reverse power',
+                title: 'Active power is negative: energy flows back through the meter (export). This is normal for generators, solar or regenerative drives. If this feeder should only consume power, the CTs may be installed in reverse or S1/S2 swapped.' }),
+            reactive: pf => ({ cls: 'note-reactive', icon: 'fa-wave-square', label: 'Mostly reactive',
+                title: `Power factor ${pf.toFixed(2)}: the current is mostly reactive, so very little real power is used. Typical of capacitor banks, lightly loaded motors or transformers.` }),
+            energy: () => ({ cls: 'note-energy', icon: 'fa-triangle-exclamation', label: 'Energy not counting',
+                title: 'Current is flowing but both energy counters read 0. The meter may store energy in different registers (different model) or the counters were reset. Compare with the energy value on the meter display.' }),
+            source: () => ({ cls: 'note-source', icon: 'fa-cloud', label: 'iSolarCloud · same values as portal',
+                title: 'Read from the Sungrow iSolarCloud portal. The portal gets a new reading from the Logger1000 about every 5 minutes; the logger checks the portal every minute, so the values here match the iSolarCloud page.' })
+        };
+        const noteChip = n => `<span class="note ${n.cls}" title="${esc(n.title)}"><i class="fas ${n.icon}"></i> ${n.label}</span>`;
+        const noteIcon = n => `<span class="note-ic ${n.cls}" title="${esc(n.label + ': ' + n.title)}"><i class="fas ${n.icon}"></i></span>`;
 
         function parseAndRender(csvData, isolarCsv, isolarDetailCsv) {
             const lines = csvData.split(/\r?\n/);
@@ -1080,13 +1256,14 @@
                 if (!lastTime[key] || time > lastTime[key]) lastTime[key] = time;
             });
 
-            let totalKwh = 0, totalLiveW = 0, onlineCount = 0, freq = 0;
+            let totalKwh = 0, onlineCount = 0, freq = 0;
             const offlineNames = [];
             const phaseKw = [[], [], []];
             const shareKw = [];
             const groupTotals = {};
             ['generation', 'distribution', 'other'].forEach(g =>
                 groupTotals[g] = { w: 0, imp: 0, exp: 0, online: 0, count: 0 });
+            const subW = { production: 0, utility: 0 };
 
             METERS.forEach((m, i) => {
                 const key = meterKey(m.measurement, m.tag);
@@ -1094,8 +1271,6 @@
                 const f = m.fields;
                 const seen = lastTime[key];
                 const online = Boolean(seen && (Date.now() - seen.getTime()) < ONLINE_WINDOW_MS);
-                const card = document.getElementById(`card-${i}`);
-                const badge = document.getElementById(`badge-${i}`);
 
                 // Energy: last known value is shown even when offline
                 const imp = d[f.kwhImp] || 0, exp = d[f.kwhExp] || 0;
@@ -1104,17 +1279,10 @@
                 gt.count++;
                 gt.imp += imp;
                 gt.exp += exp;
-                document.getElementById(`imp-${i}`).innerText = seen ? `${fmt(imp)} kWh` : '-- kWh';
-                document.getElementById(`exp-${i}`).innerText = seen ? `${fmt(exp)} kWh` : '-- kWh';
-                document.getElementById(`seen-${i}`).innerText =
-                    seen ? `Last update: ${formatPkt(seen)} PKT` : 'Last update: no data yet';
+                const st = { online, seen, imp: seen ? imp : undefined, exp: seen ? exp : undefined, notes: [] };
 
                 if (online) {
                     onlineCount++;
-                    card.classList.remove('offline');
-                    badge.innerText = "Online";
-                    badge.className = "status-badge badge-online";
-
                     const p = [d[f.p1] || 0, d[f.p2] || 0, d[f.p3] || 0];
                     const pSum = (d[f.pTotal] !== undefined) ? d[f.pTotal] : p[0] + p[1] + p[2];
                     const cur = [d[f.i1] || 0, d[f.i2] || 0, d[f.i3] || 0];
@@ -1128,80 +1296,151 @@
                     const sTotal = d[f.sTotal];
                     const pf = (sTotal && sTotal > MIN_S_FOR_PF_VA) ? pClean / sTotal : null;
 
-                    totalLiveW += pClean;
                     gt.w += pClean;
                     gt.online++;
-                    const kwEl = document.getElementById(`kw-${i}`);
-                    kwEl.innerText = `${fmt(pClean / 1000)} kW`;
-                    kwEl.classList.toggle('negative', pClean < 0);
-                    document.getElementById(`pf-${i}`).innerText = pf === null ? '--' : pf.toFixed(2);
+                    if (m.group === 'distribution') subW[m.sub === 'utility' ? 'utility' : 'production'] += pClean;
 
-                    // Indicators that explain unusual readings
-                    const notes = [];
-                    if (idle) {
-                        notes.push(`<span class="note note-idle" title="This feeder is not drawing current. Small power values caused by measurement noise are shown as 0.00 kW."><i class="fas fa-power-off"></i> No load</span>`);
-                    }
-                    if (pClean < 0) {
-                        notes.push(`<span class="note note-reverse" title="Active power is negative: energy flows back through the meter (export). This is normal for generators, solar or regenerative drives. If this feeder should only consume power, the CTs may be installed in reverse or S1/S2 swapped."><i class="fas fa-right-left"></i> Reverse power</span>`);
-                    }
-                    if (pf !== null && Math.abs(pf) < REACTIVE_PF) {
-                        notes.push(`<span class="note note-reactive" title="Power factor ${pf.toFixed(2)}: the current is mostly reactive, so very little real power is used. Typical of capacitor banks, lightly loaded motors or transformers."><i class="fas fa-wave-square"></i> Mostly reactive</span>`);
-                    }
-                    if (!idle && iTotal > 0.5 && imp === 0 && exp === 0) {
-                        notes.push(`<span class="note note-energy" title="Current is flowing but both energy counters read 0. The meter may store energy in different registers (different model) or the counters were reset. Compare with the energy value on the meter display."><i class="fas fa-triangle-exclamation"></i> Energy not counting</span>`);
-                    }
-                    document.getElementById(`notes-${i}`).innerHTML = notes.join('');
-                    document.getElementById(`i-${i}`).innerText = cur.map(x => x.toFixed(2)).join(' / ') + ' A';
-                    document.getElementById(`v-${i}`).innerText = vAvg ? `${vAvg.toFixed(1)} V` : '-- V';
+                    st.p = pClean / 1000;
+                    st.pf = pf === null ? undefined : pf;
+                    st.cur = cur;
+                    st.vln = vAvg || undefined;
+                    st.hz = d[f.freq];
+                    st.ph = p.map(x => (idle || Math.abs(x) < NOISE_POWER_W) ? 0 : x / 1000);
 
-                    const maxI = Math.max(...cur, 1);
-                    cur.forEach((x, ph) => {
-                        document.getElementById(`bar-${i}-${ph + 1}`).style.width = `${Math.min(100, (x / maxI) * 100)}%`;
-                    });
+                    if (idle) st.notes.push(NOTE.idle());
+                    if (pClean < 0) st.notes.push(NOTE.reverse());
+                    if (pf !== null && Math.abs(pf) < REACTIVE_PF) st.notes.push(NOTE.reactive(pf));
+                    if (!idle && iTotal > 0.5 && imp === 0 && exp === 0) st.notes.push(NOTE.energy());
 
-                    p.forEach((x, ph) => phaseKw[ph][i] = (idle || Math.abs(x) < NOISE_POWER_W) ? 0 : x / 1000);
+                    st.ph.forEach((x, ph) => phaseKw[ph][i] = x);
                     shareKw[i] = Math.max(pClean, 0) / 1000;
                     if (m.tag === "Janitza_Main_Master" && d[f.freq]) freq = d[f.freq];
                     if (!freq && d[f.freq]) freq = d[f.freq];
                 } else {
-                    card.classList.add('offline');
-                    badge.innerText = "Offline";
-                    badge.className = "status-badge badge-offline";
-                    document.getElementById(`kw-${i}`).innerText = '-- kW';
-                    document.getElementById(`i-${i}`).innerText = '-- A';
-                    document.getElementById(`v-${i}`).innerText = '-- V';
-                    document.getElementById(`pf-${i}`).innerText = '--';
-                    document.getElementById(`notes-${i}`).innerHTML = '';
-                    [1, 2, 3].forEach(ph => document.getElementById(`bar-${i}-${ph}`).style.width = '0%');
                     phaseKw.forEach(arr => arr[i] = 0);
                     shareKw[i] = 0;
                     offlineNames.push(m.label);
                 }
+                STATE[`m${i}`] = st;
             });
 
-            document.getElementById('facility-total-kwh').innerText = `${fmt(totalKwh)} kWh`;
-            document.getElementById('facility-live-kw').innerText = `${fmt(groupTotals.distribution.w / 1000)} kW`;
-            document.getElementById('sys-freq').innerText = freq > 0 ? `${freq.toFixed(2)} Hz` : "0.0 Hz";
-            document.getElementById('meters-online').innerText = `${onlineCount} / ${METERS.length}`;
+            setVal('facility-total-kwh', totalKwh, 'kWh', 0);
+            setVal('facility-live-kw', groupTotals.distribution.w / 1000, 'kW', 1);
+            setVal('sys-freq', freq > 0 ? freq : undefined, 'Hz', 2);
+            const mo = document.getElementById('meters-online');
+            mo.innerText = `${onlineCount} / ${METERS.length}`;
+            mo.classList.toggle('green', onlineCount === METERS.length);
+            mo.classList.toggle('amber', onlineCount < METERS.length);
             document.getElementById('meters-offline-list').innerText =
                 offlineNames.length ? `Offline: ${offlineNames.join(', ')}` : 'All meters reporting';
+            document.getElementById('bell-dot').hidden = offlineNames.length === 0;
 
             renderIsolar(isolarCsv, isolarDetailCsv, groupTotals.generation);
 
-            [['generation', 'gen'], ['distribution', 'dist']].forEach(([g, id]) => {
-                const t = groupTotals[g];
-                const kwEl = document.getElementById(`${id}-total-kw`);
-                kwEl.innerText = `${fmt(t.w / 1000)} kW`;
-                kwEl.classList.toggle('negative', t.w < 0);
-                document.getElementById(`${id}-total-imp`).innerText = `${fmt(t.imp)} kWh`;
-                document.getElementById(`${id}-total-exp`).innerText = `${fmt(t.exp)} kWh`;
-                document.getElementById(`${id}-online`).innerText = `${t.online} / ${t.count}`;
+            const g = groupTotals.generation, dt = groupTotals.distribution;
+            setVal('gen-total-kw', g.w / 1000, 'kW', 1);
+            document.getElementById('gen-total-kw').classList.toggle('negative', g.w < 0);
+            setVal('gen-total-imp', g.imp, 'kWh', 1);
+            setVal('gen-total-exp', g.exp, 'kWh', 1);
+            document.getElementById('gen-online').innerText = `${g.online} / ${g.count}`;
+            [['dist-prod-kw', subW.production], ['dist-util-kw', subW.utility]].forEach(([id, w]) => {
+                const el = document.getElementById(id);
+                el.innerText = `${fmt(w / 1000, 1)} kW`;
+                el.classList.toggle('negative', w < 0);
             });
+            document.getElementById('dist-total-imp').innerText = `${fmt(dt.imp, 0)} kWh`;
+            document.getElementById('dist-total-exp').innerText = `${fmt(dt.exp, 0)} kWh`;
+            document.getElementById('dist-online').innerText = `${dt.online} / ${dt.count}`;
+
+            SOURCES.filter(s => s.group === 'generation').forEach(s => {
+                const st = STATE[s.id] || {}, el = document.getElementById(`gr-${s.id}`);
+                const on = st.online && isNum(st.p);
+                el.innerText = on ? `${fmt(st.p, 1)} kW` : '-- kW';
+                el.classList.toggle('off', !on);
+                el.classList.toggle('negative', on && st.p < 0);
+            });
+
+            renderRows();
+            renderPanel();
 
             phaseKw.forEach((arr, ph) => barChart.data.datasets[ph].data = METERS.map((_, i) => arr[i] || 0));
             barChart.update();
-            doughnutChart.data.datasets[0].data = METERS.map((_, i) => shareKw[i] || 0);
+            const share = DIST_IDX.map(i => shareKw[i] || 0);
+            doughnutChart.data.datasets[0].data = share;
             doughnutChart.update();
+            document.getElementById('share-total').innerText = `${fmt(dt.w / 1000, 1)} kW`;
+            renderShareLegend(share);
+        }
+
+        function renderShareLegend(share) {
+            const tot = share.reduce((a, b) => a + b, 0);
+            document.getElementById('share-legend').innerHTML = DIST_IDX.map((i, k) => `
+                <li title="${esc(METERS[i].label)}"><span class="dot" style="background:${METERS[i].color}"></span>${codeOfMeter(i)} – <b>${tot > 0 ? (share[k] / tot * 100).toFixed(1) : '0.0'}%</b></li>`).join('');
+        }
+
+        // ---------- Meters table ----------
+        function renderRows() {
+            SOURCES.forEach(s => {
+                const row = document.querySelector(`#meter-tbody tr[data-src="${s.id}"]`);
+                if (!row) return;
+                const st = STATE[s.id] || {};
+                row.classList.toggle('is-offline', !st.online);
+                row.classList.toggle('selected', s.id === SEL);
+                const badge = document.getElementById(s.badgeId);
+                badge.innerText = st.online ? 'Online' : 'Offline';
+                badge.className = `status-badge ${st.online ? 'badge-online' : 'badge-offline'}`;
+                const on = st.online && isNum(st.p);
+                const pEl = document.getElementById(`rp-${s.id}`);
+                pEl.innerText = on ? fmt(st.p, 1) : '--';
+                pEl.classList.toggle('negative', on && st.p < 0);
+                ['a', 'b', 'c'].forEach((x, k) => {
+                    const v = st.online && st.ph ? st.ph[k] : undefined;
+                    const el = document.getElementById(`r${x}-${s.id}`);
+                    el.innerText = isNum(v) ? fmt(v, 1) : '--';
+                    el.classList.toggle('negative', isNum(v) && v < 0);
+                });
+                document.getElementById(`rn-${s.id}`).innerHTML =
+                    (st.notes || []).filter(n => n.cls !== 'note-source').map(noteIcon).join('');
+            });
+        }
+
+        // ---------- Meter Details panel ----------
+        function renderPanel() {
+            const s = SRC_BY_ID[SEL];
+            if (!s) return;
+            const st = STATE[s.id] || {};
+            const on = !!st.online;
+            const num = (v, unit, dec = 1) => isNum(v) ? `${fmt(v, dec)} ${unit}` : `-- ${unit}`;
+            const rows = [];
+            const row = (label, val, id) => rows.push(`<div class="pd-row"><span>${label}</span><b${id ? ` id="${id}"` : ''}>${val}</b></div>`);
+
+            document.getElementById('pd-title').textContent = `Meter Details – ${s.code}`;
+            document.getElementById('pd-name').textContent = `${s.label} · ${s.info}`;
+            row('Status', `<span class="status-badge ${on ? 'badge-online' : 'badge-offline'}">${on ? 'Online' : 'Offline'}</span>`);
+            row('Total Power', on ? `<span class="${st.p < 0 ? 'negative' : ''}">${num(st.p, 'kW')}</span>` : '-- kW');
+            if (s.kind === 'isolar') row('Voltage (L-L)', on ? num(st.vll, 'V') : '-- V');
+            row('Voltage (L-N)', on ? num(st.vln, 'V') : '-- V');
+            row('Current (L1/L2/L3)', on && st.cur && st.cur.some(isNum)
+                ? st.cur.map(x => isNum(x) ? x.toFixed(1) : '--').join(' / ') + ' A'
+                : (st.offlineMsg || '-- A'));
+            row(s.kind === 'meter' ? 'Power Factor (P/S)' : 'Power Factor', on && isNum(st.pf) ? st.pf.toFixed(2) : '--');
+            if (s.kind === 'isolar') {
+                row('Reactive Power', on ? num(st.q, 'kvar', 2) : '-- kvar');
+                row('Apparent Power', on ? num(st.s, 'kVA', 2) : '-- kVA');
+                row('Frequency', on ? num(st.hz, 'Hz', 2) : '-- Hz');
+            }
+            if (s.kind === 'meter' || isNum(st.imp)) row('Energy Import', num(st.imp, 'kWh', 2));
+            if (s.kind === 'meter' || isNum(st.exp)) row('Energy Export', num(st.exp, 'kWh', 2));
+            if (s.kind === 'isolar') {
+                rows.push('<div class="pd-sep"></div>');
+                row('Portal reading time', '--', 'pd-measured');
+                row('Next portal reading', '--', 'pd-nextread');
+                row('Next check by logger', '--', 'pd-nextcheck');
+            }
+            document.getElementById('pd-rows').innerHTML = rows.join('');
+            document.getElementById('pd-notes').innerHTML = (st.notes || []).map(noteChip).join('');
+            document.getElementById('pd-seen').textContent = st.seen ? `Last update: ${formatPkt(st.seen)} PKT` : 'Last update: no data yet';
+            updateIsolarCounters();
         }
 
         // ---------- iSolarCloud cards (KE, Genset) ----------
@@ -1238,15 +1477,9 @@
                 const seen = [seenList, seenDet].filter(Boolean).sort((a, b) => b - a)[0];
                 const fresh = Boolean(seen && (Date.now() - seen.getTime()) < ONLINE_WINDOW_MS);
                 const online = fresh && d.online === 1;
-                const card = document.getElementById(`isl-card-${j}`);
-                const badge = document.getElementById(`isl-badge-${j}`);
-                const set = (id, txt) => document.getElementById(`isl-${id}-${j}`).innerText = txt;
-                const num = (v, unit, dec = 2) => (v === undefined || isNaN(v)) ? `-- ${unit}` : `${fmt(v, dec)} ${unit}`;
                 const avg = arr => { const a = arr.filter(x => x !== undefined); return a.length ? a.reduce((x, y) => x + y, 0) / a.length : undefined; };
 
                 gt.count++;
-                document.getElementById(`isl-seen-${j}`).innerText =
-                    seen ? `Last update: ${formatPkt(seen)} PKT` : 'Last update: no data yet';
 
                 // timing (kept even when offline, so the counters still run)
                 isolarTiming[j] = {
@@ -1255,85 +1488,60 @@
                     portalIntervalMs: (d.portal_interval_s || 300) * 1000
                 };
 
+                const st = { online, seen, notes: [NOTE.source()], offlineMsg: (fresh && !online) ? 'device offline in portal' : undefined };
+
                 // energy counters, if the detail page provides them
                 const impKey = findKey(det, /(import|purchas|bought|consum).*_kwh$/);
                 const expKey = findKey(det, /(export|feed|sold).*_kwh$/);
-                document.getElementById(`isl-row-imp-${j}`).style.display = impKey ? '' : 'none';
-                document.getElementById(`isl-row-exp-${j}`).style.display = expKey ? '' : 'none';
-                if (impKey) { set('imp', num(d[impKey], 'kWh')); gt.imp += d[impKey] || 0; }
-                if (expKey) { set('exp', num(d[expKey], 'kWh')); gt.exp += d[expKey] || 0; }
+                if (impKey) { st.imp = d[impKey]; gt.imp += d[impKey] || 0; }
+                if (expKey) { st.exp = d[expKey]; gt.exp += d[expKey] || 0; }
 
                 if (online) {
                     gt.online++;
                     const p = d.meter_active_power_kw || 0, q = d.reactive_power_kvar;
                     gt.w += p * 1000;
-                    card.classList.remove('offline');
-                    badge.innerText = "Online";
-                    badge.className = "status-badge badge-online";
-                    const kwEl = document.getElementById(`isl-kw-${j}`);
-                    kwEl.innerText = `${fmt(p)} kW`;
-                    kwEl.classList.toggle('negative', p < 0);
-
-                    const cur = [d.phase_a_current_a, d.phase_b_current_a, d.phase_c_current_a];
-                    set('i', cur.some(x => x !== undefined) ? cur.map(x => x === undefined ? '--' : x.toFixed(2)).join(' / ') + ' A' : '-- A');
-                    const maxI = Math.max(...cur.map(x => x || 0), 1);
-                    cur.forEach((x, ph) => document.getElementById(`isl-bar-${j}-${ph + 1}`).style.width = `${Math.min(100, ((x || 0) / maxI) * 100)}%`);
-
-                    const vln = avg([d.phase_a_voltage_v, d.phase_b_voltage_v, d.phase_c_voltage_v]);
-                    const vll = avg([d.a_b_line_voltage_v, d.b_c_line_voltage_v, d.c_a_line_voltage_v]);
-                    set('v', num(vln, 'V', 1));
-                    set('vll', num(vll, 'V', 1));
-                    set('q', num(q, 'kvar'));
-                    const sKva = d.apparent_power_kva !== undefined ? d.apparent_power_kva
-                               : (q !== undefined ? Math.hypot(p, q) : undefined);
-                    set('s', num(sKva, 'kVA'));
-                    const pf = d.pf !== undefined ? d.pf : (sKva > 0.2 ? p / sKva : undefined);
-                    set('pf', pf === undefined ? '--' : pf.toFixed(2));
-                    set('hz', num(d.frequency_hz, 'Hz'));
-                } else {
-                    card.classList.add('offline');
-                    badge.innerText = "Offline";
-                    badge.className = "status-badge badge-offline";
-                    const kwEl = document.getElementById(`isl-kw-${j}`);
-                    kwEl.innerText = '-- kW';
-                    kwEl.classList.remove('negative');
-                    set('i', fresh ? 'device offline in portal' : '-- A');
-                    [['v', 'V'], ['vll', 'V'], ['q', 'kvar'], ['s', 'kVA'], ['hz', 'Hz']].forEach(([id, u]) => set(id, `-- ${u}`));
-                    set('pf', '--');
-                    [1, 2, 3].forEach(ph => document.getElementById(`isl-bar-${j}-${ph}`).style.width = '0%');
+                    st.p = p;
+                    st.q = q;
+                    st.cur = [d.phase_a_current_a, d.phase_b_current_a, d.phase_c_current_a];
+                    st.vln = avg([d.phase_a_voltage_v, d.phase_b_voltage_v, d.phase_c_voltage_v]);
+                    st.vll = avg([d.a_b_line_voltage_v, d.b_c_line_voltage_v, d.c_a_line_voltage_v]);
+                    st.s = d.apparent_power_kva !== undefined ? d.apparent_power_kva
+                         : (q !== undefined ? Math.hypot(p, q) : undefined);
+                    st.pf = d.pf !== undefined ? d.pf : (st.s > 0.2 ? p / st.s : undefined);
+                    st.hz = d.frequency_hz;
                 }
+                STATE[`s${j}`] = st;
             });
-            updateIsolarCounters();
         }
 
         // Runs every second: portal reading time, next portal reading, next logger check
+        // (shown in the Meter Details panel when KE or Genset is selected)
         function updateIsolarCounters() {
+            const s = SRC_BY_ID[SEL];
+            if (!s || s.kind !== 'isolar') return;
+            const el = id => document.getElementById(`pd-${id}`);
+            if (!el('measured')) return;
             const mmss = ms => { const t = Math.max(0, Math.round(ms / 1000)); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`; };
             const hhmm = d => d.toLocaleTimeString('en-GB', { timeZone: 'Asia/Karachi', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
-            ISOLAR_SOURCES.forEach((s, j) => {
-                const t = isolarTiming[j];
-                const el = id => document.getElementById(`isl-${id}-${j}`);
-                if (!el('measured')) return;
-                if (!t || !t.measuredAt) {
-                    el('measured').innerText = '--';
-                    el('nextread').innerText = '--';
-                } else {
-                    const now = Date.now();
-                    el('measured').innerText = `${hhmm(t.measuredAt)} PKT (${mmss(now - t.measuredAt)} ago)`;
-                    const next = new Date(t.measuredAt.getTime() + t.portalIntervalMs);
-                    el('nextread').innerText = next > now
-                        ? `~${hhmm(next)} PKT (in ${mmss(next - now)})`
-                        : `due now (expected ${hhmm(next)} PKT)`;
-                }
-                if (!t || !t.nextCheck) {
-                    el('nextcheck').innerText = '--';
-                } else {
-                    const left = t.nextCheck - Date.now();
-                    el('nextcheck').innerText = left > 0 ? `in ${mmss(left)}` : 'checking now...';
-                }
-            });
+            const t = isolarTiming[s.idx];
+            if (!t || !t.measuredAt) {
+                el('measured').innerText = '--';
+                el('nextread').innerText = '--';
+            } else {
+                const now = Date.now();
+                el('measured').innerText = `${hhmm(t.measuredAt)} PKT (${mmss(now - t.measuredAt)} ago)`;
+                const next = new Date(t.measuredAt.getTime() + t.portalIntervalMs);
+                el('nextread').innerText = next > now
+                    ? `~${hhmm(next)} PKT (in ${mmss(next - now)})`
+                    : `due now (expected ${hhmm(next)} PKT)`;
+            }
+            if (!t || !t.nextCheck) {
+                el('nextcheck').innerText = '--';
+            } else {
+                const left = t.nextCheck - Date.now();
+                el('nextcheck').innerText = left > 0 ? `in ${mmss(left)}` : 'checking now...';
+            }
         }
-
 
         // =====================================================================
         // METER DETAIL VIEW: opens when a meter card is clicked
@@ -1523,7 +1731,8 @@
             MD.src = src; MD.f = null; MD.live = {}; MD.liveTime = {}; MD.today = null; MD.seq++;
             const panel = document.querySelector('.md-panel');
             panel.style.setProperty('--md-color', src.color);
-            $('md-title').textContent = src.label;
+            $('md-title').textContent = SRC_BY_ID[src.id] ? `${SRC_BY_ID[src.id].code} · ${src.label}` : src.label;
+            selectSource(src.id);
             $('md-sub').textContent = src.info;
             $('md-seen').textContent = 'Loading…';
             ['md-p', 'md-q', 'md-s', 'md-pf', 'md-hz', 'md-etoday', 'md-imp', 'md-exp'].forEach(x => $(x).textContent = '--');
@@ -1674,7 +1883,7 @@
             $('md-c-phasepie-title').textContent = hasP ? 'Active power share by phase' : 'Current share by phase';
             drawChart('md-c-phasepie', 'doughnut', {
                 labels: PHASE_NAMES,
-                datasets: [{ data: pieVals, backgroundColor: PHASE_COLORS, borderColor: '#fff', borderWidth: 2 }]
+                datasets: [{ data: pieVals, backgroundColor: PHASE_COLORS, borderColor: CARD_BG, borderWidth: 2 }]
             }, pieOpts(hasP ? 'kW' : 'A'));
             setEmpty('md-c-phasepie', pieVals.some(v => v > 0) ? '' : (hasP || hasI ? 'No load at the moment.' : 'No per-phase values for this meter.'));
 
@@ -1863,7 +2072,7 @@
             $('md-c-dayphase-sub').textContent = energy.phSrc === 'counter' ? 'kWh on this day, from per-phase counters'
                 : 'kWh on this day, calculated from phase power';
             drawChart('md-c-dayphase', 'doughnut', {
-                labels: PHASE_NAMES, datasets: [{ data: phE, backgroundColor: PHASE_COLORS, borderColor: '#fff', borderWidth: 2 }]
+                labels: PHASE_NAMES, datasets: [{ data: phE, backgroundColor: PHASE_COLORS, borderColor: CARD_BG, borderWidth: 2 }]
             }, pieOpts('kWh'));
             setEmpty('md-c-dayphase', phE.some(v => v > 0) ? '' : 'No per-phase energy for this day.');
 
@@ -1879,7 +2088,7 @@
                 if (hi >= 0 && hi < hours) hourE[hi] = v;
             });
             drawChart('md-c-shift', 'doughnut', {
-                labels: SHIFTS.map(s => s.name), datasets: [{ data: shiftE, backgroundColor: SHIFT_COLORS, borderColor: '#fff', borderWidth: 2 }]
+                labels: SHIFTS.map(s => s.name), datasets: [{ data: shiftE, backgroundColor: SHIFT_COLORS, borderColor: CARD_BG, borderWidth: 2 }]
             }, pieOpts('kWh'));
             setEmpty('md-c-shift', shiftE.some(v => v > 0) ? '' : 'No energy for this day.');
 
@@ -1994,7 +2203,7 @@
             }
             let run = 0;
             const cumSrc = byPhase ? e.times.map((_, k) => e.phases.reduce((a, arr) => a + (arr[k] || 0), 0)) : e.main;
-            ds.push({ type: 'line', label: 'Cumulative (kWh)', data: cumSrc.map(v => (run += v || 0)), borderColor: '#2b2d42',
+            ds.push({ type: 'line', label: 'Cumulative (kWh)', data: cumSrc.map(v => (run += v || 0)), borderColor: '#e2e8f0',
                       borderWidth: 2, pointRadius: 0, tension: 0.25, yAxisID: 'y1' });
             drawChart('md-c-energy', 'bar', { labels: e.times.map(lbl), datasets: ds }, {
                 responsive: true, maintainAspectRatio: false, animation: false,
@@ -2026,17 +2235,22 @@
             $('md-to').value = pktInputStr(new Date());
             syncRangeUI();
 
-            ['grid-generation', 'grid-distribution', 'grid-other'].forEach(g => {
-                const grid = $(g);
-                grid.addEventListener('click', e => {
-                    const card = e.target.closest('.meter-card[data-src]');
-                    if (card) openMeterDetail(card.dataset.src);
-                });
-                grid.addEventListener('keydown', e => {
-                    const card = e.target.closest('.meter-card[data-src]');
-                    if (card && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openMeterDetail(card.dataset.src); }
-                });
+            // meters table: a click (or Enter / Space) selects the meter and opens the full detail view
+            const tbody = $('meter-tbody');
+            const rowOf = e => e.target.closest('tr[data-src]');
+            tbody.addEventListener('click', e => { const r = rowOf(e); if (r) { selectSource(r.dataset.src); openMeterDetail(r.dataset.src); } });
+            tbody.addEventListener('focusin', e => { const r = rowOf(e); if (r) selectSource(r.dataset.src); });
+            tbody.addEventListener('keydown', e => {
+                const r = rowOf(e); if (!r) return;
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openMeterDetail(r.dataset.src); }
+                if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    const n = e.key === 'ArrowDown' ? r.nextElementSibling : r.previousElementSibling;
+                    if (n) n.focus();
+                }
             });
+            $('pd-open').addEventListener('click', () => { if (SEL) openMeterDetail(SEL); });
+            $('pd-open-arrow').addEventListener('click', () => { if (SEL) openMeterDetail(SEL); });
             $('md-close').addEventListener('click', closeMeterDetail);
             $('md-overlay').addEventListener('click', e => { if (e.target.id === 'md-overlay') closeMeterDetail(); });
             document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMeterDetail(); });
