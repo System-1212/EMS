@@ -155,6 +155,9 @@
         .gen-row { display: grid; grid-template-columns: 24px 1fr auto; align-items: center; gap: 10px; font-size: 0.9rem; color: var(--text-2); }
         .gen-row .g-ic { color: #a9bbdb; font-size: 0.95rem; display: flex; justify-content: center; }
         .gen-row .g-ic svg { width: 17px; height: 17px; }
+        .gen-row.solar-total { padding: 7px 0; margin: 1px 0; border-top: 1px solid var(--line-soft); border-bottom: 1px solid var(--line-soft); color: #fff; font-weight: 600; }
+        .gen-row.solar-total .g-ic { color: var(--yellow); }
+        .gen-row.solar-total .gen-val:not(.off) { color: var(--yellow); }
         .gen-val { font-weight: 700; color: #fff; white-space: nowrap; }
         .gen-val.off { color: var(--dim); font-weight: 600; }
         .vdiv { align-self: stretch; background: var(--line); }
@@ -1002,7 +1005,7 @@
         // Each source gets a short code M1, M2, ... used in the table and the charts.
         const SOURCES = (() => {
             const fromMeter = (m, i) => ({ id: `m${i}`, kind: 'meter', idx: i, label: m.label, info: m.info, color: m.color,
-                                           group: m.group, sub: m.sub, icon: m.icon, badgeId: `badge-${i}` });
+                                           group: m.group, sub: m.sub, icon: m.icon, solar: !!m.solar, badgeId: `badge-${i}` });
             const byGroup = g => METERS.map((m, i) => [m, i]).filter(([m]) => m.group === g).map(([m, i]) => fromMeter(m, i));
             const gen = byGroup('generation');
             ISOLAR_SOURCES.forEach((s, j) => gen.splice(s.position, 0, {
@@ -1016,6 +1019,16 @@
         const codeOfMeter = i => SRC_BY_ID[`m${i}`].code;
         const GEN_SRC = SOURCES.filter(s => s.group === 'generation');
         const DIST_SRC = SOURCES.filter(s => s.group !== 'generation');   // distribution (+ "other", if any)
+        // Generation card and pie: Solar 1, Solar 2 ... then "Solar Total" (their sum), then KE, Genset
+        const SOLAR_SRC = GEN_SRC.filter(s => s.solar);
+        const OTHER_GEN_SRC = GEN_SRC.filter(s => !s.solar);
+        const SOLAR_TOTAL = { id: 'solar-total', label: 'Solar Total', color: '#facc15' };
+        const GEN_PIE = SOLAR_SRC.length ? [SOLAR_TOTAL, ...OTHER_GEN_SRC] : OTHER_GEN_SRC;
+        // solar in kW, added by size (a solar meter may read negative when its CTs face the other way)
+        function solarNowKw() {
+            const on = SOLAR_SRC.map(s => STATE[s.id] || {}).filter(st => st.online && isNum(st.p));
+            return on.length ? on.reduce((a, st) => a + Math.abs(st.p), 0) : undefined;
+        }
         const STATE = {};                               // latest computed values per source id
         let SEL = SOURCES.length ? SOURCES[0].id : null; // source shown in the Meter Details panel
 
@@ -1024,11 +1037,17 @@
         const esc = s => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 
         function buildLayout() {
-            document.getElementById('gen-list').innerHTML = SOURCES.filter(s => s.group === 'generation').map(s => `
+            const genRow = s => `
                 <div class="gen-row" title="${esc(s.info)}">
                     <span class="g-ic">${iconHtml(s.icon)}</span><span>${s.label}</span>
                     <span class="gen-val off" id="gr-${s.id}">-- kW</span>
-                </div>`).join('');
+                </div>`;
+            const solarTotalRow = SOLAR_SRC.length ? `
+                <div class="gen-row solar-total" title="${esc(SOLAR_SRC.map(s => s.label).join(' + '))}">
+                    <span class="g-ic"><i class="fas fa-sun"></i></span><span>Solar Total</span>
+                    <span class="gen-val off" id="gr-solar-total">-- kW</span>
+                </div>` : '';
+            document.getElementById('gen-list').innerHTML = SOLAR_SRC.map(genRow).join('') + solarTotalRow + OTHER_GEN_SRC.map(genRow).join('');
             const rowHtml = s => `
                 <tr data-src="${s.id}" tabindex="0" title="${esc(s.label + ' · ' + s.info)}" class="is-offline">
                     <td><span class="m-badge">${s.code}</span></td>
@@ -1353,9 +1372,9 @@
                     }
                 }
             });
-            genShare = makeShare('genShareChart', GEN_SRC);
+            genShare = makeShare('genShareChart', GEN_PIE);
             distShare = makeShare('distShareChart', DIST_SRC);
-            renderShareLegend('gen-share-legend', GEN_SRC, GEN_SRC.map(() => 0));
+            renderShareLegend('gen-share-legend', GEN_PIE, GEN_PIE.map(() => 0));
             renderShareLegend('share-legend', DIST_SRC, DIST_SRC.map(() => 0));
 
             // bell: which meters are offline
@@ -1648,8 +1667,7 @@
 
             // Solar 1 + Solar 2
             const solarSt = METERS.map((m, i) => m.solar ? STATE[`m${i}`] : null).filter(Boolean);
-            const solarOn = solarSt.filter(st => st.online && isNum(st.p));
-            setVal('solar-now-kw', solarOn.length ? solarOn.reduce((a, st) => a + Math.abs(st.p), 0) : undefined, 'kW', 1);
+            setVal('solar-now-kw', solarNowKw(), 'kW', 1);
             const solarSeen = solarSt.filter(st => st.seen);
             setVal('solar-total-kwh', solarSeen.length ? solarSeen.reduce((a, st) => a + (st.imp || 0) + (st.exp || 0), 0) : undefined, 'kWh', 0);
             [['dist-prod-kw', subW.production], ['dist-util-kw', subW.utility]].forEach(([id, w]) => {
@@ -1667,6 +1685,12 @@
                 el.classList.toggle('off', !on);
                 el.classList.toggle('negative', on && st.p < 0);
             });
+            const stEl = document.getElementById('gr-solar-total');
+            if (stEl) {
+                const kw = solarNowKw();
+                stEl.innerText = isNum(kw) ? `${fmt(kw, 1)} kW` : '-- kW';
+                stEl.classList.toggle('off', !isNum(kw));
+            }
 
             renderRows();
             renderPanel();
@@ -1680,7 +1704,15 @@
             updatePhaseBar(genBar, GEN_SRC);
             updatePhaseBar(distBar, DIST_SRC);
             // generation share uses the size of each source (solar may read negative when its CTs face the other way)
-            const genShareTot = updateShare(genShare, 'gen-share-legend', GEN_SRC, p => Math.abs(p));
+            const genVals = GEN_PIE.map(s => {
+                if (s === SOLAR_TOTAL) return solarNowKw() || 0;
+                const st = STATE[s.id] || {};
+                return st.online && isNum(st.p) ? Math.abs(st.p) : 0;
+            });
+            genShare.data.datasets[0].data = genVals;
+            genShare.update();
+            renderShareLegend('gen-share-legend', GEN_PIE, genVals);
+            const genShareTot = genVals.reduce((a, b) => a + b, 0);
             document.getElementById('gen-share-total').innerText = `${fmt(genShareTot, 1)} kW`;
             updateShare(distShare, 'share-legend', DIST_SRC, p => Math.max(p, 0));
             document.getElementById('share-total').innerText = `${fmt(dt.w / 1000, 1)} kW`;
