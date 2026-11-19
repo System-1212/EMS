@@ -108,13 +108,17 @@
         .card-title .ic-meter { color: var(--yellow); }
 
         /* KPI row */
-        .kpi-row { display: grid; grid-template-columns: 1.4fr 0.75fr 1.55fr 0.75fr; gap: 14px; }
+        .kpi-row { display: grid; grid-template-columns: 1.55fr 0.95fr 1fr 0.75fr; gap: 14px; }
         /* month energy + cost */
         .kpi-figs { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 18px; }
         #facility-total-kwh { font-size: 1.6rem; }
         .kpi-cost { font-size: 1.45rem; font-weight: 800; color: var(--green-l); white-space: nowrap; font-variant-numeric: tabular-nums; }
         .kpi-cost .cur { font-size: 0.62em; font-weight: 600; color: var(--text-2); margin-right: 5px; }
-        .kpi-tou { display: flex; flex-direction: column; gap: 4px; font-size: 0.78rem; color: var(--text-2); border-top: 1px solid var(--line-soft); padding-top: 8px; }
+        .kpi-main { display: flex; align-items: center; gap: 8px 14px; flex-wrap: wrap; }
+        .kpi-main .kpi-figs { flex-direction: column; align-items: flex-start; gap: 2px; }
+        .kpi-tou { display: flex; flex-direction: column; gap: 6px; font-size: 0.8rem; color: var(--text-2); border-left: 1px solid var(--line-soft); padding: 2px 0 2px 14px; }
+        .kpi-tou .tou-item { display: flex; flex-direction: column; gap: 1px; white-space: nowrap; }
+        .kpi-tou .tou-sub { font-size: 0.7rem; color: var(--muted); padding-left: 14px; }
         .kpi-tou b { color: #fff; font-weight: 700; font-variant-numeric: tabular-nums; }
         .kpi-tou[hidden] { display: none; }
         .kpi-asof { font-size: 0.72rem; color: var(--muted); }
@@ -123,7 +127,11 @@
         /* tariff card */
         .tariff { gap: 10px; justify-content: flex-start; }
         .tariff [hidden] { display: none !important; }
-        .tariff-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px 12px; flex-wrap: wrap; }
+        .tariff-head { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+        .tariff .tou-toggle { padding-left: 38px; }
+        .kpi.tariff { justify-content: flex-start; gap: 12px; }
+        .tariff .t-row { grid-template-columns: auto 86px auto; justify-content: start; gap: 10px; }
+        .tariff .t-unit { white-space: nowrap; }
         .tou-toggle { display: inline-flex; align-items: center; gap: 7px; font-size: 0.8rem; font-weight: 600; color: var(--text-2); cursor: pointer; user-select: none; }
         .tou-toggle input { accent-color: var(--blue); width: 15px; height: 15px; cursor: pointer; }
         .t-rows { display: flex; flex-direction: column; gap: 7px; }
@@ -143,6 +151,9 @@
         .kpi-value.green { color: var(--green-l); }
         .kpi-value.amber { color: var(--amber); }
         .kpi-value.center { text-align: center; padding-left: 0; }
+        .kpi.live .kpi-title { font-size: 1.15rem; }
+        #facility-live-kw { font-size: clamp(2.3rem, 2.9vw, 3.2rem); color: var(--cyan); text-shadow: 0 0 18px rgba(34,211,238,0.3); }
+        #facility-live-kw .unit { color: var(--cyan); }
         .ic-yellow { color: var(--yellow); filter: drop-shadow(0 0 8px rgba(250,204,21,0.45)); }
         .ic-blue { color: var(--blue); filter: drop-shadow(0 0 8px rgba(59,130,246,0.45)); }
         .ic-cyan { color: var(--cyan); filter: drop-shadow(0 0 8px rgba(34,211,238,0.45)); }
@@ -155,15 +166,12 @@
         .gen-row { display: grid; grid-template-columns: 24px 1fr auto; align-items: center; gap: 10px; font-size: 0.9rem; color: var(--text-2); }
         .gen-row .g-ic { color: #a9bbdb; font-size: 0.95rem; display: flex; justify-content: center; }
         .gen-row .g-ic svg { width: 17px; height: 17px; }
-        .gen-row.solar-total { padding: 7px 0; margin: 1px 0; border-top: 1px solid var(--line-soft); border-bottom: 1px solid var(--line-soft); color: #fff; font-weight: 600; }
-        .gen-row.solar-total .g-ic { color: var(--yellow); }
-        .gen-row.solar-total .gen-val:not(.off) { color: var(--yellow); }
         .gen-val { font-weight: 700; color: #fff; white-space: nowrap; }
         .gen-val.off { color: var(--dim); font-weight: 600; }
         .vdiv { align-self: stretch; background: var(--line); }
         .gen-total { text-align: center; }
-        .gen-total-label { font-size: 0.9rem; color: var(--text-2); }
-        .gen-total-value { font-size: 1.5rem; font-weight: 800; color: var(--cyan); margin-top: 6px; white-space: nowrap; text-shadow: 0 0 18px rgba(34,211,238,0.35); }
+        .gen-total-label { font-size: 1.15rem; font-weight: 700; color: #fff; }
+        .gen-total-value { font-size: clamp(2.1rem, 2.7vw, 3rem); font-weight: 800; color: var(--cyan); margin-top: 6px; white-space: nowrap; text-shadow: 0 0 18px rgba(34,211,238,0.35); }
         .gen-total-value .unit { color: var(--cyan); font-size: 0.8em; }
         .dist-body { display: flex; flex-direction: column; gap: 18px; margin-top: 18px; }
         .dist-row { display: grid; grid-template-columns: 30px 1fr auto; align-items: center; gap: 12px; font-size: 0.92rem; color: var(--text-2); }
@@ -276,6 +284,50 @@
         }
         .pd-open:hover { filter: brightness(1.1); }
         .pd-open:focus-visible, .pd-arrow:focus-visible, .bell:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+
+        /* ===================== Energy trend (bar chart, like the iSolarCloud energy page) ===================== */
+        .et-card { display: flex; flex-direction: column; gap: 12px; }
+        .et-head { display: flex; justify-content: space-between; align-items: center; gap: 10px 16px; flex-wrap: wrap; }
+        .et-controls { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; }
+        .et-seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: rgba(6,18,39,0.5); }
+        .et-seg button { border: none; background: transparent; padding: 7px 13px; font-size: 0.82rem; font-weight: 600; color: var(--text-2); cursor: pointer; border-right: 1px solid var(--line-soft); }
+        .et-seg button:last-child { border-right: none; }
+        .et-seg button:hover { color: #fff; }
+        .et-seg button[aria-pressed="true"] { background: linear-gradient(90deg, #1d4ed8, #2563eb); color: #fff; }
+        .et-nav { display: inline-flex; align-items: center; gap: 8px; font-size: 0.88rem; font-weight: 600; color: #fff; }
+        .et-nav span { min-width: 168px; text-align: center; font-variant-numeric: tabular-nums; }
+        .et-arrow { width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--line); background: transparent; color: #fff; cursor: pointer; }
+        .et-arrow:hover:not(:disabled) { background: rgba(59,130,246,0.15); border-color: var(--blue); }
+        .et-arrow:disabled { opacity: 0.3; cursor: default; }
+        .et-custom { display: inline-flex; gap: 8px; align-items: center; font-size: 0.82rem; color: var(--text-2); flex-wrap: wrap; }
+        .et-custom[hidden] { display: none; }
+        .et-in { font: inherit; font-size: 0.84rem; padding: 5px 8px; border: 1px solid var(--line); border-radius: 7px; background: #0a1932; color: #fff; color-scheme: dark; }
+        .et-btn { font: inherit; font-size: 0.82rem; font-weight: 600; padding: 6px 12px; border-radius: 8px; border: none; background: var(--blue-2); color: #fff; cursor: pointer; }
+        .et-seg button:focus-visible, .et-arrow:focus-visible, .et-btn:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+        .et-sum { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+        .et-s { background: rgba(6,18,39,0.45); border: 1px solid var(--line-soft); border-radius: 10px; padding: 9px 12px; }
+        .et-s .l { font-size: 0.78rem; color: var(--muted); font-weight: 600; display: flex; align-items: center; gap: 7px; }
+        .et-s .v { font-size: 1.25rem; font-weight: 800; color: #fff; margin-top: 3px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+        .et-s .v small { font-size: 0.62em; font-weight: 600; color: var(--text-2); margin-left: 4px; }
+        .et-s .x { font-size: 0.72rem; color: var(--muted); margin-top: 1px; }
+        .et-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+        .et-bar2 { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .et-status { font-size: 0.78rem; color: var(--muted); }
+        .et-chart { position: relative; height: 330px; }
+        .et-chart[hidden], .et-table-wrap[hidden] { display: none; }
+        .et-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 20px;
+                    font-size: 0.88rem; color: var(--muted); background: rgba(8, 22, 46, 0.9); border-radius: 8px; }
+        .et-empty[hidden] { display: none; }
+        .et-table-wrap { max-height: 360px; overflow: auto; }
+        /* Energy trend: loading progress for long date ranges */
+        .et-prog { display: flex; flex-direction: column; gap: 6px; padding: 8px 12px 10px; border: 1px solid var(--line-soft); border-radius: 10px; background: rgba(6,18,39,0.45); }
+        .et-prog[hidden] { display: none; }
+        .et-prog-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; font-size: 0.8rem; color: var(--text-2); }
+        .et-prog-top i { color: var(--blue); margin-right: 6px; }
+        .et-prog-pct { font-size: 1rem; font-weight: 800; color: var(--cyan); font-variant-numeric: tabular-nums; }
+        .et-prog-eta { font-size: 0.76rem; color: var(--muted); margin-left: 6px; }
+        .et-prog-track { height: 7px; background: rgba(110,150,220,0.15); border-radius: 6px; overflow: hidden; }
+        .et-prog-fill { height: 100%; width: 0; border-radius: 6px; background: linear-gradient(90deg, var(--cyan), var(--blue)); transition: width 0.25s ease; }
 
         /* ===================== Loading progress (first sync) ===================== */
         .load-card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 18px 13px; }
@@ -413,6 +465,7 @@
 
         <ul class="nav">
             <li class="active"><a href="#"><i class="fas fa-house"></i><span>Main Dashboard</span></a></li>
+            <li><a href="Trends.html"><i class="fas fa-chart-line"></i><span>Trends &amp; Analysis</span></a></li>
             <li><a href="Rep.html"><i class="far fa-file-lines"></i><span>Energy &amp; Cost Reports</span></a></li>
         </ul>
 
@@ -508,19 +561,21 @@
 
         <!-- KPI cards -->
         <section class="kpi-row">
-            <div class="card kpi" title="Energy used by all distribution meters from the 1st of this month (PKT) up to now, from their energy import counters">
+            <div class="card kpi" title="Energy used by all distribution meters this month, from the 1st at 00:00 PKT up to now, from their energy import counters">
                 <div class="kpi-head">
                     <i class="fas fa-bolt kpi-icon ic-yellow"></i>
                     <div class="kpi-title">Total Energy of Facility <span id="facility-period">(This month)</span></div>
                 </div>
-                <div class="kpi-figs">
-                    <div class="kpi-value" id="facility-total-kwh">-- <span class="unit">kWh</span></div>
-                    <div class="kpi-cost" id="facility-cost"><span class="cur">PKR</span>--</div>
+                <div class="kpi-main">
+                    <div class="kpi-figs">
+                        <div class="kpi-value" id="facility-total-kwh">-- <span class="unit">kWh</span></div>
+                        <div class="kpi-cost" id="facility-cost"><span class="cur">PKR</span>--</div>
+                    </div>
+                    <div class="kpi-tou" id="facility-tou" hidden></div>
                 </div>
-                <div class="kpi-tou" id="facility-tou" hidden></div>
-                <div class="kpi-asof" id="facility-asof">Loading this month's energy…</div>
+                <div class="kpi-asof" id="facility-asof"><i class="fas fa-circle-notch fa-spin"></i> Loading this month's energy…</div>
             </div>
-            <div class="card kpi" title="Sum of all distribution feeders">
+            <div class="card kpi live" title="Sum of all distribution feeders">
                 <div class="kpi-head">
                     <i class="fas fa-chart-simple kpi-icon ic-blue"></i>
                     <div class="kpi-title">Total Live Load</div>
@@ -583,9 +638,46 @@
             <div class="card ie-card" title="Solar 1 + Solar 2 combined">
                 <div class="card-title"><i class="fas fa-solar-panel ic-sun"></i> Solar <small>(Solar 1 + Solar 2)</small></div>
                 <div class="ie-row"><i class="fas fa-bolt" style="color: var(--yellow);"></i><span>Solar now</span><span class="ie-val" id="solar-now-kw">-- <span class="unit">kW</span></span></div>
-                <div class="ie-row"><i class="far fa-calendar" style="color: var(--cyan);"></i><span>Energy this month</span><span class="ie-val" id="solar-month-kwh">-- <span class="unit">kWh</span></span></div>
+                <div class="ie-row"><i class="far fa-calendar" style="color: var(--cyan);"></i><span title="Solar energy today, from 00:00 PKT up to now">Energy today</span><span class="ie-val" id="solar-today-kwh">-- <span class="unit">kWh</span></span></div>
                 <div class="ie-row"><i class="fas fa-sun" style="color: var(--orange);"></i><span title="Reading of the energy counters since the meters were installed">Energy, lifetime</span><span class="ie-val" id="solar-total-kwh">-- <span class="unit">kWh</span></span></div>
             </div>
+        </section>
+
+        <!-- Energy trend: bars per hour / day / month, like the iSolarCloud energy page -->
+        <section class="card et-card" id="et-card">
+            <div class="et-head">
+                <div class="card-title"><i class="fas fa-chart-column ic-cyan"></i> Energy Trend <small>Generation vs Consumption (kWh)</small></div>
+                <div class="et-controls">
+                    <div class="et-seg" role="group" aria-label="Period" id="et-tabs">
+                        <button data-v="day">Day</button><button data-v="week">Week</button><button data-v="month">Month</button><button data-v="year">Year</button><button data-v="custom">Custom</button>
+                    </div>
+                    <div class="et-nav" id="et-nav">
+                        <button class="et-arrow" id="et-prev" aria-label="Previous period"><i class="fas fa-chevron-left"></i></button>
+                        <span id="et-label">--</span>
+                        <button class="et-arrow" id="et-next" aria-label="Next period"><i class="fas fa-chevron-right"></i></button>
+                    </div>
+                    <div class="et-custom" id="et-custom" hidden>
+                        <input class="et-in" type="date" id="et-from" aria-label="From date"> to <input class="et-in" type="date" id="et-to" aria-label="To date">
+                        <button class="et-btn" id="et-apply">Show</button>
+                    </div>
+                </div>
+            </div>
+            <div class="et-sum" id="et-sum"></div>
+            <div class="et-bar2">
+                <div class="et-seg" role="group" aria-label="View" id="et-mode">
+                    <button data-m="chart" aria-pressed="true"><i class="fas fa-chart-column"></i> Chart</button><button data-m="table" aria-pressed="false"><i class="fas fa-table"></i> Table</button>
+                </div>
+                <span class="et-status" id="et-status">Loads after the live values…</span>
+            </div>
+            <div class="et-prog" id="et-prog" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Loading energy data" hidden>
+                <div class="et-prog-top">
+                    <span id="et-prog-text"><i class="fas fa-circle-notch fa-spin"></i>Loading energy data…</span>
+                    <span><span class="et-prog-pct" id="et-prog-pct">0%</span><span class="et-prog-eta" id="et-prog-eta"></span></span>
+                </div>
+                <div class="et-prog-track"><div class="et-prog-fill" id="et-prog-fill"></div></div>
+            </div>
+            <div class="et-chart" id="et-chart-box"><canvas id="et-chart"></canvas><div class="et-empty" id="et-empty" hidden></div></div>
+            <div class="et-table-wrap" id="et-table" hidden></div>
         </section>
 
         <!-- Charts -->
@@ -941,19 +1033,21 @@
         // offline come from a 30-day search, which is slow, so it runs in the background and less often.
         const FAST_RANGE = '-10m';          // meters (online = data newer than 30 s)
         const FAST_ISOLAR_RANGE = '-2h';    // iSolarCloud portal updates about every 5 minutes
-        const HISTORY_RANGE = '-30d';
+        const HISTORY_STEPS = ['-24h', '-30d'];   // offline meters: search the last day first, then 30 days
         const LAST_KNOWN_REFRESH_MS = 10 * 60 * 1000;
 
-        function buildFluxQuery(range) {
-            const measurements = [...new Set(METERS.map(m => m.measurement))];
+        function buildFluxQuery(range, list = METERS) {
+            const measurements = [...new Set(list.map(m => m.measurement))];
             const measFilter = measurements.map(m => `r._measurement == "${m}"`).join(" or ");
-            const fieldSet = [...new Set(METERS.flatMap(m => Object.values(m.fields)))];
+            const tagFilter = list.map(m => `r.meter_name == "${m.tag}"`).join(" or ");
+            const fieldSet = [...new Set(list.flatMap(m => Object.values(m.fields)))];
             const fieldFilter = fieldSet.map(f => `r._field == "${f}"`).join(" or ");
             // last() per series, then keep only the newest value per meter + field
             return `
                 from(bucket: "${INFLUX_BUCKET}")
                   |> range(start: ${range})
                   |> filter(fn: (r) => ${measFilter})
+                  |> filter(fn: (r) => ${tagFilter})
                   |> filter(fn: (r) => ${fieldFilter})
                   |> last()
                   |> keep(columns: ["_time", "_value", "_field", "_measurement", "meter_name"])
@@ -963,11 +1057,11 @@
                   |> group()
             `;
         }
-        const isolarQuery = range => `
+        const isolarQuery = (range, list = ISOLAR_SOURCES) => `
             from(bucket: "${INFLUX_BUCKET}")
               |> range(start: ${range})
               |> filter(fn: (r) => r._measurement == "isolarcloud_device")
-              |> filter(fn: (r) => ${ISOLAR_SOURCES.map(s => `r.device_name == "${s.device}"`).join(" or ")})
+              |> filter(fn: (r) => ${list.map(s => `r.device_name == "${s.device}"`).join(" or ")})
               |> filter(fn: (r) => ${ISOLAR_FIELDS.map(f => `r._field == "${f}"`).join(" or ")})
               |> last()
               |> keep(columns: ["_time", "_value", "_field", "device_name"])
@@ -975,11 +1069,11 @@
         `;
 
         // Full detail-page data (3-phase values, portal reading time, next check)
-        const isolarDetailQuery = range => `
+        const isolarDetailQuery = (range, list = ISOLAR_SOURCES) => `
             from(bucket: "${INFLUX_BUCKET}")
               |> range(start: ${range})
               |> filter(fn: (r) => r._measurement == "isolarcloud_detail")
-              |> filter(fn: (r) => ${ISOLAR_SOURCES.map(s => `r.device_name == "${s.device}"`).join(" or ")})
+              |> filter(fn: (r) => ${list.map(s => `r.device_name == "${s.device}"`).join(" or ")})
               |> filter(fn: (r) => r._field != "status")
               |> last()
               |> keep(columns: ["_time", "_value", "_field", "device_name"])
@@ -994,7 +1088,7 @@
         const MONTH_ENERGY_GROUP = 'distribution';
         const MONTH_WIN_MIN = 15;                    // energy is summed in 15-minute blocks (for on-peak / off-peak)
         const MONTH_REFRESH_MS = 2 * 60 * 1000;
-        const MONTH = { start: null, at: null, rows: null, solar: null, busy: false };
+        const MONTH = { start: null, day: null, at: null, rows: null, total: null, solar: null, busy: false, fullTried: {}, lastOffline: {} };
 
         // ---------- Tariff (saved in this browser) ----------
         const TARIFF_KEY = 'ems_tariff_v1';
@@ -1005,7 +1099,7 @@
         // Each source gets a short code M1, M2, ... used in the table and the charts.
         const SOURCES = (() => {
             const fromMeter = (m, i) => ({ id: `m${i}`, kind: 'meter', idx: i, label: m.label, info: m.info, color: m.color,
-                                           group: m.group, sub: m.sub, icon: m.icon, solar: !!m.solar, badgeId: `badge-${i}` });
+                                           group: m.group, sub: m.sub, icon: m.icon, badgeId: `badge-${i}` });
             const byGroup = g => METERS.map((m, i) => [m, i]).filter(([m]) => m.group === g).map(([m, i]) => fromMeter(m, i));
             const gen = byGroup('generation');
             ISOLAR_SOURCES.forEach((s, j) => gen.splice(s.position, 0, {
@@ -1018,17 +1112,17 @@
         const SRC_BY_ID = Object.fromEntries(SOURCES.map(s => [s.id, s]));
         const codeOfMeter = i => SRC_BY_ID[`m${i}`].code;
         const GEN_SRC = SOURCES.filter(s => s.group === 'generation');
+        // extra category in the Generation chart: Solar 1 + Solar 2 as one bar
+        const SOLAR_TOTAL_SRC = { id: 'solar-total', kind: 'solarTotal', label: 'Solar Total', color: '#facc15',
+                                  group: 'generation', icon: 'fa-solar-panel', info: 'Solar 1 + Solar 2 combined' };
+        const SOLAR_TOTAL_COLOR = '#facc15';
+        // Generation card, bar chart and share chart: Solar 1 and Solar 2 are shown only as one "Solar Total"
+        // (the individual solar meters stay in the Generation Meters table, for their details)
+        const GEN_VIEW_SRC = METERS.some(m => m.solar)
+            ? [...GEN_SRC.filter(s => !(s.kind === 'meter' && METERS[s.idx].solar)), SOLAR_TOTAL_SRC]
+            : GEN_SRC;
+        const GEN_BAR_SRC = GEN_VIEW_SRC;
         const DIST_SRC = SOURCES.filter(s => s.group !== 'generation');   // distribution (+ "other", if any)
-        // Generation card and pie: Solar 1, Solar 2 ... then "Solar Total" (their sum), then KE, Genset
-        const SOLAR_SRC = GEN_SRC.filter(s => s.solar);
-        const OTHER_GEN_SRC = GEN_SRC.filter(s => !s.solar);
-        const SOLAR_TOTAL = { id: 'solar-total', label: 'Solar Total', color: '#facc15' };
-        const GEN_PIE = SOLAR_SRC.length ? [SOLAR_TOTAL, ...OTHER_GEN_SRC] : OTHER_GEN_SRC;
-        // solar in kW, added by size (a solar meter may read negative when its CTs face the other way)
-        function solarNowKw() {
-            const on = SOLAR_SRC.map(s => STATE[s.id] || {}).filter(st => st.online && isNum(st.p));
-            return on.length ? on.reduce((a, st) => a + Math.abs(st.p), 0) : undefined;
-        }
         const STATE = {};                               // latest computed values per source id
         let SEL = SOURCES.length ? SOURCES[0].id : null; // source shown in the Meter Details panel
 
@@ -1037,17 +1131,11 @@
         const esc = s => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 
         function buildLayout() {
-            const genRow = s => `
+            document.getElementById('gen-list').innerHTML = GEN_VIEW_SRC.map(s => `
                 <div class="gen-row" title="${esc(s.info)}">
                     <span class="g-ic">${iconHtml(s.icon)}</span><span>${s.label}</span>
                     <span class="gen-val off" id="gr-${s.id}">-- kW</span>
-                </div>`;
-            const solarTotalRow = SOLAR_SRC.length ? `
-                <div class="gen-row solar-total" title="${esc(SOLAR_SRC.map(s => s.label).join(' + '))}">
-                    <span class="g-ic"><i class="fas fa-sun"></i></span><span>Solar Total</span>
-                    <span class="gen-val off" id="gr-solar-total">-- kW</span>
-                </div>` : '';
-            document.getElementById('gen-list').innerHTML = SOLAR_SRC.map(genRow).join('') + solarTotalRow + OTHER_GEN_SRC.map(genRow).join('');
+                </div>`).join('');
             const rowHtml = s => `
                 <tr data-src="${s.id}" tabindex="0" title="${esc(s.label + ' · ' + s.info)}" class="is-offline">
                     <td><span class="m-badge">${s.code}</span></td>
@@ -1100,14 +1188,17 @@
         // ---------- Active power bar charts (one for Generation, one for Distribution) ----------
         // Meters show phase A/B/C. Sources without per-phase power (KE, Genset from iSolarCloud) show one "Total" bar.
         function makePhaseBar(canvasId, srcs) {
+            const withPhases = srcs.some(s => s.kind === 'meter');
             const withTotal = srcs.some(s => s.kind === 'isolar');
+            const withSolar = srcs.some(s => s.kind === 'solarTotal');
             const bar = (label, color) => ({
                 label, data: srcs.map(() => null), skipNull: true,
                 backgroundColor: barGradient(color), hoverBackgroundColor: color,
                 borderRadius: { topLeft: 3, topRight: 3 }, categoryPercentage: 0.72, barPercentage: 0.88
             });
-            const datasets = ['A', 'B', 'C'].map((ph, i) => bar(`Phase ${ph}`, PHASE_COLORS[i]));
+            const datasets = withPhases ? ['A', 'B', 'C'].map((ph, i) => Object.assign(bar(`Phase ${ph}`, PHASE_COLORS[i]), { phase: i })) : [];
             if (withTotal) datasets.push(bar('Total (no phase data)', TOTAL_BAR_COLOR));
+            if (withSolar) datasets.push(Object.assign(bar('Solar Total', SOLAR_TOTAL_COLOR), { solarTotal: true }));
             return new Chart(document.getElementById(canvasId), {
                 type: 'bar',
                 data: { labels: srcs.map(s => s.label.split(' ')), datasets },   // two-word names wrap onto 2 lines
@@ -1129,12 +1220,14 @@
             });
         }
         function updatePhaseBar(chart, srcs) {
-            const ds = chart.data.datasets;
             srcs.forEach((s, k) => {
                 const st = STATE[s.id] || {};
-                const noPhases = s.kind === 'isolar';
-                [0, 1, 2].forEach(ph => ds[ph].data[k] = noPhases ? null : (st.online && st.ph ? st.ph[ph] : 0));
-                if (ds[3]) ds[3].data[k] = noPhases ? (st.online && isNum(st.p) ? st.p : 0) : null;
+                const p = st.online && isNum(st.p) ? st.p : 0;
+                chart.data.datasets.forEach(d => {
+                    if (d.phase !== undefined) d.data[k] = s.kind === 'meter' ? (st.online && st.ph ? st.ph[d.phase] : 0) : null;
+                    else if (d.solarTotal) d.data[k] = s.kind === 'solarTotal' ? p : null;
+                    else d.data[k] = s.kind === 'isolar' ? p : null;
+                });
             });
             chart.update();
         }
@@ -1178,6 +1271,10 @@
         }
 
         // ---------- Month-to-date energy ----------
+        // 00:00 PKT of the given day
+        function pktTodayStart(d) {
+            return new Date(Math.floor((d.getTime() + 5 * 3600e3) / 86400e3) * 86400e3 - 5 * 3600e3);
+        }
         function pktMonthStart(d) {
             const s = new Date(d.getTime() + 5 * 3600e3);
             return new Date(Date.UTC(s.getUTCFullYear(), s.getUTCMonth(), 1) - 5 * 3600e3);
@@ -1196,9 +1293,9 @@
   ${tail}`;
         }
         // first or last counter reading of this month per meter + field (0 readings ignored)
-        function counterFlux(list, fields, start, fn) {
+        function counterFlux(list, fields, start, fn, stop) {
             return `from(bucket: "${INFLUX_BUCKET}")
-  |> range(start: ${start.toISOString()})
+  |> range(start: ${start.toISOString()}${stop ? `, stop: ${stop.toISOString()}` : ''})
   |> filter(fn: (r) => ${list.map(m => `(r._measurement == "${m.measurement}" and r.meter_name == "${m.tag}")`).join(' or ')})
   |> filter(fn: (r) => ${fields.map(f => `r._field == "${f}"`).join(' or ')})
   |> filter(fn: (r) => r._value > 0)
@@ -1208,83 +1305,147 @@
         }
         // energy this month = last counter reading - first counter reading, per meter and counter.
         // This can never be more than the counter itself, even when the meter sends a bad reading.
-        async function counterSpan(list, fields, start) {
-            const [f0, f1] = await Promise.all([runFlux(counterFlux(list, fields, start, 'first')), runFlux(counterFlux(list, fields, start, 'last'))]);
-            const key = r => `${r._measurement}|${r.meter_name}|${r._field}`;
-            const first = {};
-            f0.forEach(r => { const v = parseFloat(r._value); if (!isNaN(v)) first[key(r)] = v; });
-            return f1.reduce((sum, r) => {
-                const v = parseFloat(r._value), a = first[key(r)];
-                return sum + (isNaN(v) || a === undefined ? 0 : Math.max(v - a, 0));
-            }, 0);
+        // ---- browser caches: first counter readings and the finished 15-minute blocks never change ----
+        const FAC_CACHE_KEY = 'ems_month_cache_v2';        // facility, this month (cleared when the month changes)
+        const SOLAR_CACHE_KEY = 'ems_solar_day_cache_v1';  // solar, today (cleared when the day changes)
+        try { localStorage.removeItem('ems_day_cache_v1'); } catch (e) {}   // old cache of the earlier version
+        function energyCache(key, start) {
+            const fresh = { start: start.getTime(), first: {}, blocks: null };
+            try { const c = JSON.parse(localStorage.getItem(key)); return c && c.start === fresh.start ? c : fresh; } catch (e) { return fresh; }
         }
+        function saveEnergyCache(key, c) { try { localStorage.setItem(key, JSON.stringify(c)); } catch (e) {} }
+
+        // energy this month = last counter reading - first counter reading, per meter and counter.
+        // This can never be more than the counter itself, even when the meter sends a bad reading.
+        // Fast path: the first reading comes from the browser cache (or the first 2 hours of the day),
+        // the latest reading from the last hour. Only meters missing there are searched over the whole month.
+        async function counterSpan(list, fields, start, cache) {
+            const now = Date.now(), s0 = start.getTime();
+            const own = m => fields.filter(f => Object.values(m.fields).includes(f));
+            const mk = (m, f) => `${m.measurement}|${m.tag}|${f}`;
+            const read = rows => { const o = {}; rows.forEach(r => { const v = parseFloat(r._value); if (!isNaN(v)) o[`${r._measurement}|${r.meter_name}|${r._field}`] = v; }); return o; };
+            const missing = got => list.filter(m => own(m).some(f => got[mk(m, f)] === undefined));
+            const tried = MONTH.fullTried;   // whole-day searches that found nothing: retry every 30 minutes only
+            const fullSearch = (need, tag) => need.filter(m => !(tried[tag + mk(m, '')] > now - 30 * 60e3));
+            const markTried = (need, tag) => need.forEach(m => tried[tag + mk(m, '')] = now);
+
+            const first = cache.first;
+            let need = missing(first);
+            if (need.length) Object.assign(first, read(await runFlux(counterFlux(need, fields, start, 'first', new Date(Math.min(now, s0 + 2 * HOUR_MS))))));
+            need = fullSearch(missing(first), 'f|');
+            if (need.length) { Object.assign(first, read(await runFlux(counterFlux(need, fields, start, 'first')))); markTried(missing(first), 'f|'); }
+
+            const last = read(await runFlux(counterFlux(list, fields, new Date(Math.max(s0, now - HOUR_MS)), 'last')));
+            Object.keys(last).forEach(k => { delete MONTH.lastOffline[k]; });            // back online: forget the old reading
+            list.forEach(m => { if (own(m).every(f => last[mk(m, f)] !== undefined)) delete tried['l|' + mk(m, '')]; });
+            // offline meters: their latest reading does not change, so the one found earlier is reused
+            Object.entries(MONTH.lastOffline).forEach(([k, v]) => { if (last[k] === undefined) last[k] = v; });
+            need = fullSearch(missing(last), 'l|');
+            if (need.length) {
+                const got = read(await runFlux(counterFlux(need, fields, start, 'last')));
+                Object.assign(last, got); Object.assign(MONTH.lastOffline, got); markTried(missing(last), 'l|');
+            }
+            return list.reduce((sum, m) => sum + own(m).reduce((s, f) => {
+                const a = first[mk(m, f)], b = last[mk(m, f)];
+                return s + (a === undefined || b === undefined ? 0 : Math.max(b - a, 0));
+            }, 0), 0);
+        }
+
+        // 15-minute energy blocks (only needed for the on-peak / off-peak split).
+        // Blocks already in the browser cache are kept; only the newest ones are read again.
+        async function monthBlocks(list, fields, start, cache) {
+            let rows = (cache.blocks || []).filter(r => r[0] >= start.getTime());
+            const from = rows.length ? rows[rows.length - 1][0] : start.getTime();   // the last block may have been incomplete
+            rows = rows.filter(r => r[0] < from);
+            const fresh = await runFlux(monthFlux(list, fields, new Date(from), `|> group(columns: ["_time"])
+  |> sum()
+  |> group()
+  |> keep(columns: ["_time", "_value"])`));
+            fresh.forEach(r => { const t = new Date(r._time).getTime(), v = parseFloat(r._value); if (!isNaN(t) && !isNaN(v) && t >= from) rows.push([t, v]); });
+            rows.sort((a, b) => a[0] - b[0]);
+            cache.blocks = rows;
+            return rows;
+        }
+
         async function loadMonth() {
             if (MONTH.busy) return;
             MONTH.busy = true;
-            const now = new Date(), start = pktMonthStart(now);
+            // facility energy: from the 1st of this month (PKT); solar energy: today from 00:00 PKT
+            const now = new Date(), start = pktMonthStart(now), day = pktTodayStart(now);
+            if (!MONTH.day || MONTH.day.getTime() !== day.getTime()) { MONTH.fullTried = {}; MONTH.lastOffline = {}; MONTH.day = day; }
+            if (MONTH.start && MONTH.start.getTime() !== start.getTime()) { MONTH.rows = null; MONTH.total = null; }
             const facility = METERS.filter(m => m.group === MONTH_ENERGY_GROUP);
             const solar = METERS.filter(m => m.solar);
             const uniq = arr => [...new Set(arr.filter(Boolean))];
             const facFields = uniq(facility.map(m => m.fields.kwhImp));
             // solar: import + export counters, so it works whichever way the CTs are installed
             const solFields = uniq(solar.flatMap(m => [m.fields.kwhImp, m.fields.kwhExp]));
-            try {
-                const [fRows, fTotal, sTotal] = await Promise.all([
-                    facility.length ? runFlux(monthFlux(facility, facFields, start, `|> group(columns: ["_time"])
-  |> sum()
-  |> group()
-  |> keep(columns: ["_time", "_value"])`)) : [],
-                    facility.length ? counterSpan(facility, facFields, start) : 0,
-                    solar.length ? counterSpan(solar, solFields, start) : undefined
-                ]);
-                let rows = fRows.map(r => ({ t: new Date(r._time).getTime(), v: parseFloat(r._value) })).filter(x => !isNaN(x.t) && !isNaN(x.v));
-                // the 15-minute blocks give the on-peak / off-peak split; the month total comes from the counters
-                const blockSum = rows.reduce((a, r) => a + r.v, 0);
-                if (blockSum > 0) rows = rows.map(r => ({ t: r.t, v: r.v * fTotal / blockSum }));
-                MONTH.start = start; MONTH.at = now;
-                MONTH.rows = rows;
-                MONTH.total = fTotal;
-                MONTH.solar = sTotal;
-                renderMonth();
-            } catch (err) {
-                console.error('Month energy query:', err);
-                if (!MONTH.rows) document.getElementById('facility-asof').textContent = 'Could not load this month\'s energy yet, retrying…';
-            } finally {
-                MONTH.busy = false;
+            const facCache = energyCache(FAC_CACHE_KEY, start), solCache = energyCache(SOLAR_CACHE_KEY, day);
+            const tasks = [];
+
+            // solar today: shown as soon as it arrives (does not wait for the month blocks)
+            if (solar.length) tasks.push(counterSpan(solar, solFields, day, solCache).then(v => {
+                saveEnergyCache(SOLAR_CACHE_KEY, solCache);
+                MONTH.solar = v;
+                setVal('solar-today-kwh', v, 'kWh', 1);
+            }).catch(err => console.error('Solar energy today:', err)));
+
+            // facility this month: the total (from the counters) is shown first, the on-peak / off-peak split follows
+            if (facility.length) {
+                const totalP = counterSpan(facility, facFields, start, facCache).then(v => {
+                    MONTH.total = v; MONTH.start = start; MONTH.at = now;
+                    renderMonth();
+                });
+                const blocksP = monthBlocks(facility, facFields, start, facCache);
+                tasks.push(Promise.all([totalP, blocksP]).then(([, blocks]) => {
+                    saveEnergyCache(FAC_CACHE_KEY, facCache);
+                    MONTH.rows = blocks.map(([t, v]) => ({ t, v }));
+                    renderMonth();
+                }).catch(err => {
+                    console.error('Month energy query:', err);
+                    if (!MONTH.at) document.getElementById('facility-asof').textContent = 'Could not load this month\'s energy yet, retrying…';
+                }));
             }
+            try { await Promise.all(tasks); } finally { MONTH.busy = false; }
         }
         const hmToMin = s => { const m = /^(\d{1,2}):(\d{2})/.exec(s || ''); return m ? +m[1] * 60 + +m[2] : null; };
         const pktMinuteOfDay = ms => Math.floor((((ms + 5 * 3600e3) % 86400e3) + 86400e3) % 86400e3 / 60000);
         const inWindow = (m, a, b) => a === null || b === null || a === b ? false : a < b ? (m >= a && m < b) : (m >= a || m < b);
 
         function renderMonth() {
-            if (!MONTH.rows) return;
+            if (!MONTH.at) return;
             const T = TARIFF;
             const pkA = hmToMin(T.peakFrom), pkB = hmToMin(T.peakTo);
-            let total = 0, peak = 0;
-            MONTH.rows.forEach(({ t, v }) => {
-                total += v;
+            const split = !!MONTH.rows;
+            let blockTot = 0, blockPeak = 0;
+            (MONTH.rows || []).forEach(({ t, v }) => {
+                blockTot += v;
                 // a 15-minute block counts as on-peak when its middle falls inside the on-peak time
-                if (T.tou && inWindow(pktMinuteOfDay(t + MONTH_WIN_MIN * 30e3), pkA, pkB)) peak += v;
+                // (the on-peak hours in the tariff card are used even when the tariff is a single rate)
+                if (inWindow(pktMinuteOfDay(t + MONTH_WIN_MIN * 30e3), pkA, pkB)) blockPeak += v;
             });
-            if (isNum(MONTH.total) && !(total > 0)) total = MONTH.total;   // no 15-minute blocks: use the counter total
+            // the month total comes from the counters; the 15-minute blocks only give the on-peak share
+            const total = isNum(MONTH.total) ? MONTH.total : blockTot;
+            const peak = blockTot > 0 ? blockPeak * total / blockTot : 0;
             const off = total - peak;
             const r = x => isNum(x) ? x : NaN;
             const peakCost = peak * r(T.peakRate), offCost = off * r(T.offRate);
-            const cost = T.tou ? peakCost + offCost : total * r(T.rate);
+            const cost = T.tou ? (split ? peakCost + offCost : NaN) : total * r(T.rate);
             const money = v => isNum(v) ? fmt(v, 0) : '--';
 
             setVal('facility-total-kwh', total, 'kWh', 0);
             document.getElementById('facility-cost').innerHTML = `<span class="cur">PKR</span>${money(cost)}`;
-            document.getElementById('facility-period').textContent = `(This month: ${fmtDay(MONTH.start)} – ${fmtDay(MONTH.at)})`;
+            document.getElementById('facility-period').textContent = `(This month: ${fmtDay(MONTH.start)} – ${fmtDay(MONTH.at)}, ${fmtClock(MONTH.at)})`;
             const tou = document.getElementById('facility-tou');
-            tou.hidden = !T.tou;
-            if (T.tou) tou.innerHTML = `
-                <span><span class="tou-dot peak"></span>On-peak <b>${fmt(peak, 0)} kWh</b> · PKR <b>${money(peakCost)}</b></span>
-                <span><span class="tou-dot off"></span>Off-peak <b>${fmt(off, 0)} kWh</b> · PKR <b>${money(offCost)}</b></span>`;
+            tou.hidden = false;
+            const hrs = (T.peakFrom && T.peakTo) ? `${T.peakFrom}–${T.peakTo}` : 'set the hours in the tariff card';
+            tou.innerHTML = !split ? '<span>Loading on-peak / off-peak…</span>' : `
+                <span class="tou-item"><span><span class="tou-dot peak"></span>On-peak <b>${fmt(peak, 0)} kWh</b></span>
+                    <span class="tou-sub">${hrs}${T.tou ? ` · PKR ${money(peakCost)}` : ''}</span></span>
+                <span class="tou-item"><span><span class="tou-dot off"></span>Off-peak <b>${fmt(off, 0)} kWh</b></span>
+                    <span class="tou-sub">other hours${T.tou ? ` · PKR ${money(offCost)}` : ''}</span></span>`;
             const rateTxt = T.tou ? 'on-peak / off-peak tariff' : `${isNum(T.rate) ? fmt(T.rate, 2) : '--'} PKR/kWh`;
             document.getElementById('facility-asof').textContent = `Updated ${fmtClock(MONTH.at)} PKT · ${rateTxt}`;
-            setVal('solar-month-kwh', MONTH.solar, 'kWh', 1);
         }
 
         document.addEventListener('DOMContentLoaded', function() {
@@ -1298,9 +1459,10 @@
 
             buildLayout();
             initMeterDetail();
+            initEnergyTrend();
 
             initTariff();
-            genBar = makePhaseBar('genBarChart', GEN_SRC);
+            genBar = makePhaseBar('genBarChart', GEN_BAR_SRC);
             distBar = makePhaseBar('distBarChart', DIST_SRC);
 
             // draws each slice's kW value inside its arc; narrow slices (<7%) get a callout label outside the ring
@@ -1372,9 +1534,9 @@
                     }
                 }
             });
-            genShare = makeShare('genShareChart', GEN_PIE);
+            genShare = makeShare('genShareChart', GEN_VIEW_SRC);
             distShare = makeShare('distShareChart', DIST_SRC);
-            renderShareLegend('gen-share-legend', GEN_PIE, GEN_PIE.map(() => 0));
+            renderShareLegend('gen-share-legend', GEN_VIEW_SRC, GEN_VIEW_SRC.map(() => 0));
             renderShareLegend('share-legend', DIST_SRC, DIST_SRC.map(() => 0));
 
             // bell: which meters are offline
@@ -1391,8 +1553,7 @@
             loadBar.start();
             fetchInfluxData();
             setInterval(fetchInfluxData, REFRESH_MS);
-            loadMonth();
-            setInterval(loadMonth, MONTH_REFRESH_MS);
+            setInterval(loadMonth, MONTH_REFRESH_MS);   // first run starts once the live values are loaded
             setInterval(updateIsolarCounters, 1000);
 
             function updatePktClock() {
@@ -1403,7 +1564,20 @@
             setInterval(updatePktClock, 1000);
         });
 
+        // every query logs its time in the browser console (F12 -> Console, look for "[EMS timing]")
+        const PAGE_T0 = performance.now();
+        function queryName(flux) {
+            const meas = (flux.match(/_measurement == "([^"]+)"/) || [])[1] || '?';
+            const rng = (flux.match(/range\(start: ([^,)\s]+)/) || [])[1] || '?';
+            const what = /integral/.test(flux) ? 'energy-trend' : /difference/.test(flux) ? 'today-blocks' : /first\(\)/.test(flux) ? 'counter-first' : /last\(\)/.test(flux) ? 'last' : 'query';
+            return `${what} ${meas} from ${rng}`;
+        }
         async function queryInflux(flux) {
+            const qt0 = performance.now();
+            try { return await queryInfluxRaw(flux); }
+            finally { console.info(`[EMS timing] ${((performance.now() - qt0) / 1000).toFixed(2)} s  ${queryName(flux)}  (page +${((performance.now() - PAGE_T0) / 1000).toFixed(1)} s)`); }
+        }
+        async function queryInfluxRaw(flux) {
             const response = await fetch(`${INFLUX_URL}/api/v2/query?org=${encodeURIComponent(INFLUX_ORG)}`, {
                 method: 'POST',
                 headers: {
@@ -1501,10 +1675,14 @@
                 if (first) {
                     firstLiveDone = true;
                     loadBar.clearFail();
-                    loadBar.set(70, 96, 'Live values are on screen',
-                        'Now loading the last known values of offline meters (this search covers 30 days and can take a while)', 0.006);
+                    const secs = ((performance.now() - PAGE_T0) / 1000).toFixed(1);
+                    loadBar.finish('Live values loaded', `Ready in ${secs} s · this month's energy, solar today and the energy trend load in the background`);
+                    document.getElementById('db-status').innerText = "System Online";
+                    document.getElementById('db-status').style.color = "var(--green-l)";
+                    console.info(`[EMS timing] page ready (live values on screen) after ${secs} s`);
+                    startBackground();
                 }
-                if (!lastKnown || Date.now() - historyAt > LAST_KNOWN_REFRESH_MS) loadHistory();
+                if (lastKnown && Date.now() - historyAt > LAST_KNOWN_REFRESH_MS) loadHistory();
             } catch (err) {
                 console.error("Data fetch error:", err);
                 document.getElementById('db-status').innerText = "Cloud Offline";
@@ -1515,16 +1693,46 @@
             }
         }
 
+        // meters and iSolarCloud devices with no reading in the fast (last few minutes) query
+        function missingFromFast() {
+            const seenM = new Set(parseFluxCsv(lastFast.meters || '').map(r => meterKey(r._measurement, r.meter_name)));
+            const seenI = new Set(parseFluxCsv(lastFast.isolar || '').map(r => r.device_name));
+            return { meters: METERS.filter(m => !seenM.has(meterKey(m.measurement, m.tag))),
+                     isolar: ISOLAR_SOURCES.filter(s => !seenI.has(s.device)) };
+        }
+
+        // Last known values are only needed for meters that are offline. When all meters report, nothing is searched.
+        // Offline meters are searched over the last day first; only those still missing are searched over 30 days.
         async function loadHistory() {
             if (historyBusy) return;
             historyBusy = true;
             try {
-                const [meters, isolar, detail] = await Promise.all([
-                    queryInflux(buildFluxQuery(HISTORY_RANGE)),
-                    queryInflux(isolarQuery(HISTORY_RANGE)).catch(() => null),
-                    queryInflux(isolarDetailQuery(HISTORY_RANGE)).catch(() => null)
-                ]);
-                lastKnown = { meters, isolar, detail };
+                const miss = missingFromFast();
+                const parts = { meters: [], isolar: [], detail: [] };
+                for (const range of HISTORY_STEPS) {
+                    const n = miss.meters.length + miss.isolar.length;
+                    if (!n) break;
+                    if (loadBar.active) loadBar.set(range === HISTORY_STEPS[0] ? 80 : 88, 97,
+                        `Loading the last known values of ${n} offline meter${n > 1 ? 's' : ''}`,
+                        range === HISTORY_STEPS[0] ? 'Searching the last 24 hours…' : 'Searching the last 30 days (this can take a while)…', 0.02);
+                    const [m, i, d] = await Promise.all([
+                        miss.meters.length ? queryInflux(buildFluxQuery(range, miss.meters)) : null,
+                        miss.isolar.length ? queryInflux(isolarQuery(range, miss.isolar)).catch(() => null) : null,
+                        miss.isolar.length ? queryInflux(isolarDetailQuery(range, miss.isolar)).catch(() => null) : null
+                    ]);
+                    if (m) {
+                        parts.meters.push(m);
+                        const got = new Set(parseFluxCsv(m).map(r => meterKey(r._measurement, r.meter_name)));
+                        miss.meters = miss.meters.filter(x => !got.has(meterKey(x.measurement, x.tag)));
+                    }
+                    if (i) {
+                        parts.isolar.push(i);
+                        const got = new Set(parseFluxCsv(i).map(r => r.device_name));
+                        miss.isolar = miss.isolar.filter(s => !got.has(s.device));
+                    }
+                    if (d) parts.detail.push(d);
+                }
+                lastKnown = { meters: joinCsv(...parts.meters), isolar: joinCsv(...parts.isolar), detail: joinCsv(...parts.detail) };
                 historyAt = Date.now();
                 if (lastFast) renderMerged();
                 if (loadBar.active) {
@@ -1540,9 +1748,21 @@
                     document.getElementById('db-status').style.color = "var(--green-l)";
                 }
                 historyAt = Date.now() - LAST_KNOWN_REFRESH_MS + 60 * 1000;   // retry in about a minute
+                if (!lastKnown) lastKnown = {};
             } finally {
                 historyBusy = false;
             }
+        }
+
+        // After the live values: one task at a time, so the cloud is never asked many things at once
+        // 1) today's energy  2) last known values of offline meters (only if any)  3) Energy Trend bars
+        let bgStarted = false;
+        async function startBackground() {
+            if (bgStarted) return;
+            bgStarted = true;
+            try { await loadMonth(); } catch (e) {}
+            try { await loadHistory(); } catch (e) {}
+            etStart();
         }
 
         function formatPkt(date) {
@@ -1629,7 +1849,7 @@
                     const sTotal = d[f.sTotal];
                     const pf = (sTotal && sTotal > MIN_S_FOR_PF_VA) ? pClean / sTotal : null;
 
-                    gt.w += pClean;
+                    gt.w += m.solar ? Math.abs(pClean) : pClean;   // solar counts as generation whichever way its CTs face
                     gt.online++;
                     if (m.group === 'distribution') subW[m.sub === 'utility' ? 'utility' : 'production'] += pClean;
 
@@ -1661,13 +1881,18 @@
 
             renderIsolar(isolarCsv, isolarDetailCsv, groupTotals.generation);
 
+            // Solar Total = Solar 1 + Solar 2 (size of the power, solar CTs may face either way)
+            const solarLive = METERS.map((m, i) => m.solar ? STATE[`m${i}`] : null).filter(st => st && st.online && isNum(st.p));
+            STATE['solar-total'] = { online: solarLive.length > 0, p: solarLive.reduce((a, st) => a + Math.abs(st.p), 0) };
+
             const g = groupTotals.generation, dt = groupTotals.distribution;
             setVal('gen-total-kw', g.w / 1000, 'kW', 1);
             document.getElementById('gen-total-kw').classList.toggle('negative', g.w < 0);
 
             // Solar 1 + Solar 2
             const solarSt = METERS.map((m, i) => m.solar ? STATE[`m${i}`] : null).filter(Boolean);
-            setVal('solar-now-kw', solarNowKw(), 'kW', 1);
+            const solarOn = solarSt.filter(st => st.online && isNum(st.p));
+            setVal('solar-now-kw', solarOn.length ? solarOn.reduce((a, st) => a + Math.abs(st.p), 0) : undefined, 'kW', 1);
             const solarSeen = solarSt.filter(st => st.seen);
             setVal('solar-total-kwh', solarSeen.length ? solarSeen.reduce((a, st) => a + (st.imp || 0) + (st.exp || 0), 0) : undefined, 'kWh', 0);
             [['dist-prod-kw', subW.production], ['dist-util-kw', subW.utility]].forEach(([id, w]) => {
@@ -1678,19 +1903,13 @@
             document.getElementById('dist-total-imp').innerText = `${fmt(dt.imp, 0)} kWh`;
             document.getElementById('dist-online').innerText = `${dt.online} / ${dt.count}`;
 
-            SOURCES.filter(s => s.group === 'generation').forEach(s => {
+            GEN_VIEW_SRC.forEach(s => {
                 const st = STATE[s.id] || {}, el = document.getElementById(`gr-${s.id}`);
                 const on = st.online && isNum(st.p);
                 el.innerText = on ? `${fmt(st.p, 1)} kW` : '-- kW';
                 el.classList.toggle('off', !on);
                 el.classList.toggle('negative', on && st.p < 0);
             });
-            const stEl = document.getElementById('gr-solar-total');
-            if (stEl) {
-                const kw = solarNowKw();
-                stEl.innerText = isNum(kw) ? `${fmt(kw, 1)} kW` : '-- kW';
-                stEl.classList.toggle('off', !isNum(kw));
-            }
 
             renderRows();
             renderPanel();
@@ -1701,18 +1920,10 @@
                 el.classList.toggle('negative', w < 0);
             });
 
-            updatePhaseBar(genBar, GEN_SRC);
+            updatePhaseBar(genBar, GEN_BAR_SRC);
             updatePhaseBar(distBar, DIST_SRC);
             // generation share uses the size of each source (solar may read negative when its CTs face the other way)
-            const genVals = GEN_PIE.map(s => {
-                if (s === SOLAR_TOTAL) return solarNowKw() || 0;
-                const st = STATE[s.id] || {};
-                return st.online && isNum(st.p) ? Math.abs(st.p) : 0;
-            });
-            genShare.data.datasets[0].data = genVals;
-            genShare.update();
-            renderShareLegend('gen-share-legend', GEN_PIE, genVals);
-            const genShareTot = genVals.reduce((a, b) => a + b, 0);
+            const genShareTot = updateShare(genShare, 'gen-share-legend', GEN_VIEW_SRC, p => Math.abs(p));
             document.getElementById('gen-share-total').innerText = `${fmt(genShareTot, 1)} kW`;
             updateShare(distShare, 'share-legend', DIST_SRC, p => Math.max(p, 0));
             document.getElementById('share-total').innerText = `${fmt(dt.w / 1000, 1)} kW`;
@@ -2631,6 +2842,327 @@
                 if (s) openMeterDetail(s.id);
             }
         }
+        // =====================================================================
+        // ENERGY TREND: Generation vs Consumption bars per hour / day / month
+        // (same idea as the iSolarCloud energy page). Loads after the dashboard's first load.
+        // Energy = integral of active power in each hour or day. Finished periods are kept in memory.
+        // =====================================================================
+        const ET_COLORS = { gen: '#60a5fa', load: '#facc15', solar: '#f59e0b', ke: '#ef4444', genset: '#9ca3af' };
+        const ET_REFRESH_MS = 5 * 60 * 1000;    // the current period reloads every 5 minutes
+        const ET_MAX_DAYS = 92;
+        const ET_VIEW_KEY = 'ems_et_view_v1';
+        const ET = { view: (() => { try { return localStorage.getItem(ET_VIEW_KEY) || 'day'; } catch (e) { return 'day'; } })(), anchor: null, from: null, to: null, mode: 'chart', units: new Map(), prog: null, tok: 0, chart: null, last: null, started: false, busy: false };
+        const ET_DAY = 24 * 3600e3, ET_HOUR = 3600e3, ET_PKT = 5 * 3600e3;
+        const ET_MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const etDayStart = t => Math.floor((t + ET_PKT) / ET_DAY) * ET_DAY - ET_PKT;
+        const etParts = t => { const d = new Date(t + ET_PKT); return { y: d.getUTCFullYear(), m: d.getUTCMonth(), d: d.getUTCDate() }; };
+        const etDate = (y, m, d = 1) => Date.UTC(y, m, d) - ET_PKT;              // midnight PKT
+        const etDdMon = t => { const p = etParts(t); return `${String(p.d).padStart(2, '0')}/${ET_MON[p.m]}`; };
+        const etYmd = t => new Date(t + ET_PKT).toISOString().slice(0, 10);
+        const etKwh = v => !isNum(v) ? '--' : Math.abs(v) >= 1000 ? `${fmt(v / 1000, 2)}<small>MWh</small>` : `${fmt(v, 1)}<small>kWh</small>`;
+
+        function etRange() {
+            const now = Date.now(), a = ET.anchor === null ? now : ET.anchor, p = etParts(a);
+            if (ET.view === 'day') { const s = etDayStart(a); return { start: s, stop: s + ET_DAY, step: 'hour', label: `${etDdMon(s)}/${p.y}` }; }
+            if (ET.view === 'week') { const e = etDayStart(a) + ET_DAY; return { start: e - 7 * ET_DAY, stop: e, step: 'day', label: `${etDdMon(e - 7 * ET_DAY)} – ${etDdMon(e - ET_DAY)}/${p.y}` }; }
+            if (ET.view === 'month') return { start: etDate(p.y, p.m), stop: etDate(p.y, p.m + 1), step: 'day', label: `${ET_MON[p.m]} ${p.y}` };
+            if (ET.view === 'year') return { start: etDate(p.y, 0), stop: etDate(p.y + 1, 0), step: 'month', label: `${p.y}` };
+            if (!ET.from || !ET.to) return { error: 'Choose both dates.' };
+            const s = new Date(`${ET.from}T00:00:00+05:00`).getTime(), e = new Date(`${ET.to}T00:00:00+05:00`).getTime() + ET_DAY;
+            if (isNaN(s) || isNaN(e) || e <= s) return { error: 'The end date must be on or after the start date.' };
+            if (s > now) return { error: 'The start date is in the future.' };
+            if (e - s > ET_MAX_DAYS * ET_DAY) return { error: `Choose at most ${ET_MAX_DAYS} days.` };
+            return { start: s, stop: e, step: 'day', label: `${etDdMon(s)} – ${etDdMon(e - ET_DAY)}` };
+        }
+        function etShift(dir) {
+            const a = ET.anchor === null ? Date.now() : ET.anchor, p = etParts(a);
+            const next = ET.view === 'day' ? a + dir * ET_DAY : ET.view === 'week' ? a + dir * 7 * ET_DAY
+                       : ET.view === 'month' ? etDate(p.y, p.m + dir, Math.min(p.d, 28)) : etDate(p.y + dir, p.m, Math.min(p.d, 28));
+            const now = Date.now();
+            ET.anchor = next >= etDayStart(now) ? null : next;   // null = the period that contains today
+            etLoad();
+        }
+
+        // ---- loading in small batches, with progress, and a browser cache of finished hours / days ----
+        // Energy per hour (Day view) or per day (other views), per meter, from the integral of active power.
+        // The range is split into batches that load a few at a time, so the progress bar shows real progress.
+        // Every finished hour / day is kept in the browser, so Week, Month and Year reuse what was loaded before.
+        const ET_CONC = 3;                      // batches loading at the same time
+        const ET_SETTLE_MS = 15 * 60 * 1000;    // an hour / day counts as finished 15 min after it ends (late readings)
+        const ET_UNIT_MAX = 2000;               // most hours / days kept in the browser
+        const ET_UNIT_KEY = 'ems_et_units_v1_' + (() => {   // new key when the meter list changes
+            const sig = JSON.stringify([METERS.map(m => [m.measurement, m.tag, m.fields.pTotal]), ISOLAR_SOURCES.map(x => x.device)]);
+            let h = 0; for (const c of sig) h = (h * 31 + c.charCodeAt(0)) | 0;
+            return (h >>> 0).toString(36);
+        })();
+        const etUnitKey = (unit, t) => `${unit}|${t}`;
+        function etLoadUnits() {
+            try {
+                const o = JSON.parse(localStorage.getItem(ET_UNIT_KEY));
+                if (o) Object.entries(o).forEach(([k, v]) => ET.units.set(k, { m: v[0], i: v[1], final: true, at: 0 }));
+            } catch (e) {}
+        }
+        function etSaveUnits() {
+            try {
+                const fin = [...ET.units.entries()].filter(([, u]) => u.final).slice(-ET_UNIT_MAX);
+                localStorage.setItem(ET_UNIT_KEY, JSON.stringify(Object.fromEntries(fin.map(([k, u]) => [k, [u.m, u.i]]))));
+            } catch (e) {}
+        }
+
+        // one batch = consecutive hours / days; the result is stored per hour / day
+        async function etFetchBatch(unit, ts) {
+            const every = unit === ET_HOUR ? '1h' : '1d', offset = unit === ET_HOUR ? '0m' : '19h';   // days start at 00:00 PKT
+            const start = ts[0], stop = Math.min(ts[ts.length - 1] + unit, Date.now());
+            const integ = `|> aggregateWindow(every: ${every}, offset: ${offset}, fn: (column, tables=<-) => tables |> integral(unit: 1h, column: column), createEmpty: false, timeSrc: "_start")`;
+            const range = `|> range(start: ${new Date(start).toISOString()}, stop: ${new Date(stop).toISOString()})`;
+            const fields = [...new Set(METERS.map(m => m.fields.pTotal))];
+            const [mRows, iRes] = await Promise.all([
+                runFlux(`from(bucket: "${INFLUX_BUCKET}")
+  ${range}
+  |> filter(fn: (r) => ${METERS.map(m => `(r._measurement == "${m.measurement}" and r.meter_name == "${m.tag}")`).join(' or ')})
+  |> filter(fn: (r) => ${fields.map(f => `r._field == "${f}"`).join(' or ')})
+  ${integ}
+  |> keep(columns: ["_time", "_value", "_measurement", "meter_name"])`),
+                !ISOLAR_SOURCES.length ? Promise.resolve({ rows: [], ok: true }) : runFlux(`from(bucket: "${INFLUX_BUCKET}")
+  ${range}
+  |> filter(fn: (r) => r._measurement == "isolarcloud_device")
+  |> filter(fn: (r) => ${ISOLAR_SOURCES.map(s => `r.device_name == "${s.device}"`).join(' or ')})
+  |> filter(fn: (r) => r._field == "meter_active_power_kw")
+  ${integ}
+  |> keep(columns: ["_time", "_value", "device_name"])`).then(rows => ({ rows, ok: true }))
+                    .catch(err => { console.error('Energy trend (iSolarCloud):', err); return { rows: [], ok: false }; })
+            ]);
+            const now = Date.now();
+            const per = new Map(ts.map(t => [t, { m: [], i: [] }]));
+            const slot = time => per.get(start + Math.floor((time - start) / unit) * unit);
+            const r3 = v => Math.round(v * 1000) / 1000;
+            mRows.forEach(r => {
+                const v = parseFloat(r._value), u = slot(new Date(r._time).getTime());
+                if (u && !isNaN(v)) u.m.push([r._measurement, r.meter_name, r3(v)]);
+            });
+            iRes.rows.forEach(r => {
+                const v = parseFloat(r._value), u = slot(new Date(r._time).getTime());
+                if (u && !isNaN(v)) u.i.push([r.device_name, r3(v)]);
+            });
+            // only complete answers for finished hours / days are kept for good; the rest reloads after 5 min
+            ts.forEach(t => { const u = per.get(t); u.at = now; u.final = iRes.ok && t + unit <= now - ET_SETTLE_MS; ET.units.set(etUnitKey(unit, t), u); });
+        }
+
+        // rows in the shape etBuckets expects, from the cached hours / days
+        function etRowsFrom(unit, ts) {
+            const mRows = [], iRows = [];
+            ts.forEach(t => {
+                const u = ET.units.get(etUnitKey(unit, t)); if (!u) return;
+                const iso = new Date(t).toISOString();
+                u.m.forEach(([meas, tag, v]) => mRows.push({ _time: iso, _value: v, _measurement: meas, meter_name: tag }));
+                u.i.forEach(([dev, v]) => iRows.push({ _time: iso, _value: v, device_name: dev }));
+            });
+            return [mRows, iRows];
+        }
+
+        const etDur = ms => { const s = Math.max(1, Math.round(ms / 1000)); return s < 60 ? `${s} s` : `${Math.floor(s / 60)} min ${String(s % 60).padStart(2, '0')} s`; };
+        // progress bar above the chart; etProg(null) hides it
+        function etProg(done, total, unitName, t0) {
+            const box = $('et-prog');
+            if (done === null || done === undefined) { ET.prog = null; box.hidden = true; return; }
+            const pct = total ? Math.floor(done / total * 100) : 0;
+            ET.prog = { pct };
+            box.hidden = false;
+            box.setAttribute('aria-valuenow', String(pct));
+            $('et-prog-fill').style.width = pct + '%';
+            $('et-prog-pct').textContent = pct + '%';
+            $('et-prog-text').innerHTML = `<i class="fas fa-circle-notch fa-spin"></i>Loading energy data: ${done} of ${total} ${unitName}`;
+            const spent = Date.now() - t0;
+            $('et-prog-eta').textContent = done > 0 && done < total ? `· about ${etDur(spent / done * (total - done))} left`
+                                         : done === 0 ? '· starting…' : '';
+            $('et-status').textContent = `Loading… ${pct}%`;
+            const ov = $('et-empty');
+            if (!ov.hidden) ov.textContent = `Loading energy data… ${pct}%`;
+        }
+
+        function etBuckets(r, mRows, iRows) {
+            const keys = [];
+            if (r.step === 'hour') for (let t = r.start; t < r.stop; t += ET_HOUR) keys.push(t);
+            else if (r.step === 'day') for (let t = r.start; t < r.stop; t += ET_DAY) keys.push(t);
+            else { const y = etParts(r.start).y; for (let m = 0; m < 12; m++) keys.push(etDate(y, m)); }
+            const idx = t => r.step === 'hour' ? Math.floor((t - r.start) / ET_HOUR) : r.step === 'day' ? Math.floor((t - r.start) / ET_DAY) : etParts(t).m;
+            const z = () => keys.map(() => null);
+            const B = { keys, gen: z(), load: z(), solar: z(), ke: z(), genset: z() };
+            const add = (arr, i, v) => { arr[i] = (arr[i] || 0) + v; };
+            const byKey = {};
+            METERS.forEach(m => byKey[`${m.measurement}|${m.tag}`] = m);
+            mRows.forEach(row => {
+                const m = byKey[`${row._measurement}|${row.meter_name}`], v = parseFloat(row._value) / 1000, i = idx(new Date(row._time).getTime());
+                if (!m || isNaN(v) || i < 0 || i >= keys.length) return;
+                if (m.group === 'generation') { const e = m.solar ? Math.abs(v) : v; add(B.gen, i, e); if (m.solar) add(B.solar, i, e); }
+                else if (m.group === 'distribution') add(B.load, i, v);
+            });
+            iRows.forEach(row => {
+                const j = ISOLAR_SOURCES.findIndex(s => s.device === row.device_name), v = parseFloat(row._value), i = idx(new Date(row._time).getTime());
+                if (j < 0 || isNaN(v) || i < 0 || i >= keys.length) return;
+                add(B.gen, i, v);
+                add(/genset|generator/i.test(ISOLAR_SOURCES[j].label + ISOLAR_SOURCES[j].device) ? B.genset : B.ke, i, v);
+            });
+            return B;
+        }
+
+        async function etLoad(silent) {
+            const r = etRange();
+            etSyncUI(r);
+            if (r.error) { $('et-status').textContent = r.error; etProg(null); return; }
+            const unit = r.step === 'hour' ? ET_HOUR : ET_DAY, unitName = unit === ET_HOUR ? 'hours' : 'days';
+            const now = Date.now(), ts = [];
+            for (let t = r.start; t < Math.min(r.stop, now); t += unit) ts.push(t);
+            const usable = u => u && (u.final || now - u.at < ET_REFRESH_MS);
+            const need = ts.filter(t => !usable(ET.units.get(etUnitKey(unit, t))));
+            const tok = ++ET.tok;
+            const paint = () => { const [m, i] = etRowsFrom(unit, ts); ET.last = { r, B: etBuckets(r, m, i) }; etRender(); };
+
+            if (!need.length) { etProg(null); paint(); return; }   // everything already in the browser
+
+            // batches of consecutive hours / days: about 8 batches for a day, 20 for longer ranges
+            const size = Math.max(1, Math.ceil(need.length / (unit === ET_HOUR ? 8 : 20)));
+            const batches = [];
+            let cur = [];
+            need.forEach(t => {
+                if (cur.length && (cur.length >= size || t !== cur[cur.length - 1] + unit)) { batches.push(cur); cur = []; }
+                cur.push(t);
+            });
+            if (cur.length) batches.push(cur);
+
+            const t0 = Date.now();
+            let done = 0, failed = 0, next = 0;
+            ET.busy = true;
+            if (!silent) {
+                etProg(0, need.length, unitName, t0);
+                if (ts.some(t => ET.units.has(etUnitKey(unit, t)))) paint();   // show what is already cached
+                else etEmpty('Loading energy data… 0%');
+            }
+            const worker = async () => {
+                while (next < batches.length && tok === ET.tok) {
+                    const b = batches[next++];
+                    try { await etFetchBatch(unit, b); }
+                    catch (err) { failed += b.length; console.error('Energy trend:', err); }
+                    done += b.length;
+                    if (tok !== ET.tok) return;            // the user picked another period
+                    if (!silent) { etProg(done, need.length, unitName, t0); paint(); }
+                }
+            };
+            try { await Promise.all(Array.from({ length: Math.min(ET_CONC, batches.length) }, worker)); }
+            finally { if (tok === ET.tok) ET.busy = false; }
+            etSaveUnits();
+            if (tok !== ET.tok) return;
+            etProg(null);
+            paint();
+            console.info(`[EMS timing] energy trend: ${need.length} ${unitName} in ${batches.length} batches, ${((Date.now() - t0) / 1000).toFixed(1)} s`);
+            if (failed) $('et-status').textContent = `${failed} of ${need.length} ${unitName} could not be loaded. They will be tried again in a few minutes.`;
+        }
+
+        function etEmpty(msg) { const el = $('et-empty'); el.hidden = !msg; el.textContent = msg || ''; }
+
+        function etSyncUI(r) {
+            document.querySelectorAll('#et-tabs button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === ET.view)));
+            document.querySelectorAll('#et-mode button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.m === ET.mode)));
+            $('et-custom').hidden = ET.view !== 'custom';
+            $('et-nav').style.display = ET.view === 'custom' ? 'none' : '';
+            $('et-label').textContent = r.label || '--';
+            $('et-next').disabled = !r.error && r.stop > Date.now();
+            $('et-chart-box').hidden = ET.mode !== 'chart';
+            $('et-table').hidden = ET.mode !== 'table';
+        }
+
+        function etRender() {
+            if (!ET.last) return;
+            const { r, B } = ET.last;
+            const lbl = t => r.step === 'hour' ? `${String(Math.round((t - r.start) / ET_HOUR)).padStart(2, '0')}:00` : r.step === 'day' ? etDdMon(t) : ET_MON[etParts(t).m];
+            const labels = B.keys.map(lbl);
+            const sum = a => a.some(v => v !== null) ? a.reduce((x, v) => x + (v || 0), 0) : null;
+            const S = { gen: sum(B.gen), load: sum(B.load), solar: sum(B.solar), ke: sum(B.ke), genset: sum(B.genset) };
+            const tile = (k, name, v, extra) => `<div class="et-s"><div class="l"><span class="et-dot" style="background:${ET_COLORS[k]}"></span>${name}</div><div class="v">${etKwh(v)}</div>${extra ? `<div class="x">${extra}</div>` : ''}</div>`;
+            const gap = isNum(S.gen) && isNum(S.load) ? S.gen - S.load : null;
+            $('et-sum').innerHTML = [
+                tile('gen', 'Generation', S.gen, 'KE + Genset + Solar'),
+                tile('load', 'Consumption', S.load, gap !== null && S.gen > 0 ? `Gen − cons: ${fmt(gap, 0)} kWh (${fmt(gap / S.gen * 100, 1)}%)` : 'All distribution feeders'),
+                tile('solar', 'Solar', S.solar, isNum(S.solar) && S.gen > 0 ? `${fmt(S.solar / S.gen * 100, 1)}% of generation` : 'Solar total'),
+                tile('ke', 'KE (energy purchase)', S.ke, 'Grid supply'),
+                tile('genset', 'Genset', S.genset, 'Generator')
+            ].join('');
+
+            const bar = (label, k, data, hidden) => ({ label, data, hidden, backgroundColor: ET_COLORS[k], hoverBackgroundColor: ET_COLORS[k],
+                borderRadius: { topLeft: 4, topRight: 4 }, categoryPercentage: 0.7, barPercentage: 0.82, maxBarThickness: 28 });
+            const prev = ET.chart ? Object.fromEntries(ET.chart.data.datasets.map((d, i) => [d.label, !ET.chart.isDatasetVisible(i)])) : {};
+            const hid = (label, def) => label in prev ? prev[label] : def;   // keep the legend choices when the period changes
+            const datasets = [
+                bar('Generation', 'gen', B.gen, hid('Generation', false)),
+                bar('Consumption', 'load', B.load, hid('Consumption', false)),
+                bar('Solar', 'solar', B.solar, hid('Solar', true)),
+                bar('KE', 'ke', B.ke, hid('KE', true)),
+                bar('Genset', 'genset', B.genset, hid('Genset', true))
+            ];
+            const unitTitle = r.step === 'hour' ? 'kWh per hour' : r.step === 'day' ? 'kWh per day' : 'kWh per month';
+            const titleOf = i => r.step === 'hour' ? `${etDdMon(r.start)} ${labels[i]}–${String(i + 1).padStart(2, '0')}:00 PKT`
+                               : r.step === 'day' ? new Date(B.keys[i]).toLocaleDateString('en-GB', { timeZone: 'Asia/Karachi', weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })
+                               : `${ET_MON[etParts(B.keys[i]).m]} ${etParts(B.keys[i]).y}`;
+            const options = {
+                responsive: true, maintainAspectRatio: false, animation: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { position: 'bottom', labels: { boxWidth: 14, boxHeight: 10, color: '#c9d6ee', font: { size: 11 } } },
+                    tooltip: { filter: it => it.raw !== null && it.raw !== undefined, callbacks: {
+                        title: items => items.length ? titleOf(items[0].dataIndex) : '',
+                        label: c => ` ${c.dataset.label}: ${fmt(c.parsed.y, 1)} kWh`
+                    } }
+                },
+                scales: {
+                    x: { grid: { display: false }, border: { color: 'rgba(110, 150, 220, 0.25)' }, ticks: { color: '#c9d6ee', maxRotation: 0, autoSkip: true, maxTicksLimit: r.step === 'hour' ? 12 : 16, font: { size: 11 } } },
+                    y: { beginAtZero: true, border: { display: false }, ticks: { maxTicksLimit: 7 }, title: { display: true, text: unitTitle } }
+                }
+            };
+            if (ET.chart) { ET.chart.data = { labels, datasets }; ET.chart.options = options; ET.chart.update('none'); }
+            else ET.chart = new Chart($('et-chart'), { type: 'bar', data: { labels, datasets }, options });
+            etEmpty(S.gen === null && S.load === null ? (ET.prog ? `Loading energy data… ${ET.prog.pct}%` : 'No energy data in this period.') : '');
+
+            const cell = v => v === null ? '<span class="na">—</span>' : fmt(v, 1);
+            $('et-table').innerHTML = `<table class="md-table"><thead><tr><th>${r.step === 'hour' ? 'Hour (PKT)' : r.step === 'day' ? 'Day' : 'Month'}</th>
+                <th>Generation (kWh)</th><th>Consumption (kWh)</th><th>Solar (kWh)</th><th>KE (kWh)</th><th>Genset (kWh)</th></tr></thead><tbody>
+                ${B.keys.map((_, i) => `<tr><td>${titleOf(i)}</td><td>${cell(B.gen[i])}</td><td>${cell(B.load[i])}</td><td>${cell(B.solar[i])}</td><td>${cell(B.ke[i])}</td><td>${cell(B.genset[i])}</td></tr>`).join('')}
+                <tr class="md-total"><td>Total</td><td>${cell(S.gen)}</td><td>${cell(S.load)}</td><td>${cell(S.solar)}</td><td>${cell(S.ke)}</td><td>${cell(S.genset)}</td></tr></tbody></table>`;
+            const live = r.stop > Date.now();
+            if (ET.prog) { $('et-status').textContent = `Loading… ${ET.prog.pct}%`; return; }
+            $('et-status').textContent = `Energy from the integral of active power · ${live ? `updated ${fmtClock(new Date())} PKT, refreshes every 5 min` : 'finished period'}`;
+        }
+
+        function initEnergyTrend() {
+            etLoadUnits();
+            const today = etYmd(Date.now());
+            $('et-from').value = etYmd(etDayStart(Date.now()) - 6 * ET_DAY); $('et-to').value = today;
+            $('et-from').max = $('et-to').max = today;
+            if (ET.view === 'custom') { ET.from = $('et-from').value; ET.to = $('et-to').value; }
+            $('et-tabs').addEventListener('click', e => {
+                const b = e.target.closest('button[data-v]'); if (!b) return;
+                ET.view = b.dataset.v; ET.anchor = null;
+                try { localStorage.setItem(ET_VIEW_KEY, ET.view); } catch (e) {}
+                if (ET.view === 'custom') { ET.from = $('et-from').value; ET.to = $('et-to').value; }
+                if (ET.started) etLoad(); else etSyncUI(etRange());
+            });
+            $('et-mode').addEventListener('click', e => {
+                const b = e.target.closest('button[data-m]'); if (!b) return;
+                ET.mode = b.dataset.m; etSyncUI(etRange());
+                if (ET.chart) ET.chart.resize();
+            });
+            $('et-prev').addEventListener('click', () => etShift(-1));
+            $('et-next').addEventListener('click', () => etShift(1));
+            $('et-apply').addEventListener('click', () => { ET.from = $('et-from').value; ET.to = $('et-to').value; etLoad(); });
+            etSyncUI(etRange());
+            setInterval(() => { if (ET.started && !document.hidden && !ET.busy && etRange().stop > Date.now()) etLoad(true); }, ET_REFRESH_MS);
+        }
+        // called once the dashboard's first load is done, so the bars never slow down the loading bar
+        function etStart() {
+            if (ET.started) return;
+            ET.started = true;
+            etLoad();
+        }
+
     </script>
 </body>
 </html>
