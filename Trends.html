@@ -1,0 +1,1443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Toyo Packaging - Trends &amp; Analysis</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --bg: #061227; --bg-2: #081a36;
+            --card: #0c1e3b; --card-2: #0a1932; --card-hi: #102648;
+            --line: rgba(80, 130, 210, 0.22); --line-soft: rgba(110, 150, 220, 0.12);
+            --text: #eef3ff; --text-2: #c9d6ee; --muted: #8ea3c6; --dim: #5f7599;
+            --blue: #3b82f6; --blue-2: #2563eb; --cyan: #22d3ee; --green: #22c55e; --green-l: #4ade80;
+            --yellow: #facc15; --orange: #f5a524; --red: #ef4444; --amber: #fbbf24;
+            /* names used by the dashboard script */
+            --primary: #3b82f6; --success: #22c55e; --warning: #fbbf24; --danger: #ef4444; --dark: #eef3ff;
+            --sidebar-w: 236px;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; }
+        html { background: #050f22; }
+        body {
+            min-height: 100vh; color: var(--text);
+            background:
+                radial-gradient(1100px 520px at 75% -12%, rgba(37, 99, 235, 0.22), transparent 60%),
+                radial-gradient(800px 500px at 10% 110%, rgba(34, 211, 238, 0.06), transparent 60%),
+                linear-gradient(180deg, #071630 0%, #050f22 100%);
+            background-attachment: fixed;
+        }
+        button { font: inherit; }
+        .num, .kpi-value, .gen-val, .ie-val { font-variant-numeric: tabular-nums; }
+
+        /* ===================== Layout ===================== */
+        .app { display: flex; min-height: 100vh; }
+        .sidebar {
+            width: var(--sidebar-w); flex-shrink: 0; position: sticky; top: 0; height: 100vh;
+            background: linear-gradient(180deg, #0a1e40 0%, #081733 55%, #071530 100%);
+            border-right: 1px solid var(--line); display: flex; flex-direction: column; overflow: hidden;
+        }
+        .main { flex: 1; min-width: 0; padding: 20px 24px 28px; display: flex; flex-direction: column; gap: 16px; }
+
+        /* ===================== Sidebar ===================== */
+        .brand { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 18px 14px 20px; }
+        .brand svg { width: 42px; height: 42px; flex-shrink: 0; filter: drop-shadow(0 4px 10px rgba(59,130,246,0.35)); }
+        .logo-tile { display: flex; align-items: center; justify-content: center; padding: 0 0 0 8px; height: 108px; }
+        .logo-img { display: block; height: 108px; width: auto; max-width: 100%; }
+        .brand-name { font-size: 1.45rem; font-weight: 800; line-height: 1.08; letter-spacing: -0.01em; color: #fff; }
+        .nav { list-style: none; display: flex; flex-direction: column; gap: 8px; padding: 0 12px; }
+        .nav a {
+            display: flex; align-items: center; gap: 13px; padding: 11px 14px; border-radius: 9px;
+            color: var(--text-2); text-decoration: none; font-weight: 500; font-size: 0.95rem;
+            border: 1px solid transparent; transition: background 0.2s, color 0.2s, border-color 0.2s;
+        }
+        .nav a i { width: 20px; text-align: center; font-size: 1.05rem; color: #b8c8e6; }
+        .nav a:hover { background: rgba(59, 130, 246, 0.12); color: #fff; }
+        .nav li.active a {
+            background: linear-gradient(90deg, #1d4ed8 0%, #2563eb 100%); color: #fff; font-weight: 600;
+            border-color: rgba(147, 197, 253, 0.35); box-shadow: 0 6px 18px rgba(37, 99, 235, 0.35);
+        }
+        .nav li.active a i { color: #fff; }
+        .sb-foot { margin-top: auto; position: relative; min-height: 290px; display: flex; flex-direction: column; justify-content: flex-end; }
+        .sb-art { position: absolute; inset: 0; width: 100%; height: 100%; }
+        .sb-status { position: relative; padding: 0 18px 20px; }
+        #db-status { display: flex; align-items: center; gap: 9px; font-weight: 700; font-size: 0.95rem; color: var(--green-l); }
+        #db-status::before { content: ''; width: 10px; height: 10px; border-radius: 50%; background: currentColor; box-shadow: 0 0 10px currentColor; flex-shrink: 0; }
+        .sb-update { font-size: 0.74rem; color: var(--text-2); margin-top: 7px; }
+
+        /* ===================== Header ===================== */
+        .topbar { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; padding: 2px 0 2px; }
+        .topbar h1 { font-size: 1.75rem; font-weight: 800; letter-spacing: -0.015em; color: #fff; line-height: 1.2; }
+        .topbar .subtitle { font-size: 0.86rem; color: var(--text-2); margin-top: 5px; }
+        .top-actions { display: flex; align-items: center; gap: 12px; position: relative; }
+        .date-pill {
+            display: flex; align-items: center; gap: 10px; padding: 9px 14px; border-radius: 9px;
+            background: rgba(12, 30, 59, 0.85); border: 1px solid var(--line); font-size: 0.84rem; color: var(--text-2); white-space: nowrap;
+        }
+        .date-pill i { color: var(--text-2); }
+        .bell {
+            width: 40px; height: 40px; border-radius: 10px; border: 1px solid transparent; background: transparent;
+            color: var(--text-2); font-size: 1.1rem; cursor: pointer; position: relative;
+        }
+        .bell:hover, .bell[aria-expanded="true"] { background: rgba(12, 30, 59, 0.85); border-color: var(--line); color: #fff; }
+        .bell-dot { position: absolute; top: 8px; right: 9px; width: 8px; height: 8px; border-radius: 50%; background: var(--red); box-shadow: 0 0 0 2px var(--bg); }
+        .bell-dot[hidden] { display: none; }
+        .bell-pop {
+            position: absolute; right: 0; top: 48px; z-index: 50; width: 290px; padding: 14px 16px; border-radius: 12px;
+            background: var(--card-hi); border: 1px solid var(--line); box-shadow: 0 18px 40px rgba(0,0,0,0.45); font-size: 0.84rem; color: var(--text-2); line-height: 1.5;
+        }
+        .bell-pop[hidden] { display: none; }
+        .bell-pop strong { display: block; color: #fff; margin-bottom: 4px; font-size: 0.9rem; }
+
+        /* ===================== Cards ===================== */
+        .card {
+            background: linear-gradient(180deg, rgba(16, 38, 74, 0.92) 0%, rgba(10, 26, 52, 0.92) 100%);
+            border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035), 0 10px 26px rgba(0, 0, 0, 0.22);
+            min-width: 0;
+        }
+        .card-title { display: flex; align-items: center; gap: 9px; font-size: 1rem; font-weight: 700; color: #fff; }
+        .card-title small { font-size: 0.8rem; font-weight: 500; color: var(--text-2); }
+        .card-title .ic-sun { color: var(--yellow); }
+        .card-title .ic-dist { color: var(--orange); }
+        .card-title .ic-meter { color: var(--yellow); }
+
+        /* ===================== Loading progress ===================== */
+        .load-card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 18px 13px; }
+        .load-card[hidden] { display: none; }
+        .load-top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+        .load-title { font-size: 0.92rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 9px; }
+        .load-title i { color: var(--blue); }
+        .load-pct { font-size: 1.25rem; font-weight: 800; color: var(--cyan); font-variant-numeric: tabular-nums; }
+        .load-track { height: 8px; margin: 9px 0 8px; background: rgba(110,150,220,0.15); border-radius: 6px; overflow: hidden; }
+        .load-fill { height: 100%; width: 0; border-radius: 6px; background: linear-gradient(90deg, var(--cyan), var(--blue)); transition: width 0.2s linear; position: relative; overflow: hidden; }
+        .load-fill::after { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(115deg, rgba(255,255,255,0.2) 0 10px, transparent 10px 20px); }
+        @media (prefers-reduced-motion: no-preference) { .load-card.busy .load-fill::after { animation: loadStripes 0.8s linear infinite; } }
+        @keyframes loadStripes { from { background-position: 0 0; } to { background-position: 46px 0; } }
+        .load-sub { font-size: 0.8rem; color: var(--muted); display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+        .load-card.done { border-color: rgba(34,197,94,0.5); }
+        .load-card.done .load-fill { background: var(--green); }
+        .load-card.done .load-pct, .load-card.done .load-title i { color: var(--green-l); }
+        .load-card.failed { border-color: rgba(239,68,68,0.55); }
+        .load-card.failed .load-pct, .load-card.failed .load-title i { color: var(--red); }
+
+        /* ===================== Trends page ===================== */
+        .num { font-variant-numeric: tabular-nums; }
+        .t-controls { display: flex; flex-direction: column; gap: 12px; }
+        .t-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; justify-content: space-between; }
+        .t-row-left { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+        .t-lbl { font-size: 0.8rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+        .seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: rgba(6,18,39,0.5); }
+        .seg button { border: none; background: transparent; padding: 8px 12px; font-size: 0.82rem; font-weight: 600; color: var(--text-2); cursor: pointer; border-right: 1px solid var(--line-soft); }
+        .seg button:last-child { border-right: none; }
+        .seg button:hover { color: #fff; }
+        .seg button[aria-pressed="true"] { background: linear-gradient(90deg, #1d4ed8, #2563eb); color: #fff; }
+        .t-custom { display: inline-flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+        .t-custom[hidden] { display: none; }
+        .t-custom label, .t-inline label { font-size: 0.82rem; font-weight: 600; color: var(--text-2); display: inline-flex; align-items: center; gap: 6px; }
+        .t-in, .t-sel { font: inherit; font-weight: 500; font-size: 0.84rem; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: #0a1932; color: #fff; color-scheme: dark; }
+        .btn { font: inherit; font-size: 0.84rem; font-weight: 600; padding: 8px 14px; border-radius: 8px; border: 1px solid rgba(147,197,253,0.35); background: linear-gradient(90deg, #1d4ed8, #2563eb); color: #fff; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
+        .btn.ghost { background: rgba(12, 30, 59, 0.85); border-color: var(--line); color: var(--text-2); }
+        .btn:hover { filter: brightness(1.12); color: #fff; }
+        .btn:focus-visible, .seg button:focus-visible, .chip:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+        .t-status { font-size: 0.8rem; color: var(--muted); display: inline-flex; align-items: center; gap: 8px; }
+        .t-status.err { color: #fca5a5; font-weight: 600; }
+        .t-status i { color: var(--blue); }
+        .t-err { font-size: 0.82rem; color: #fca5a5; font-weight: 600; }
+        .t-err:empty { display: none; }
+
+        .chips-wrap { display: flex; flex-wrap: wrap; gap: 10px 22px; border-top: 1px solid var(--line-soft); padding-top: 12px; }
+        .chip-group { display: flex; flex-direction: column; gap: 6px; }
+        .chip-group > span { font-size: 0.72rem; font-weight: 700; color: var(--dim); text-transform: uppercase; letter-spacing: 0.05em; }
+        .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+        .chip { font: inherit; font-size: 0.8rem; font-weight: 600; padding: 6px 11px; border-radius: 999px; cursor: pointer; border: 1px solid var(--line); background: rgba(6,18,39,0.5); color: var(--muted); display: inline-flex; align-items: center; gap: 7px; }
+        .chip i { font-size: 0.72rem; }
+        .chip[aria-pressed="true"] { background: rgba(37, 99, 235, 0.22); border-color: rgba(147,197,253,0.55); color: #fff; }
+        .chip:hover { color: #fff; }
+        .chip-actions { display: flex; gap: 6px; align-items: flex-end; margin-left: auto; }
+
+        .t-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+        .t-kpi { padding: 13px 15px; display: flex; flex-direction: column; gap: 5px; }
+        .t-kpi .k-t { font-size: 0.8rem; font-weight: 600; color: var(--text-2); display: flex; align-items: center; gap: 8px; }
+        .t-kpi .k-v { font-size: 1.45rem; font-weight: 800; color: #fff; white-space: nowrap; font-variant-numeric: tabular-nums; }
+        .t-kpi .k-v .unit { font-size: 0.6em; }
+        .t-kpi .k-s { font-size: 0.74rem; color: var(--muted); line-height: 1.4; }
+        .t-kpi .k-s b { color: var(--text-2); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+        .t-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        .t-grid.busy { opacity: 0.55; transition: opacity 0.2s; }
+        .t-card { display: flex; flex-direction: column; gap: 6px; }
+        .t-card.wide { grid-column: 1 / -1; }
+        .t-card[hidden] { display: none; }
+        .t-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
+        .t-sub { font-size: 0.78rem; color: var(--muted); line-height: 1.45; }
+        .t-sub b { color: var(--text-2); font-weight: 600; font-variant-numeric: tabular-nums; }
+        .t-inline { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .t-chart { position: relative; height: 290px; margin-top: 4px; }
+        .t-chart.tall { height: 340px; }
+        .t-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        .t-pair .t-mini { font-size: 0.82rem; font-weight: 600; color: var(--text-2); margin-top: 4px; }
+        .t-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 20px;
+                   font-size: 0.85rem; color: var(--muted); background: rgba(8, 22, 46, 0.92); border-radius: 8px; }
+        .t-empty[hidden] { display: none; }
+        .t-none { text-align: center; color: var(--muted); font-size: 0.9rem; padding: 30px; }
+        .t-none[hidden] { display: none; }
+
+        /* heatmap */
+        .hm-wrap { max-height: 520px; overflow: auto; margin-top: 6px; border-radius: 8px; }
+        .hm-wrap::-webkit-scrollbar { width: 8px; height: 8px; }
+        .hm-wrap::-webkit-scrollbar-thumb { background: rgba(110,150,220,0.25); border-radius: 8px; }
+        .hm { display: grid; grid-template-columns: 96px repeat(24, minmax(22px, 1fr)); gap: 2px; min-width: 700px; }
+        .hm .hd { font-size: 0.68rem; color: var(--muted); text-align: center; position: sticky; top: 0; background: #0d2142; padding: 3px 0; z-index: 1; }
+        .hm .rl { font-size: 0.74rem; color: var(--text-2); white-space: nowrap; display: flex; align-items: center; }
+        .hm .c { height: 20px; border-radius: 3px; cursor: crosshair; }
+        .hm .c.na { background: repeating-linear-gradient(135deg, rgba(110,150,220,0.08) 0 3px, transparent 3px 6px); }
+        .hm .c:hover { outline: 2px solid #fff; outline-offset: -1px; }
+        .hm-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 8px; font-size: 0.76rem; color: var(--muted); }
+        .hm-scale { display: flex; align-items: center; gap: 8px; }
+        .hm-bar { width: 160px; height: 10px; border-radius: 5px; }
+        .hm-read { color: var(--text-2); font-weight: 600; min-height: 1.2em; }
+
+        @media (max-width: 1180px) {
+            .t-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 900px) {
+            .app { flex-direction: column; }
+            .sidebar { width: 100%; height: auto; position: static; }
+            .brand { padding: 16px 16px 12px; }
+            .nav { flex-direction: row; flex-wrap: wrap; padding: 0 12px 12px; }
+            .nav li { flex: 1 1 140px; }
+            .sb-foot { min-height: 0; }
+            .sb-art { display: none; }
+            .sb-status { padding: 0 16px 14px; display: flex; gap: 14px; align-items: baseline; flex-wrap: wrap; }
+            .sb-update { margin-top: 0; }
+            .main { padding: 16px; }
+            .topbar { flex-direction: column; }
+            .t-pair { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<div class="app">
+
+    <!-- ===================== Sidebar ===================== -->
+    <aside class="sidebar">
+        <div class="brand"><span class="logo-tile"><img class="logo-img" src="data:image/png;base64,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" alt="Toyo Packaging"></span></div>
+
+        <ul class="nav">
+            <li><a href="index.html"><i class="fas fa-house"></i><span>Main Dashboard</span></a></li>
+            <li class="active"><a href="Trends.html" aria-current="page"><i class="fas fa-chart-line"></i><span>Trends &amp; Analysis</span></a></li>
+            <li><a href="Rep.html"><i class="far fa-file-lines"></i><span>Energy &amp; Cost Reports</span></a></li>
+        </ul>
+
+        <div class="sb-foot">
+            <svg class="sb-art" viewBox="0 0 240 300" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+                <defs>
+                    <linearGradient id="sbSky" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0" stop-color="#0a1e40" stop-opacity="0"/>
+                        <stop offset="0.5" stop-color="#16407f" stop-opacity="0.55"/>
+                        <stop offset="1" stop-color="#0b2148"/>
+                    </linearGradient>
+                    <radialGradient id="sbGlow" cx="0.5" cy="0.5" r="0.5">
+                        <stop offset="0" stop-color="#f59e0b" stop-opacity="0.5"/>
+                        <stop offset="1" stop-color="#f59e0b" stop-opacity="0"/>
+                    </radialGradient>
+                    <linearGradient id="sbPv" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0" stop-color="#3b82f6"/><stop offset="1" stop-color="#1e3a8a"/>
+                    </linearGradient>
+                    <pattern id="sbCells1" width="9" height="6" patternUnits="userSpaceOnUse" patternTransform="skewX(-30)">
+                        <rect width="9" height="6" fill="url(#sbPv)"/><path d="M9 0V6M0 6H9" stroke="#a5c8ff" stroke-opacity="0.55" stroke-width="0.6"/>
+                    </pattern>
+                    <pattern id="sbCells2" width="13" height="8" patternUnits="userSpaceOnUse" patternTransform="skewX(-30)">
+                        <rect width="13" height="8" fill="url(#sbPv)"/><path d="M13 0V8M0 8H13" stroke="#a5c8ff" stroke-opacity="0.55" stroke-width="0.8"/>
+                    </pattern>
+                    <pattern id="sbCells3" width="18" height="11" patternUnits="userSpaceOnUse" patternTransform="skewX(-30)">
+                        <rect width="18" height="11" fill="url(#sbPv)"/><path d="M18 0V11M0 11H18" stroke="#a5c8ff" stroke-opacity="0.6" stroke-width="1"/>
+                    </pattern>
+                    <linearGradient id="sbFade" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0.55" stop-color="#071530" stop-opacity="0"/>
+                        <stop offset="1" stop-color="#071530" stop-opacity="0.92"/>
+                    </linearGradient>
+                </defs>
+                <rect width="240" height="300" fill="url(#sbSky)"/>
+                <ellipse cx="110" cy="128" rx="150" ry="50" fill="url(#sbGlow)"/>
+                <!-- factory -->
+                <g fill="#0a1a33">
+                    <rect x="22" y="46" width="8" height="90"/>
+                    <rect x="38" y="66" width="7" height="70"/>
+                    <rect x="164" y="56" width="9" height="80"/>
+                    <rect x="182" y="78" width="6" height="58"/>
+                    <path d="M0 140V112h18V98h34v18l20-13v13l20-13v13l20-13v13l20-13v13h18V92h40v24h24V104h26v36z"/>
+                </g>
+                <g fill="#fbbf24">
+                    <rect x="6" y="120" width="5" height="3" opacity="0.9"/><rect x="24" y="108" width="5" height="3" opacity="0.8"/>
+                    <rect x="36" y="120" width="5" height="3"/><rect x="60" y="122" width="4" height="3" opacity="0.7"/>
+                    <rect x="78" y="124" width="4" height="3"/><rect x="98" y="122" width="4" height="3" opacity="0.8"/>
+                    <rect x="118" y="124" width="4" height="3"/><rect x="138" y="122" width="4" height="3" opacity="0.7"/>
+                    <rect x="158" y="104" width="5" height="3"/><rect x="170" y="112" width="5" height="3" opacity="0.8"/>
+                    <rect x="160" y="122" width="5" height="3" opacity="0.9"/><rect x="176" y="124" width="5" height="3"/>
+                    <rect x="204" y="118" width="5" height="3" opacity="0.85"/><rect x="220" y="124" width="5" height="3"/>
+                </g>
+                <rect y="138" width="240" height="14" fill="#091a36"/>
+                <!-- solar arrays -->
+                <polygon points="6,152 234,152 244,176 -4,176" fill="url(#sbCells1)"/>
+                <polygon points="-14,186 254,186 268,222 -28,222" fill="url(#sbCells2)"/>
+                <polygon points="-40,234 280,234 302,300 -62,300" fill="url(#sbCells3)"/>
+                <rect width="240" height="300" fill="url(#sbFade)"/>
+            </svg>
+            <div class="sb-status">
+                <div id="db-status" style="color: var(--primary);">Cloud Syncing...</div>
+                <div class="sb-update">Last Update: <span id="last-update">--</span></div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ===================== Main ===================== -->
+    <main class="main">
+        <header class="topbar">
+            <div>
+                <h1>Trends &amp; Analysis</h1>
+                <div class="subtitle" id="t-range-text">Generation, distribution, demand and power quality over time</div>
+            </div>
+            <div class="top-actions">
+                <div class="date-pill"><i class="far fa-calendar"></i><span id="pkt-clock">--</span></div>
+            </div>
+        </header>
+
+        <div class="load-card busy" id="load-card" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Loading trends">
+            <div class="load-top">
+                <span class="load-title"><i class="fas fa-cloud-arrow-down" id="load-icon"></i><span id="load-title">Loading trends and data for analysis…</span></span>
+                <span class="load-pct" id="load-pct">0%</span>
+            </div>
+            <div class="load-track"><div class="load-fill" id="load-fill"></div></div>
+            <div class="load-sub"><span id="load-sub">Connecting to the cloud…</span><span id="load-time">0 s</span></div>
+        </div>
+
+        <!-- Controls -->
+        <section class="card t-controls">
+            <div class="t-row">
+                <div class="t-row-left">
+                    <span class="t-lbl">Period</span>
+                    <div class="seg" role="group" aria-label="Time range" id="t-range-seg">
+                        <button data-preset="today">Today</button><button data-preset="yesterday">Yesterday</button>
+                        <button data-preset="24h">Last 24 h</button><button data-preset="7d">Last 7 days</button>
+                        <button data-preset="month">This month</button><button data-preset="30d">Last 30 days</button>
+                        <button data-preset="custom">Custom</button>
+                    </div>
+                    <div class="t-custom" id="t-custom" hidden>
+                        <label>From <input class="t-in" type="date" id="t-from"></label>
+                        <label>To <input class="t-in" type="date" id="t-to"></label>
+                        <button class="btn" id="t-apply">Show</button>
+                    </div>
+                </div>
+                <div class="t-row-left">
+                    <span class="t-status" id="t-status"><i class="fas fa-circle-notch fa-spin"></i> Loading…</span>
+                    <button class="btn ghost" id="t-refresh" title="Reload the data now"><i class="fas fa-rotate"></i> Refresh</button>
+                    <button class="btn ghost" id="t-export" title="Download the time series shown on this page"><i class="fas fa-file-csv"></i> Export CSV</button>
+                </div>
+            </div>
+            <div class="t-err" id="t-range-error"></div>
+            <div class="chips-wrap" id="t-chips"></div>
+        </section>
+
+        <!-- Period summary -->
+        <section class="t-kpis">
+            <div class="card t-kpi" title="Energy from KE, Genset and Solar in the selected period, calculated from average active power">
+                <div class="k-t"><i class="fas fa-sun ic-yellow"></i> Generation energy</div>
+                <div class="k-v" id="k-gen">--</div><div class="k-s" id="k-gen-s"></div>
+            </div>
+            <div class="card t-kpi" title="Energy used by all distribution feeders in the selected period, calculated from average active power">
+                <div class="k-t"><i class="fas fa-circle-nodes" style="color: var(--orange);"></i> Distribution energy</div>
+                <div class="k-v" id="k-dist">--</div><div class="k-s" id="k-dist-s"></div>
+            </div>
+            <div class="card t-kpi" title="Solar energy as a share of all generation">
+                <div class="k-t"><i class="fas fa-solar-panel ic-yellow"></i> Solar share</div>
+                <div class="k-v" id="k-solar">--</div><div class="k-s" id="k-solar-s"></div>
+            </div>
+            <div class="card t-kpi" title="Highest 15-minute average of the total distribution load">
+                <div class="k-t"><i class="fas fa-arrow-trend-up ic-cyan"></i> Peak demand (15 min)</div>
+                <div class="k-v" id="k-peak">--</div><div class="k-s" id="k-peak-s"></div>
+            </div>
+            <div class="card t-kpi" title="Average load divided by peak demand. Higher means the load is steadier.">
+                <div class="k-t"><i class="fas fa-gauge ic-blue"></i> Load factor</div>
+                <div class="k-v" id="k-lf">--</div><div class="k-s" id="k-lf-s"></div>
+            </div>
+            <div class="card t-kpi" title="Generation minus distribution energy: transformer and cable losses plus any loads without a meter">
+                <div class="k-t"><i class="fas fa-scale-unbalanced" style="color: var(--amber);"></i> Unaccounted energy</div>
+                <div class="k-v" id="k-gap">--</div><div class="k-s" id="k-gap-s"></div>
+            </div>
+            <div class="card t-kpi" title="Distribution energy multiplied by the tariff set on the main dashboard">
+                <div class="k-t"><i class="fas fa-tags ic-green"></i> Estimated cost</div>
+                <div class="k-v" id="k-cost">--</div><div class="k-s" id="k-cost-s"></div>
+            </div>
+        </section>
+
+        <div class="t-none card" id="t-none" hidden>No trends selected. Pick one or more trends above.</div>
+
+        <section class="t-grid" id="t-grid">
+            <!-- Generation vs Distribution -->
+            <div class="card t-card wide" data-sec="gvd">
+                <div class="card-title"><i class="fas fa-right-left ic-cyan"></i> Generation vs Distribution <small>(kW)</small></div>
+                <div class="t-sub" id="s-gvd">Total generation (KE + Genset + Solar) against the total feeder load. The shaded band is the gap between them.</div>
+                <div class="t-chart tall"><canvas id="c-gvd"></canvas><div class="t-empty" hidden></div></div>
+            </div>
+
+            <!-- Generation mix -->
+            <div class="card t-card wide" data-sec="mix">
+                <div class="card-title"><i class="fas fa-layer-group ic-yellow"></i> Generation mix <small>(kW, stacked by source)</small></div>
+                <div class="t-sub" id="s-mix">Which source carried the load, with the distribution load as a line on top. Click a legend item to hide it.</div>
+                <div class="t-chart tall"><canvas id="c-mix"></canvas><div class="t-empty" hidden></div></div>
+            </div>
+
+            <!-- Solar contribution -->
+            <div class="card t-card" data-sec="solar">
+                <div class="card-title"><i class="fas fa-solar-panel ic-yellow"></i> Solar contribution <small>(% of generation)</small></div>
+                <div class="t-sub" id="s-solar"></div>
+                <div class="t-chart"><canvas id="c-solar"></canvas><div class="t-empty" hidden></div></div>
+            </div>
+
+            <!-- Power factor -->
+            <div class="card t-card" data-sec="pf">
+                <div class="card-title"><i class="fas fa-wave-square ic-blue"></i> Facility power factor</div>
+                <div class="t-sub" id="s-pf"></div>
+                <div class="t-chart"><canvas id="c-pf"></canvas><div class="t-empty" hidden></div></div>
+            </div>
+
+            <!-- Feeder load -->
+            <div class="card t-card wide" data-sec="feeders">
+                <div class="card-title"><i class="fas fa-circle-nodes" style="color: var(--orange);"></i> Load by feeder <small>(kW, stacked)</small></div>
+                <div class="t-sub">How each feeder adds up to the total load. Click a legend item to hide a feeder.</div>
+                <div class="t-chart tall"><canvas id="c-feeders"></canvas><div class="t-empty" hidden></div></div>
+            </div>
+
+            <!-- Feeder ranking -->
+            <div class="card t-card" data-sec="rank">
+                <div class="card-title"><i class="fas fa-ranking-star" style="color: var(--orange);"></i> Feeder energy ranking <small>(kWh)</small></div>
+                <div class="t-sub" id="s-rank"></div>
+                <div class="t-chart"><canvas id="c-rank"></canvas><div class="t-empty" hidden></div></div>
+            </div>
+
+            <!-- Energy per period -->
+            <div class="card t-card" data-sec="energy">
+                <div class="card-title"><i class="fas fa-chart-column ic-cyan"></i> <span id="t-energy-title">Energy per day</span> <small>(kWh)</small></div>
+                <div class="t-sub" id="s-energy"></div>
+                <div class="t-chart"><canvas id="c-energy"></canvas><div class="t-empty" hidden></div></div>
+            </div>
+
+            <!-- Cost -->
+            <div class="card t-card" data-sec="cost">
+                <div class="card-title"><i class="fas fa-money-bill-wave ic-green"></i> <span id="t-cost-title">Energy cost per day</span> <small>(PKR)</small></div>
+                <div class="t-sub" id="s-cost"></div>
+                <div class="t-chart"><canvas id="c-cost"></canvas><div class="t-empty" hidden></div></div>
+            </div>
+
+            <!-- Typical day -->
+            <div class="card t-card" data-sec="profile">
+                <div class="t-head">
+                    <div class="card-title"><i class="fas fa-clock ic-cyan"></i> Typical daily profile <small>(average kW by hour)</small></div>
+                    <div class="t-inline"><label>Days <select class="t-sel" id="t-prof-days">
+                        <option value="all">All days</option><option value="work">Mon–Sat</option><option value="sun">Sundays</option>
+                    </select></label></div>
+                </div>
+                <div class="t-sub" id="s-profile"></div>
+                <div class="t-chart"><canvas id="c-profile"></canvas><div class="t-empty" hidden></div></div>
+            </div>
+
+            <!-- Peak demand -->
+            <div class="card t-card" data-sec="peak">
+                <div class="card-title"><i class="fas fa-arrow-trend-up ic-cyan"></i> <span id="t-peak-title">Peak demand per day</span> <small>(kW)</small></div>
+                <div class="t-sub" id="s-peak"></div>
+                <div class="t-chart"><canvas id="c-peak"></canvas><div class="t-empty" hidden></div></div>
+            </div>
+
+            <!-- Load duration curve -->
+            <div class="card t-card" data-sec="ldc">
+                <div class="card-title"><i class="fas fa-chart-area ic-blue"></i> Load duration curve <small>(kW)</small></div>
+                <div class="t-sub" id="s-ldc">All 15-minute load values, sorted from highest to lowest. Shows how often the plant runs near its peak and what the base load is.</div>
+                <div class="t-chart"><canvas id="c-ldc"></canvas><div class="t-empty" hidden></div></div>
+            </div>
+
+            <!-- Heatmap -->
+            <div class="card t-card wide" data-sec="heat">
+                <div class="t-head">
+                    <div class="card-title"><i class="fas fa-table-cells ic-blue"></i> Load heatmap <small>(average kW per hour and day)</small></div>
+                    <div class="t-inline"><label>Show <select class="t-sel" id="t-heat-metric"></select></label></div>
+                </div>
+                <div class="t-sub">Each cell is one hour. Spot shifts, idle hours with high base load, and unusual days at a glance.</div>
+                <div class="hm-wrap"><div class="hm" id="hm"></div></div>
+                <div class="hm-foot">
+                    <span class="hm-read" id="hm-read">Point at a cell to read its value</span>
+                    <span class="hm-scale"><span id="hm-min">--</span><span class="hm-bar" id="hm-bar"></span><span id="hm-max">--</span></span>
+                </div>
+            </div>
+
+            <!-- Voltage & frequency -->
+            <div class="card t-card wide" data-sec="volt">
+                <div class="t-head">
+                    <div class="card-title"><i class="fas fa-bolt ic-yellow"></i> Voltage &amp; frequency</div>
+                    <div class="t-inline"><label>Meter <select class="t-sel" id="t-volt-meter"></select></label></div>
+                </div>
+                <div class="t-sub" id="s-volt"></div>
+                <div class="t-pair">
+                    <div><div class="t-mini">Voltage L-N (V)</div><div class="t-chart"><canvas id="c-volt"></canvas><div class="t-empty" hidden></div></div></div>
+                    <div><div class="t-mini">Frequency (Hz)</div><div class="t-chart"><canvas id="c-freq"></canvas><div class="t-empty" hidden></div></div></div>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<script>
+    // --- INFLUXDB CLOUD CONFIGURATION (same as index.html) ---
+        // --- INFLUXDB CLOUD CONFIGURATION ---
+        const INFLUX_URL = "https://us-east-1-1.aws.cloud2.influxdata.com";
+        const INFLUX_TOKEN = "7ab5RgQQFiI8ykfMKQ-Wppd6zC46risspDpbzGDRLhk_TaD_aEwrjkY69nDtZlnJN14UnaTe1AJvNt_2LE2aHQ==";
+        const INFLUX_ORG = "Fahad";
+        const INFLUX_BUCKET = "Toyo";
+
+    // --- FIELD MAPS and METER LIST: keep these the same as in index.html ---
+        const JANITZA_FIELDS = {
+            p1: "p_l1", p2: "p_l2", p3: "p_l3", pTotal: "p_total",
+            i1: "i_l1", i2: "i_l2", i3: "i_l3",
+            v1: "v_l1n", v2: "v_l2n", v3: "v_l3n",
+            freq: "frequency_hz", kwhImp: "kwh_import", kwhExp: "kwh_export", sTotal: "s_total"
+        };
+        const EEM_FIELDS = {
+            p1: "p_active_phase_1", p2: "p_active_phase_2", p3: "p_active_phase_3", pTotal: "total_active_power_w",
+            i1: "i_phase_1", i2: "i_phase_2", i3: "i_phase_3",
+            v1: "v_phase_1", v2: "v_phase_2", v3: "v_phase_3",
+            freq: "frequency_hz", kwhImp: "kwh_import", kwhExp: "kwh_export", sTotal: "total_apparent_power_va"
+        };
+
+        const METERS = [
+            // --- Generation ---
+            // "solar: true" = counted in the Solar card (Solar 1 + Solar 2)
+            { group: "generation",   tag: "Janitza_Unit_09",     label: "Solar 1",     info: "Janitza Unit 9 · Gateway",     measurement: "janitza_feeder",     fields: JANITZA_FIELDS, color: '#f59e0b', icon: 'fa-solar-panel', solar: true },
+            { group: "generation",   tag: "Janitza_Unit_10",     label: "Solar 2",     info: "Janitza Unit 10 · Gateway",    measurement: "janitza_feeder",     fields: JANITZA_FIELDS, color: '#84cc16', icon: 'fa-solar-panel', solar: true },
+            // --- Distribution ---
+            { group: "distribution", sub: "production", tag: "Janitza_Main_Master", label: "Metallizer",  info: "Janitza Main Master · UMG 96-PQ-L", measurement: "janitza_umg96pql", fields: JANITZA_FIELDS, color: '#3b82f6' },
+            { group: "distribution", sub: "production", tag: "Janitza_Unit_02",     label: "Holo",     info: "Janitza Unit 2 · Gateway",     measurement: "janitza_feeder",     fields: JANITZA_FIELDS, color: '#38bdf8' },
+            { group: "distribution", sub: "production", tag: "Janitza_Unit_03",     label: "Silliting",   info: "Janitza Unit 3 · Gateway",     measurement: "janitza_feeder",     fields: JANITZA_FIELDS, color: '#2dd4bf' },
+            { group: "distribution", sub: "production", tag: "Janitza_Unit_04",     label: "Super Combi", info: "Janitza Unit 4 · Gateway",     measurement: "janitza_feeder",     fields: JANITZA_FIELDS, color: '#facc15' },
+            { group: "distribution", sub: "production", tag: "Janitza_Unit_05",     label: "Rotomec",        info: "Janitza Unit 5 · Gateway",     measurement: "janitza_feeder",     fields: JANITZA_FIELDS, color: '#f472b6' },
+            { group: "distribution", sub: "utility",    tag: "Janitza_Unit_06",     label: "Utilities",   info: "Janitza Unit 6 · Gateway",     measurement: "janitza_feeder",     fields: JANITZA_FIELDS, color: '#a78bfa' },
+            { group: "distribution", sub: "production", tag: "Janitza_Unit_07",     label: "Super Simplex", info: "Janitza Unit 7 · Gateway",   measurement: "janitza_feeder",     fields: JANITZA_FIELDS, color: '#fb923c' },
+            { group: "distribution", sub: "production", tag: "Janitza_Unit_08",     label: "Bag Making",  info: "Janitza Unit 8 · Gateway",     measurement: "janitza_feeder",     fields: JANITZA_FIELDS, color: '#4ade80' },
+            { group: "distribution", sub: "utility",    tag: "EEM_570R",            label: "Mosque",      info: "EEM 570R · 192.168.10.8",      measurement: "eem570r_meter_data", fields: EEM_FIELDS,     color: '#94a3b8' }
+        ];
+
+        const ISOLAR_SOURCES = [
+            { device: "Grid - 1", label: "KE",     info: "Grid supply (K-Electric) · Sungrow meter", color: '#ef4444', position: 0, icon: 'pylon' },
+            { device: "Genset",   label: "Genset", info: "Generator · Sungrow meter",                color: '#9ca3af', position: 1, icon: 'fa-gas-pump' }
+        ];
+
+    // ---------- settings ----------
+    const REFRESH_MS = 2 * 60 * 1000;       // live ranges reload every 2 minutes
+    const DEMAND_MIN = 15;                  // peak demand = highest average over this many minutes
+    const PF_TARGET = 0.90;                 // reference line on the power factor chart
+    const MAX_DAYS = 92;                    // longest custom range
+    const MAX_GAP_FILL = 3;                 // short gaps (in windows) are bridged with the last value
+    const SEL_KEY = 'ems_trends_sel_v1';
+    const TARIFF_KEY = 'ems_tariff_v1';     // set on the main dashboard
+    const TARIFF = { rate: 33, tou: false, peakFrom: '18:30', peakTo: '22:30', peakRate: 33, offRate: 33 };
+
+    const GEN_COLOR = '#22d3ee', DIST_COLOR = '#f5a524', SOLAR_COLOR = '#facc15', GAP_COLOR = '#94a3b8';
+    const SUB_COLORS = { production: '#3b82f6', utility: '#a78bfa' };
+    const PHASE_COLORS = ['#22d3ee', '#f5a524', '#3b82f6'];
+    const CARD_BG = '#0c1e3b';
+
+    const SECTIONS = [
+        { key: 'gvd',     group: 'Generation & Distribution', label: 'Generation vs Distribution', icon: 'fa-right-left', def: true },
+        { key: 'mix',     group: 'Generation & Distribution', label: 'Generation mix',            icon: 'fa-layer-group', def: true },
+        { key: 'solar',   group: 'Generation & Distribution', label: 'Solar contribution',        icon: 'fa-solar-panel', def: true },
+        { key: 'feeders', group: 'Feeders',                   label: 'Load by feeder',            icon: 'fa-circle-nodes', def: true },
+        { key: 'rank',    group: 'Feeders',                   label: 'Feeder ranking',            icon: 'fa-ranking-star', def: true },
+        { key: 'energy',  group: 'Energy & Cost',             label: 'Energy per period',         icon: 'fa-chart-column', def: true },
+        { key: 'cost',    group: 'Energy & Cost',             label: 'Energy cost',               icon: 'fa-money-bill-wave', def: true },
+        { key: 'profile', group: 'Load patterns',             label: 'Typical daily profile',     icon: 'fa-clock', def: true },
+        { key: 'heat',    group: 'Load patterns',             label: 'Load heatmap',              icon: 'fa-table-cells', def: false },
+        { key: 'peak',    group: 'Demand & Quality',          label: 'Peak demand',               icon: 'fa-arrow-trend-up', def: true },
+        { key: 'ldc',     group: 'Demand & Quality',          label: 'Load duration curve',       icon: 'fa-chart-area', def: false },
+        { key: 'pf',      group: 'Demand & Quality',          label: 'Power factor',              icon: 'fa-wave-square', def: true },
+        { key: 'volt',    group: 'Demand & Quality',          label: 'Voltage & frequency',       icon: 'fa-bolt', def: false }
+    ];
+
+    // ---------- sources ----------
+    // Generation: KE and Genset (iSolarCloud) at their "position", then the generation meters (Solar 1, Solar 2)
+    const GEN = (() => {
+        const g = METERS.map((m, i) => [m, i]).filter(([m]) => m.group === 'generation')
+            .map(([m, i]) => ({ id: `m${i}`, kind: 'meter', label: m.label, color: m.color, solar: !!m.solar }));
+        ISOLAR_SOURCES.forEach((s, j) => g.splice(s.position, 0, { id: `s${j}`, kind: 'isolar', label: s.label, color: s.color, solar: false }));
+        return g;
+    })();
+    const DIST = METERS.map((m, i) => [m, i]).filter(([m]) => m.group === 'distribution')
+        .map(([m, i]) => ({ id: `m${i}`, kind: 'meter', label: m.label, color: m.color, sub: m.sub === 'utility' ? 'utility' : 'production' }));
+    const SOLAR_IDS = GEN.filter(s => s.solar).map(s => s.id);
+
+    // ---------- helpers ----------
+    const PKT = 5 * 3600e3, HOUR = 3600e3, DAY = 24 * HOUR;
+    const $ = id => document.getElementById(id);
+    const isNum = v => typeof v === 'number' && !isNaN(v);
+    const fmt = (v, d = 1) => v.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+    const fmtN = (v, d = 1) => isNum(v) ? fmt(v, d) : '--';
+    const uniq = a => [...new Set(a.filter(Boolean))];
+    const alignDown = (t, w) => Math.floor((t + PKT) / w) * w - PKT;          // window start, aligned to PKT
+    const pktDayStart = t => alignDown(t, DAY);
+    const pktMonthStart = t => { const s = new Date(t + PKT); return Date.UTC(s.getUTCFullYear(), s.getUTCMonth(), 1) - PKT; };
+    const pktHour = t => new Date(t + PKT).getUTCHours();
+    const pktDow = t => new Date(t + PKT).getUTCDay();
+    const pktMinuteOfDay = t => Math.floor((((t + PKT) % DAY) + DAY) % DAY / 60000);
+    const pktDateStr = t => new Date(t + PKT).toISOString().slice(0, 10);
+    const fromPktDate = s => new Date(`${s}T00:00:00+05:00`).getTime();
+    const tz = { timeZone: 'Asia/Karachi', hourCycle: 'h23' };
+    const fmtClock = t => new Date(t).toLocaleTimeString('en-GB', { ...tz, hour: '2-digit', minute: '2-digit' });
+    const fmtDay = t => new Date(t).toLocaleDateString('en-GB', { timeZone: 'Asia/Karachi', day: '2-digit', month: 'short' });
+    const fmtDayW = t => new Date(t).toLocaleDateString('en-GB', { timeZone: 'Asia/Karachi', weekday: 'short', day: '2-digit', month: 'short' });
+    const fmtDayClock = t => new Date(t).toLocaleString('en-GB', { ...tz, day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+    const fmtFull = t => new Date(t).toLocaleString('en-GB', { ...tz, weekday: 'short', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const fluxDur = ms => `${Math.round(ms / 60000)}m`;
+    const iso = t => new Date(t).toISOString();
+    const winText = w => w >= DAY ? '1-day' : w >= HOUR ? `${w / HOUR}-hour` : `${w / 60000}-minute`;
+    const hmToMin = s => { const m = /^(\d{1,2}):(\d{2})/.exec(s || ''); return m ? +m[1] * 60 + +m[2] : null; };
+    const inWindow = (m, a, b) => a === null || b === null || a === b ? false : a < b ? (m >= a && m < b) : (m >= a || m < b);
+    const kwh = v => isNum(v) ? (Math.abs(v) >= 10000 ? `${fmt(v / 1000, 2)} <span class="unit">MWh</span>` : `${fmt(v, 0)} <span class="unit">kWh</span>`) : '--';
+
+    function readTariff() {
+        try { const s = JSON.parse(localStorage.getItem(TARIFF_KEY)); if (s) Object.assign(TARIFF, s); } catch (e) {}
+    }
+
+    // ---------- InfluxDB ----------
+    async function queryInflux(flux) {
+        const res = await fetch(`${INFLUX_URL}/api/v2/query?org=${encodeURIComponent(INFLUX_ORG)}`, {
+            method: 'POST',
+            headers: { 'Authorization': `Token ${INFLUX_TOKEN}`, 'Content-Type': 'application/vnd.flux', 'Accept': 'application/csv' },
+            body: flux
+        });
+        if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
+        return res.text();
+    }
+    function parseFluxCsv(text) {
+        const rows = []; let header = [];
+        (text || '').split(/\r?\n/).forEach(line => {
+            if (!line.trim()) { header = []; return; }
+            if (line.startsWith('#')) return;
+            const parts = line.split(',').map(s => s.trim());
+            if (parts.includes('_value') && (parts.includes('_time') || parts.includes('_field'))) { header = parts; return; }
+            if (!header.length || parts.length !== header.length) return;
+            const o = {}; header.forEach((h, k) => o[h] = parts[k]); rows.push(o);
+        });
+        return rows;
+    }
+    const runFlux = flux => queryInflux(flux).then(parseFluxCsv);
+    const meterSel = list => list.map(m => `(r._measurement == "${m.measurement}" and r.meter_name == "${m.tag}")`).join(' or ');
+    const fieldSel = fs => fs.map(f => `r._field == "${f}"`).join(' or ');
+    const offsetFor = w => fluxDur(((-PKT % w) + w) % w);
+
+    // average active power of a few meters, one value per window (several small queries run in parallel)
+    const qMeters = (list, start, stop, w) => `from(bucket: "${INFLUX_BUCKET}")
+  |> range(start: ${iso(start)}, stop: ${iso(stop)})
+  |> filter(fn: (r) => ${meterSel(list)})
+  |> filter(fn: (r) => ${fieldSel(uniq(list.map(m => m.fields.pTotal)))})
+  |> aggregateWindow(every: ${fluxDur(w)}, offset: ${offsetFor(w)}, fn: mean, createEmpty: false, timeSrc: "_start")
+  |> keep(columns: ["_time", "_value", "_field", "_measurement", "meter_name"])`;
+
+    // apparent power of the distribution feeders (only loaded when the power factor chart is shown)
+    const qApparent = (start, stop, w) => {
+        const dist = METERS.filter(m => m.group === 'distribution');
+        return `from(bucket: "${INFLUX_BUCKET}")
+  |> range(start: ${iso(start)}, stop: ${iso(stop)})
+  |> filter(fn: (r) => ${meterSel(dist)})
+  |> filter(fn: (r) => ${fieldSel(uniq(dist.map(m => m.fields.sTotal)))})
+  |> aggregateWindow(every: ${fluxDur(w)}, offset: ${offsetFor(w)}, fn: mean, createEmpty: false, timeSrc: "_start")
+  |> keep(columns: ["_time", "_value", "_field", "_measurement", "meter_name"])`;
+    };
+
+    // KE and Genset active power from iSolarCloud (kW)
+    const qIsolar = (start, stop, w) => `from(bucket: "${INFLUX_BUCKET}")
+  |> range(start: ${iso(start)}, stop: ${iso(stop)})
+  |> filter(fn: (r) => r._measurement == "isolarcloud_device")
+  |> filter(fn: (r) => ${ISOLAR_SOURCES.map(s => `r.device_name == "${s.device}"`).join(' or ')})
+  |> filter(fn: (r) => r._field == "meter_active_power_kw")
+  |> aggregateWindow(every: ${fluxDur(w)}, offset: ${offsetFor(w)}, fn: mean, createEmpty: false, timeSrc: "_start")
+  |> keep(columns: ["_time", "_value", "device_name"])`;
+
+    // total distribution load as 15-minute averages (for peak demand and the load duration curve)
+    const qDemand = (start, stop) => {
+        const dist = METERS.filter(m => m.group === 'distribution');
+        return `from(bucket: "${INFLUX_BUCKET}")
+  |> range(start: ${iso(start)}, stop: ${iso(stop)})
+  |> filter(fn: (r) => ${meterSel(dist)})
+  |> filter(fn: (r) => ${fieldSel(uniq(dist.map(m => m.fields.pTotal)))})
+  |> aggregateWindow(every: ${DEMAND_MIN}m, fn: mean, createEmpty: false, timeSrc: "_start")
+  |> group(columns: ["_time"])
+  |> sum()
+  |> group()
+  |> keep(columns: ["_time", "_value"])`;
+    };
+
+    const qVolt = (m, start, stop, w) => `from(bucket: "${INFLUX_BUCKET}")
+  |> range(start: ${iso(start)}, stop: ${iso(stop)})
+  |> filter(fn: (r) => ${meterSel([m])})
+  |> filter(fn: (r) => ${fieldSel(uniq([m.fields.v1, m.fields.v2, m.fields.v3, m.fields.freq]))})
+  |> aggregateWindow(every: ${fluxDur(w)}, offset: ${offsetFor(w)}, fn: mean, createEmpty: false, timeSrc: "_start")
+  |> keep(columns: ["_time", "_value", "_field"])`;
+
+    // ---------- time range ----------
+    const PERIOD_KEY = 'ems_trends_period_v1';
+    const RANGE = { preset: 'today', from: null, to: null };   // opens on Today (fast); the last choice is remembered
+    try { const p = JSON.parse(localStorage.getItem(PERIOD_KEY)); if (p && p.preset) Object.assign(RANGE, p); } catch (e) {}
+    function getRange() {
+        const now = Date.now(), d0 = pktDayStart(now);
+        switch (RANGE.preset) {
+            case 'today': return { start: Math.min(d0, now - HOUR), stop: now, live: true };
+            case 'yesterday': return { start: d0 - DAY, stop: d0, live: false };
+            case '24h': return { start: now - DAY, stop: now, live: true };
+            case '7d': return { start: d0 - 6 * DAY, stop: now, live: true };
+            case 'month': return { start: Math.min(pktMonthStart(now), now - HOUR), stop: now, live: true };
+            case '30d': return { start: d0 - 29 * DAY, stop: now, live: true };
+        }
+        if (!RANGE.from || !RANGE.to) return { error: 'Choose both a start and an end date.' };
+        const a = fromPktDate(RANGE.from), b = fromPktDate(RANGE.to) + DAY;
+        if (isNaN(a) || isNaN(b)) return { error: 'Choose both a start and an end date.' };
+        if (a >= now) return { error: 'The start date is in the future.' };
+        if (b <= a) return { error: 'The end date must be on or after the start date.' };
+        if (b - a > MAX_DAYS * DAY) return { error: `Choose at most ${MAX_DAYS} days.` };
+        return { start: a, stop: Math.min(b, now), live: b > now };
+    }
+    // one value per window; the window grows with the range so charts stay fast
+    const pickWindow = span => span <= 2 * DAY ? 5 * 60e3 : span <= 8 * DAY ? 15 * 60e3 : span <= 35 * DAY ? HOUR : 3 * HOUR;
+
+    // ---------- data ----------
+    let DATA = null, DEMAND = null, TOK = 0, RAW = null;
+    const PAST = new Map();      // finished periods (Yesterday, past custom ranges) stay in memory: reopening them is instant
+    const CH = {};
+
+    // meters are read in small groups at the same time: faster than one big query, and it drives the % bar
+    const CHUNK_SIZE = 3;
+    const CHUNKS = [];
+    for (let i = 0; i < METERS.length; i += CHUNK_SIZE) CHUNKS.push(METERS.slice(i, i + CHUNK_SIZE));
+    const MAIN_SETS = [...CHUNKS.map((_, k) => `m${k}`), ...(ISOLAR_SOURCES.length ? ['iso'] : [])];
+    const setLabel = name => name === 'iso' ? ISOLAR_SOURCES.map(s => s.label).join(' & ')
+        : name.startsWith('m') ? CHUNKS[+name.slice(1)].map(m => m.label).join(', ') : name;
+    function setQuery(name, from, stop, w) {
+        if (name.startsWith('m')) return qMeters(CHUNKS[+name.slice(1)], from, stop, w);
+        if (name === 'iso') return qIsolar(from, stop, w);
+        if (name === 'app') return qApparent(from, stop, w);
+        if (name === 'dem') return qDemand(from, stop);
+        if (name.startsWith('v')) return qVolt(METERS[+name.slice(1)], from, stop, w);
+        throw new Error('unknown data set ' + name);
+    }
+    const timeOf = row => row._t !== undefined ? row._t : (row._t = Date.parse(row._time));
+    const blockOf = name => name === 'dem' ? DEMAND_MIN * 60e3 : RAW.w;
+
+    // a data set that is not loaded yet (power factor, voltage, 15-minute demand) is fetched once and kept
+    function ensureSet(name) {
+        const R = RAW;
+        if (R.sets[name]) return Promise.resolve(R.sets[name]);
+        if (!R.pending[name]) R.pending[name] = runFlux(setQuery(name, R.t0, R.stop, R.w))
+            .then(rows => { R.sets[name] = rows; R.stops[name] = R.stop; return rows; })
+            .finally(() => { delete R.pending[name]; });
+        return R.pending[name];
+    }
+
+    // auto-refresh: only the newest windows are read again and added to what is already loaded
+    async function refreshSets(R, t0, stop) {
+        await Promise.all(Object.keys(R.sets).map(async name => {
+            const B = name === 'dem' ? DEMAND_MIN * 60e3 : R.w;
+            const tail = Math.max(t0, Math.min(alignDown(stop, B) - B, alignDown(R.stops[name], B)));
+            const add = await runFlux(setQuery(name, tail, stop, R.w));
+            R.sets[name] = R.sets[name].filter(x => { const t = timeOf(x); return t >= t0 && t < tail; }).concat(add);
+            R.stops[name] = stop;
+        }));
+        R.t0 = t0; R.stop = stop;
+    }
+
+    function ffill(arr) {
+        let last = null, gap = 0;
+        for (let i = 0; i < arr.length; i++) {
+            if (arr[i] !== null) { last = arr[i]; gap = 0; }
+            else if (last !== null && gap < MAX_GAP_FILL) { arr[i] = last; gap++; }
+            else last = null;
+        }
+    }
+    const METER_BY_KEY = {};
+    METERS.forEach((m, i) => METER_BY_KEY[`${m.measurement}|${m.tag}`] = { m, id: `m${i}` });
+
+    function build(r, t0, w, meterRows, isoRows) {
+        const n = Math.max(1, Math.ceil((r.stop - t0) / w));
+        const times = Array.from({ length: n }, (_, i) => t0 + i * w);
+        const P = {};
+        [...GEN, ...DIST].forEach(s => P[s.id] = new Array(n).fill(null));
+        const idx = row => Math.round((timeOf(row) - t0) / w);
+        meterRows.forEach(row => {
+            const e = METER_BY_KEY[`${row._measurement}|${row.meter_name}`]; if (!e || row._field !== e.m.fields.pTotal) return;
+            const v = parseFloat(row._value), i = idx(row);
+            if (isNaN(v) || i < 0 || i >= n) return;
+            // solar CTs may face the other way: use the size of the value, like the dashboard
+            P[e.id][i] = (e.m.solar ? Math.abs(v) : v) / 1000;
+        });
+        const isoId = Object.fromEntries(ISOLAR_SOURCES.map((s, j) => [s.device, `s${j}`]));
+        isoRows.forEach(row => {
+            const id = isoId[row.device_name], v = parseFloat(row._value), i = idx(row);
+            if (!id || isNaN(v) || i < 0 || i >= n) return;
+            P[id][i] = v;
+        });
+        Object.values(P).forEach(ffill);
+
+        const sumAt = (ids, i) => { let s = 0, any = false; ids.forEach(id => { const v = P[id][i]; if (v !== null) { s += v; any = true; } }); return any ? s : null; };
+        const genIds = GEN.map(s => s.id), distIds = DIST.map(s => s.id);
+        const subIds = sub => DIST.filter(s => s.sub === sub).map(s => s.id);
+        const genTot = times.map((_, i) => sumAt(genIds, i));
+        const distTot = times.map((_, i) => sumAt(distIds, i));
+        const solarTot = SOLAR_IDS.length ? times.map((_, i) => sumAt(SOLAR_IDS, i)) : times.map(() => null);
+        const prodTot = times.map((_, i) => sumAt(subIds('production'), i));
+        const utilTot = times.map((_, i) => sumAt(subIds('utility'), i));
+        const span = r.stop - r.start;
+        const labels = times.map(t => span <= 26 * HOUR ? fmtClock(t) : fmtDayClock(t));
+        return { r, t0, w, n, span, times, labels, P, genTot, distTot, solarTot, prodTot, utilTot, pf: null };
+    }
+
+    // facility power factor = total active / total apparent power of the feeders
+    function applyApparent(D, rows) {
+        const S = {};
+        DIST.forEach(s => S[s.id] = new Array(D.n).fill(null));
+        rows.forEach(row => {
+            const e = METER_BY_KEY[`${row._measurement}|${row.meter_name}`]; if (!e || !S[e.id] || row._field !== e.m.fields.sTotal) return;
+            const v = parseFloat(row._value), i = Math.round((timeOf(row) - D.t0) / D.w);
+            if (!isNaN(v) && i >= 0 && i < D.n) S[e.id][i] = v / 1000;
+        });
+        Object.values(S).forEach(ffill);
+        D.pf = D.times.map((_, i) => {
+            let sp = 0, ss = 0;
+            DIST.forEach(s => { const p = D.P[s.id][i], a = S[s.id][i]; if (p !== null && a !== null && a > 0) { sp += p; ss += a; } });
+            return ss > 0.5 ? Math.max(-1, Math.min(1, sp / ss)) : null;
+        });
+    }
+
+    // energy of a power series in kWh (average kW x window length)
+    const eOf = (v, w) => v === null ? 0 : v * w / HOUR;
+    const sumE = (arr, w) => arr.reduce((a, v) => a + eOf(v, w), 0);
+    const hasData = arr => arr.some(v => v !== null);
+
+    // hourly buckets for short ranges, daily otherwise
+    function buckets(D) {
+        const hourly = D.span <= 2 * DAY, B = hourly ? HOUR : DAY;
+        const keys = [], map = new Map();
+        const of = D.times.map(t => { const k = alignDown(t, B); if (!map.has(k)) { map.set(k, keys.length); keys.push(k); } return map.get(k); });
+        const sum = (arr, fn = v => v) => { const out = keys.map(() => 0); arr.forEach((v, i) => { if (v !== null) out[of[i]] += fn(v); }); return out; };
+        return { hourly, B, keys, of, sum, labels: keys.map(k => hourly ? `${fmtDay(k)} ${fmtClock(k)}` : fmtDayW(k)) };
+    }
+
+    // 15-minute demand: worked out from the loaded data for periods up to 8 days (no extra query)
+    function demandFromData(D) {
+        const B = DEMAND_MIN * 60e3, map = new Map();
+        D.distTot.forEach((v, i) => {
+            if (v === null) return;
+            const k = alignDown(D.times[i], B), c = map.get(k) || { s: 0, n: 0 };
+            c.s += v; c.n++; map.set(k, c);
+        });
+        return [...map.entries()].sort((a, b) => a[0] - b[0]).map(([t, c]) => ({ t, v: c.s / c.n }));
+    }
+    const parseDemand = rows => rows.map(x => ({ t: timeOf(x), v: parseFloat(x._value) / 1000 }))
+        .filter(x => !isNaN(x.t) && !isNaN(x.v) && x.t >= DATA.r.start).sort((a, b) => a.t - b.t);
+
+    // ---------- loading bar ----------
+    const loadBar = (() => {
+        let shown = 0, cap = 0, t0 = 0, timer = null, total = 1, done = 0, hideT = null;
+        const paint = () => {
+            $('load-fill').style.width = shown.toFixed(1) + '%';
+            $('load-pct').textContent = Math.floor(shown) + '%';
+            $('load-card').setAttribute('aria-valuenow', String(Math.floor(shown)));
+            $('load-time').textContent = Math.round((Date.now() - t0) / 1000) + ' s';
+        };
+        const tick = () => { shown += Math.max(0, cap - shown) * 0.04; paint(); };   // creeps toward the next step
+        return {
+            start(steps, title, sub) {
+                clearTimeout(hideT); clearInterval(timer);
+                total = steps; done = 0; t0 = Date.now(); shown = 1; cap = Math.min(95, 90 / steps);
+                const c = $('load-card');
+                c.hidden = false; c.classList.remove('done', 'failed'); c.classList.add('busy');
+                $('load-icon').className = 'fas fa-cloud-arrow-down';
+                $('load-title').textContent = title; $('load-sub').textContent = sub;
+                timer = setInterval(tick, 120); paint();
+            },
+            step(label) {
+                done++;
+                shown = Math.max(shown, done / total * 90); cap = Math.min(97, (done + 1) / total * 90);
+                $('load-sub').textContent = done < total ? `${done} of ${total} data sets received (latest: ${label})` : 'All data received · drawing the charts…';
+                paint();
+            },
+            finish(title, sub) {
+                clearInterval(timer); shown = 100; paint();
+                const c = $('load-card'); c.classList.remove('busy'); c.classList.add('done');
+                $('load-icon').className = 'fas fa-circle-check';
+                $('load-title').textContent = title; $('load-sub').textContent = sub;
+                hideT = setTimeout(() => { c.hidden = true; }, 1800);
+            },
+            fail(msg) {
+                clearInterval(timer);
+                const c = $('load-card'); c.classList.remove('busy'); c.classList.add('failed');
+                $('load-icon').className = 'fas fa-triangle-exclamation';
+                $('load-title').textContent = 'Could not load the trends'; $('load-sub').textContent = msg;
+            }
+        };
+    })();
+
+    const PERIOD_NAMES = { today: 'Today', yesterday: 'Yesterday', '24h': 'Last 24 hours', '7d': 'Last 7 days', month: 'This month', '30d': 'Last 30 days', custom: 'Custom period' };
+
+    // mode: 'full' (new period: shows the % bar), 'refresh' (button) or 'auto' (every 2 minutes, silent)
+    async function loadAll(mode = 'full') {
+        const r = getRange();
+        $('t-range-error').textContent = r.error || '';
+        if (r.error) return;
+        const tok = ++TOK;
+        const w = pickWindow(r.stop - r.start);
+        const t0 = alignDown(r.start, w);
+        const key = `${RANGE.preset}|${RANGE.from}|${RANGE.to}|${w}`;
+        const pastKey = `${t0}|${r.stop}|${w}`;
+        const t1 = Date.now();
+        $('t-range-text').textContent = `${fmtFull(r.start)} – ${r.live ? 'now' : fmtFull(r.stop)} (PKT)`;
+        try {
+            if (!r.live && PAST.has(pastKey)) {
+                RAW = PAST.get(pastKey);
+            } else if (mode !== 'full' && RAW && RAW.key === key && RAW.live && r.live) {
+                setBusy(true, 'Updating with the newest readings…', false, true);
+                const R = RAW;
+                await refreshSets(R, t0, r.stop);
+                if (tok !== TOK) return;
+            } else {
+                setBusy(true, 'Loading trends…');
+                loadBar.start(MAIN_SETS.length, `Loading trends and data for analysis · ${PERIOD_NAMES[RANGE.preset]}`,
+                    `Reading ${METERS.length + ISOLAR_SOURCES.length} meters as ${winText(w)} averages in ${MAIN_SETS.length} parallel requests…`);
+                const R = { key, live: r.live, t0, stop: r.stop, w, sets: {}, stops: {}, pending: {} };
+                await Promise.all(MAIN_SETS.map(name => {
+                    let p = runFlux(setQuery(name, t0, r.stop, w));
+                    if (name === 'iso') p = p.catch(e => { console.error('iSolarCloud trend query:', e); return []; });
+                    return p.then(rows => { R.sets[name] = rows; R.stops[name] = r.stop; if (tok === TOK) loadBar.step(setLabel(name)); });
+                }));
+                if (tok !== TOK) return;
+                RAW = R;
+                if (!r.live) { PAST.set(pastKey, R); if (PAST.size > 6) PAST.delete(PAST.keys().next().value); }
+            }
+            readTariff();
+            DATA = build(r, t0, w, CHUNKS.flatMap((_, k) => RAW.sets[`m${k}`] || []), RAW.sets.iso || []);
+            DEMAND = w <= DEMAND_MIN * 60e3 ? demandFromData(DATA) : (RAW.sets.dem ? parseDemand(RAW.sets.dem) : null);
+            if (RAW.sets.app) applyApparent(DATA, RAW.sets.app);
+            renderAll();
+            loadLazy();
+            const secs = ((Date.now() - t1) / 1000).toFixed(1);
+            if (mode === 'full') loadBar.finish(`Trends ready · ${PERIOD_NAMES[RANGE.preset]}`, `Loaded in ${secs} s`);
+            setBusy(false, `Updated ${fmtClock(Date.now())} PKT · ${winText(w)} averages${r.live ? ' · refreshes every 2 min' : ''}`);
+            $('db-status').innerText = 'System Online'; $('db-status').style.color = 'var(--green-l)';
+            $('last-update').innerText = fmtFull(Date.now());
+        } catch (err) {
+            console.error('Trend query:', err);
+            if (tok !== TOK) return;
+            if (mode === 'full') loadBar.fail('Check the internet connection, or try a shorter period. Press Refresh to try again.');
+            setBusy(false, 'Could not load the trends. Check the internet connection, or try a shorter period.', true);
+            $('db-status').innerText = 'Cloud Offline'; $('db-status').style.color = 'var(--danger)';
+        }
+    }
+
+    // extra data sets that only some charts need, fetched after the main charts are on screen
+    function loadLazy() {
+        const D = DATA;
+        if (!D || !RAW) return;
+        if (!DEMAND && D.w > DEMAND_MIN * 60e3) {
+            ensureSet('dem').then(rows => { if (D !== DATA) return; DEMAND = parseDemand(rows); renderKpis(); renderPeak(); renderLdc(); })
+                .catch(err => { console.error('Demand query:', err); if (D === DATA) { empty('c-peak', 'Could not load the 15-minute demand. Press Refresh to try again.'); empty('c-ldc', 'Could not load the 15-minute demand.'); } });
+        }
+        if (isShown('pf') && !D.pf) {
+            ensureSet('app').then(rows => { if (D !== DATA) return; applyApparent(D, rows); renderPf(); })
+                .catch(err => { console.error('Apparent power query:', err); if (D === DATA) empty('c-pf', 'Could not load the power factor. Press Refresh to try again.'); });
+        }
+        if (isShown('volt')) loadVolt();
+    }
+
+    function setBusy(on, msg, err, quiet) {
+        $('t-grid').classList.toggle('busy', on && !quiet);
+        const st = $('t-status');
+        st.classList.toggle('err', !!err);
+        st.innerHTML = (on ? '<i class="fas fa-circle-notch fa-spin"></i> ' : err ? '<i class="fas fa-triangle-exclamation"></i> ' : '<i class="fas fa-circle-check" style="color: var(--green-l);"></i> ') + msg;
+    }
+
+    // ---------- charts ----------
+    function draw(id, type, data, options) {
+        const c = CH[id];
+        if (c && c.config.type === type) { c.data = data; c.options = options; c.update('none'); return; }
+        if (c) c.destroy();
+        CH[id] = new Chart($(id), { type, data, options });
+    }
+    function empty(id, msg) {
+        const el = $(id).parentElement.querySelector('.t-empty');
+        el.hidden = !msg; el.textContent = msg || '';
+    }
+    const timeTitle = items => items.length ? `${fmtFull(DATA.times[items[0].dataIndex])} PKT` : '';
+    function opts({ y = '', stacked = false, yMin, yMax, title = timeTitle, legend = true, unit = '', dec = 1, xTicks = 10 } = {}) {
+        return {
+            responsive: true, maintainAspectRatio: false, animation: false,
+            interaction: { mode: 'index', intersect: false },
+            elements: { point: { radius: 0, hitRadius: 6, hoverRadius: 4 }, line: { borderWidth: 2, tension: 0.2 } },
+            plugins: {
+                legend: { display: legend, position: 'top', align: 'end', labels: { boxWidth: 12, boxHeight: 10, color: '#c9d6ee', font: { size: 11 } } },
+                tooltip: { callbacks: {
+                    title,
+                    label: c => isNum(c.parsed.y) ? ` ${c.dataset.label}: ${fmt(c.parsed.y, dec)}${unit ? ' ' + unit : ''}` : null
+                } }
+            },
+            scales: {
+                x: { stacked, grid: { display: false }, border: { color: 'rgba(110, 150, 220, 0.25)' }, ticks: { maxTicksLimit: xTicks, maxRotation: 0, autoSkip: true } },
+                y: { stacked, min: yMin, max: yMax, border: { display: false }, ticks: { maxTicksLimit: 6 }, title: { display: !!y, text: y } }
+            }
+        };
+    }
+    const line = (label, data, color, extra = {}) => ({ label, data, borderColor: color, backgroundColor: color, pointBackgroundColor: color, ...extra });
+    const area = (label, data, color, first, extra = {}) => ({ label, data, borderColor: color, backgroundColor: color + '99', fill: first ? 'origin' : '-1', borderWidth: 1, ...extra });
+
+    function renderAll() {
+        if (!DATA) return;
+        renderKpis(); renderGvd(); renderMix(); renderSolar(); renderPf(); renderFeeders(); renderRank();
+        renderEnergy(); renderCost(); renderProfile(); renderPeak(); renderHeat(); renderLdc();
+    }
+
+    // ---------- period summary ----------
+    function costOf(D) {
+        const T = TARIFF, a = hmToMin(T.peakFrom), b = hmToMin(T.peakTo);
+        let peakE = 0, offE = 0;
+        D.distTot.forEach((v, i) => {
+            const e = eOf(v, D.w);
+            if (T.tou && inWindow(pktMinuteOfDay(D.times[i] + D.w / 2), a, b)) peakE += e; else offE += e;
+        });
+        const r = x => isNum(x) ? x : NaN;
+        return T.tou ? { tou: true, peakE, offE, peakC: peakE * r(T.peakRate), offC: offE * r(T.offRate), total: peakE * r(T.peakRate) + offE * r(T.offRate) }
+                     : { tou: false, total: (peakE + offE) * r(T.rate) };
+    }
+    function peakInfo() {
+        return DEMAND && DEMAND.length ? DEMAND.reduce((b, x) => x.v > b.v ? x : b, DEMAND[0]) : null;
+    }
+    function renderKpis() {
+        const D = DATA, w = D.w;
+        const genE = sumE(D.genTot, w), distE = sumE(D.distTot, w), solE = sumE(D.solarTot, w);
+        const srcE = GEN.filter(s => !s.solar).map(s => `${s.label} <b>${fmt(sumE(D.P[s.id], w), 0)}</b>`);
+        if (SOLAR_IDS.length) srcE.push(`Solar <b>${fmt(solE, 0)}</b>`);
+        $('k-gen').innerHTML = hasData(D.genTot) ? kwh(genE) : '--';
+        $('k-gen-s').innerHTML = hasData(D.genTot) ? srcE.join(' · ') + ' kWh' : 'No generation data';
+        $('k-dist').innerHTML = hasData(D.distTot) ? kwh(distE) : '--';
+        $('k-dist-s').innerHTML = hasData(D.distTot) ? `Production <b>${fmt(sumE(D.prodTot, w), 0)}</b> · Utility <b>${fmt(sumE(D.utilTot, w), 0)}</b> kWh` : 'No distribution data';
+        $('k-solar').innerHTML = genE > 0 ? `${fmt(solE / genE * 100, 1)} <span class="unit">%</span>` : '--';
+        $('k-solar-s').innerHTML = `Solar <b>${fmt(solE, 0)} kWh</b> of generation`;
+        const pk = peakInfo();
+        $('k-peak').innerHTML = pk ? `${fmt(pk.v, 1)} <span class="unit">kW</span>` : '--';
+        $('k-peak-s').innerHTML = pk ? `${fmtDayW(pk.t)} at <b>${fmtClock(pk.t)}</b> PKT` : (DEMAND ? 'No load data' : 'Loading 15-minute demand…');
+        const vals = D.distTot.filter(v => v !== null);
+        const avg = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+        $('k-lf').innerHTML = pk && pk.v > 0 && isNum(avg) ? `${fmt(avg / pk.v * 100, 0)} <span class="unit">%</span>` : '--';
+        $('k-lf-s').innerHTML = isNum(avg) ? `Average load <b>${fmt(avg, 1)} kW</b>` : '';
+        const gap = genE - distE;
+        $('k-gap').innerHTML = genE > 0 && distE > 0 ? `${fmt(gap, 0)} <span class="unit">kWh</span>` : '--';
+        $('k-gap-s').innerHTML = genE > 0 && distE > 0 ? `<b>${fmt(gap / genE * 100, 1)}%</b> of generation · losses and unmetered loads` : 'Needs both generation and distribution data';
+        const c = costOf(D);
+        $('k-cost').innerHTML = isNum(c.total) ? `<span class="unit" style="margin:0 5px 0 0">PKR</span>${fmt(c.total, 0)}` : '--';
+        $('k-cost-s').innerHTML = c.tou ? `On-peak <b>${fmt(c.peakC, 0)}</b> · Off-peak <b>${fmt(c.offC, 0)}</b>` : `At <b>${fmtN(TARIFF.rate, 2)} PKR/kWh</b> (tariff from main dashboard)`;
+    }
+
+    // ---------- Generation vs Distribution ----------
+    function renderGvd() {
+        const D = DATA;
+        const gap = D.times.map((_, i) => D.genTot[i] !== null && D.distTot[i] !== null ? D.genTot[i] - D.distTot[i] : null);
+        draw('c-gvd', 'line', { labels: D.labels, datasets: [
+            line('Generation (kW)', D.genTot, GEN_COLOR, { fill: { target: 1, above: 'rgba(34, 211, 238, 0.10)', below: 'rgba(245, 165, 36, 0.16)' } }),
+            line('Distribution (kW)', D.distTot, DIST_COLOR),
+            line('Difference, gen − dist (kW)', gap, GAP_COLOR, { borderDash: [5, 4], borderWidth: 1.5, hidden: true })
+        ] }, opts({ y: 'kW', unit: 'kW', xTicks: 12 }));
+        const g = gap.filter(v => v !== null);
+        $('s-gvd').innerHTML = g.length
+            ? `Total generation (KE + Genset + Solar) against the total feeder load. Average gap <b>${fmt(g.reduce((a, b) => a + b, 0) / g.length, 1)} kW</b>; cyan shading = generation above load, orange = load above generation (a source may be missing data). Turn on “Difference” in the legend to see the gap as a line.`
+            : 'Total generation (KE + Genset + Solar) against the total feeder load.';
+        empty('c-gvd', hasData(D.genTot) || hasData(D.distTot) ? '' : 'No power data in this period.');
+    }
+
+    // ---------- Generation mix ----------
+    function renderMix() {
+        const D = DATA;
+        const anyAt = i => GEN.some(s => D.P[s.id][i] !== null);
+        const ds = GEN.map((s, k) => area(`${s.label} (kW)`, D.P[s.id].map((v, i) => v !== null ? Math.max(v, 0) : (anyAt(i) ? 0 : null)), s.color, k === 0, { stack: 'gen' }));
+        ds.push(line('Distribution load (kW)', D.distTot, '#eef3ff', { stack: 'dist', borderDash: [6, 4], borderWidth: 1.6, fill: false }));
+        draw('c-mix', 'line', { labels: D.labels, datasets: ds }, opts({ y: 'kW', unit: 'kW', stacked: true, xTicks: 12 }));
+        empty('c-mix', hasData(D.genTot) ? '' : 'No generation data in this period.');
+    }
+
+    // ---------- Solar contribution ----------
+    function renderSolar() {
+        const D = DATA;
+        const share = D.times.map((_, i) => D.genTot[i] > 0.5 && D.solarTot[i] !== null ? Math.min(100, D.solarTot[i] / D.genTot[i] * 100) : (D.genTot[i] !== null ? 0 : null));
+        draw('c-solar', 'line', { labels: D.labels, datasets: [
+            line('Solar share (%)', share, SOLAR_COLOR, { fill: 'origin', backgroundColor: 'rgba(250, 204, 21, 0.15)' })
+        ] }, opts({ y: '% of generation', unit: '%', yMin: 0, yMax: 100, legend: false }));
+        const sol = D.solarTot.filter(v => v !== null);
+        const pk = sol.length ? Math.max(...sol) : null;
+        const pkI = pk !== null ? D.solarTot.indexOf(pk) : -1;
+        const genE = sumE(D.genTot, D.w), solE = sumE(D.solarTot, D.w);
+        $('s-solar').innerHTML = sol.length
+            ? `Solar covered <b>${genE > 0 ? fmt(solE / genE * 100, 1) : '--'}%</b> of generation in this period. Highest solar output <b>${fmt(pk, 1)} kW</b> (${fmtDayClock(D.times[pkI])}).`
+            : 'Share of generation coming from Solar 1 + Solar 2.';
+        empty('c-solar', sol.length ? '' : 'No solar data in this period.');
+    }
+
+    // ---------- Power factor ----------
+    function renderPf() {
+        const D = DATA;
+        if (!D.pf) { draw('c-pf', 'line', { labels: [], datasets: [] }, opts()); empty('c-pf', 'Loading power factor…'); $('s-pf').textContent = 'Total active ÷ apparent power of the distribution feeders.'; return; }
+        const vals = D.pf.filter(v => v !== null);
+        const lo = vals.length ? Math.min(...vals, PF_TARGET) : 0.8;
+        draw('c-pf', 'line', { labels: D.labels, datasets: [
+            line('Power factor', D.pf, '#3b82f6'),
+            line(`Target ${PF_TARGET.toFixed(2)}`, D.times.map(() => PF_TARGET), GAP_COLOR, { borderDash: [5, 4], borderWidth: 1.2 })
+        ] }, opts({ y: 'PF', dec: 3, yMin: Math.max(0, Math.floor((lo - 0.03) * 20) / 20), yMax: 1 }));
+        const below = vals.filter(v => v < PF_TARGET).length;
+        $('s-pf').innerHTML = vals.length
+            ? `Total active ÷ apparent power of the distribution feeders. Average <b>${fmt(vals.reduce((a, b) => a + b, 0) / vals.length, 3)}</b>, lowest <b>${fmt(Math.min(...vals), 3)}</b>; below ${PF_TARGET.toFixed(2)} for <b>${fmt(below / vals.length * 100, 0)}%</b> of the time.`
+            : 'Total active ÷ apparent power of the distribution feeders.';
+        empty('c-pf', vals.length ? '' : 'No apparent power data in this period, so the power factor cannot be calculated.');
+    }
+
+    // ---------- Feeders ----------
+    function renderFeeders() {
+        const D = DATA;
+        const anyAt = i => DIST.some(s => D.P[s.id][i] !== null);
+        const ds = DIST.map((s, k) => area(`${s.label} (kW)`, D.P[s.id].map((v, i) => v !== null ? Math.max(v, 0) : (anyAt(i) ? 0 : null)), s.color, k === 0));
+        const o = opts({ y: 'kW', unit: 'kW', stacked: true, xTicks: 12 });
+        o.plugins.legend.position = 'bottom'; o.plugins.legend.align = 'center';
+        draw('c-feeders', 'line', { labels: D.labels, datasets: ds }, o);
+        empty('c-feeders', hasData(D.distTot) ? '' : 'No feeder data in this period.');
+    }
+    function renderRank() {
+        const D = DATA;
+        const list = DIST.map(s => ({ s, e: Math.max(0, sumE(D.P[s.id], D.w)) })).sort((a, b) => b.e - a.e);
+        const tot = list.reduce((a, x) => a + x.e, 0);
+        const o = opts({ legend: false, title: items => items.length ? list[items[0].dataIndex].s.label : '' });
+        o.indexAxis = 'y';
+        o.interaction = { mode: 'nearest', axis: 'y', intersect: false };
+        o.scales = {
+            x: { beginAtZero: true, border: { display: false }, ticks: { maxTicksLimit: 6 }, title: { display: true, text: 'kWh' } },
+            y: { grid: { display: false }, ticks: { color: '#c9d6ee', autoSkip: false } }
+        };
+        o.plugins.tooltip.callbacks.label = c => ` ${fmt(c.parsed.x, 0)} kWh · ${tot > 0 ? fmt(c.parsed.x / tot * 100, 1) : '0.0'}% of feeder energy`;
+        draw('c-rank', 'bar', { labels: list.map(x => x.s.label), datasets: [{
+            label: 'Energy (kWh)', data: list.map(x => x.e), backgroundColor: list.map(x => x.s.color),
+            borderRadius: 4, barPercentage: 0.8, categoryPercentage: 0.85
+        }] }, o);
+        $('s-rank').innerHTML = tot > 0
+            ? `Top consumer: <b>${list[0].s.label}</b> with <b>${fmt(list[0].e / tot * 100, 1)}%</b> of feeder energy. Top 3 together: <b>${fmt(list.slice(0, 3).reduce((a, x) => a + x.e, 0) / tot * 100, 1)}%</b>.`
+            : 'Energy per feeder in the selected period.';
+        empty('c-rank', tot > 0 ? '' : 'No feeder energy in this period.');
+    }
+
+    // ---------- Energy & cost per hour / day ----------
+    function renderEnergy() {
+        const D = DATA, b = buckets(D), w = D.w;
+        $('t-energy-title').textContent = b.hourly ? 'Energy per hour' : 'Energy per day';
+        const ds = GEN.map(s => ({ label: s.label, data: b.sum(D.P[s.id], v => eOf(v, w)), backgroundColor: s.color, stack: 'gen' }))
+            .concat([
+                { label: 'Production feeders', data: b.sum(D.prodTot, v => eOf(v, w)), backgroundColor: SUB_COLORS.production, stack: 'dist' },
+                { label: 'Utility feeders', data: b.sum(D.utilTot, v => eOf(v, w)), backgroundColor: SUB_COLORS.utility, stack: 'dist' }
+            ]);
+        ds.forEach(d => { d.borderColor = CARD_BG; d.borderWidth = { top: 1 }; d.borderRadius = 2; d.categoryPercentage = 0.8; d.barPercentage = 0.92; });
+        const o = opts({ y: 'kWh', unit: 'kWh', dec: 0, stacked: true, title: items => items.length ? (b.hourly ? `${fmtFull(b.keys[items[0].dataIndex])} PKT` : fmtDayW(b.keys[items[0].dataIndex])) : '' });
+        o.plugins.legend.labels.boxWidth = 10;
+        o.plugins.tooltip.callbacks.footer = items => {
+            if (!items.length) return '';
+            const k = items[0].dataIndex, g = ds.filter(d => d.stack === 'gen').reduce((a, d) => a + d.data[k], 0), d = ds.filter(x => x.stack === 'dist').reduce((a, x) => a + x.data[k], 0);
+            return `Generation ${fmt(g, 0)} kWh · Distribution ${fmt(d, 0)} kWh`;
+        };
+        draw('c-energy', 'bar', { labels: b.labels, datasets: ds }, o);
+        const distDay = b.sum(D.distTot, v => eOf(v, w));
+        const hi = distDay.length ? distDay.indexOf(Math.max(...distDay)) : -1;
+        $('s-energy').innerHTML = `Left bar: generation by source. Right bar: distribution (production + utility feeders). Calculated from average active power.${!b.hourly && hi >= 0 && distDay[hi] > 0 ? ` Highest-use day: <b>${fmtDayW(b.keys[hi])}</b> (${fmt(distDay[hi], 0)} kWh).` : ''}`;
+        empty('c-energy', hasData(D.genTot) || hasData(D.distTot) ? '' : 'No energy data in this period.');
+    }
+    function renderCost() {
+        const D = DATA, b = buckets(D), w = D.w, T = TARIFF;
+        $('t-cost-title').textContent = b.hourly ? 'Energy cost per hour' : 'Energy cost per day';
+        const a = hmToMin(T.peakFrom), z = hmToMin(T.peakTo);
+        const pk = b.keys.map(() => 0), off = b.keys.map(() => 0);
+        D.distTot.forEach((v, i) => {
+            if (v === null) return;
+            const e = eOf(v, w);
+            if (T.tou && inWindow(pktMinuteOfDay(D.times[i] + w / 2), a, z)) pk[b.of[i]] += e * (T.peakRate || 0);
+            else off[b.of[i]] += e * ((T.tou ? T.offRate : T.rate) || 0);
+        });
+        const ds = T.tou
+            ? [{ label: 'On-peak', data: pk, backgroundColor: '#ef4444' }, { label: 'Off-peak', data: off, backgroundColor: '#22d3ee' }]
+            : [{ label: 'Cost', data: off, backgroundColor: '#22c55e' }];
+        ds.forEach(d => { d.borderColor = CARD_BG; d.borderWidth = { top: 1 }; d.borderRadius = 2; d.categoryPercentage = 0.8; d.barPercentage = 0.9; });
+        const o = opts({ y: 'PKR', unit: 'PKR', dec: 0, stacked: true, legend: T.tou, title: items => items.length ? (b.hourly ? `${fmtFull(b.keys[items[0].dataIndex])} PKT` : fmtDayW(b.keys[items[0].dataIndex])) : '' });
+        draw('c-cost', 'bar', { labels: b.labels, datasets: ds }, o);
+        const tot = pk.reduce((x, y) => x + y, 0) + off.reduce((x, y) => x + y, 0);
+        const days = Math.max(1, (D.r.stop - D.r.start) / DAY);
+        $('s-cost').innerHTML = tot > 0
+            ? `Total <b>PKR ${fmt(tot, 0)}</b>${b.hourly ? '' : `, about <b>PKR ${fmt(tot / days, 0)}</b> per day`}. ${T.tou ? `On-peak ${T.peakFrom}–${T.peakTo} at ${fmtN(T.peakRate, 2)}, off-peak at ${fmtN(T.offRate, 2)} PKR/kWh.` : `Tariff ${fmtN(T.rate, 2)} PKR/kWh.`} Change the tariff on the main dashboard.`
+            : 'Distribution energy × tariff from the main dashboard.';
+        empty('c-cost', tot > 0 ? '' : 'No energy (or no tariff) for this period.');
+    }
+
+    // ---------- Typical daily profile ----------
+    function renderProfile() {
+        const D = DATA, mode = $('t-prof-days').value;
+        const keep = t => mode === 'all' || (mode === 'sun' ? pktDow(t) === 0 : pktDow(t) !== 0);
+        const series = [
+            { label: 'Distribution', arr: D.distTot, color: DIST_COLOR },
+            { label: 'Generation', arr: D.genTot, color: GEN_COLOR },
+            ...(SOLAR_IDS.length ? [{ label: 'Solar', arr: D.solarTot, color: SOLAR_COLOR }] : []),
+            ...GEN.filter(s => s.kind === 'isolar').map(s => ({ label: s.label, arr: D.P[s.id], color: s.color }))
+        ];
+        const sub = Math.max(1, Math.round(D.w / HOUR));
+        const days = new Set();
+        const ds = series.map(s => {
+            const sum = new Array(24).fill(0), cnt = new Array(24).fill(0);
+            s.arr.forEach((v, i) => {
+                if (v === null) return;
+                for (let h = 0; h < sub; h++) {
+                    const t = D.times[i] + h * HOUR;
+                    if (!keep(t)) continue;
+                    days.add(pktDayStart(t));
+                    sum[pktHour(t)] += v; cnt[pktHour(t)]++;
+                }
+            });
+            return line(`${s.label} (kW)`, sum.map((x, h) => cnt[h] ? x / cnt[h] : null), s.color, { borderDash: s.label === 'Generation' ? [5, 4] : undefined, hidden: s.label === 'Generation' });
+        });
+        const hours = Array.from({ length: 24 }, (_, h) => `${String(h).padStart(2, '0')}:00`);
+        draw('c-profile', 'line', { labels: hours, datasets: ds }, opts({ y: 'kW', unit: 'kW', xTicks: 12, title: items => items.length ? `${hours[items[0].dataIndex]}–${String(items[0].dataIndex + 1).padStart(2, '0')}:00 PKT` : '' }));
+        const dp = ds[0].data, ok = dp.filter(v => v !== null);
+        $('s-profile').innerHTML = ok.length
+            ? `Average over <b>${days.size}</b> day${days.size === 1 ? '' : 's'}. Busiest hour <b>${hours[dp.indexOf(Math.max(...ok))]}</b> (${fmt(Math.max(...ok), 1)} kW), quietest <b>${hours[dp.indexOf(Math.min(...ok))]}</b> (${fmt(Math.min(...ok), 1)} kW).`
+            : 'Average load for each hour of the day.';
+        empty('c-profile', ok.length ? '' : 'No data for these days in this period.');
+    }
+
+    // ---------- Peak demand ----------
+    function renderPeak() {
+        const D = DATA, dem = DEMAND || [];
+        const short = D.span <= 2 * DAY;
+        $('t-peak-title').textContent = short ? `Demand (${DEMAND_MIN}-minute average)` : 'Peak demand per day';
+        if (!DEMAND) { draw('c-peak', 'bar', { labels: [], datasets: [] }, opts()); empty('c-peak', 'Loading 15-minute demand…'); $('s-peak').textContent = ''; return; }
+        if (!dem.length) { draw('c-peak', 'bar', { labels: [], datasets: [] }, opts()); empty('c-peak', 'No demand data in this period.'); $('s-peak').textContent = ''; return; }
+        if (short) {
+            const pk = dem.reduce((b, x) => x.v > b.v ? x : b, dem[0]);
+            draw('c-peak', 'line', { labels: dem.map(x => fmtClock(x.t)), datasets: [
+                line(`Demand (kW)`, dem.map(x => x.v), DIST_COLOR, { fill: 'origin', backgroundColor: 'rgba(245, 165, 36, 0.14)' }),
+                line(`Peak ${fmt(pk.v, 1)} kW`, dem.map(() => pk.v), '#ef4444', { borderDash: [5, 4], borderWidth: 1.2 })
+            ] }, opts({ y: 'kW', unit: 'kW', title: items => items.length ? `${fmtFull(dem[items[0].dataIndex].t)}–${fmtClock(dem[items[0].dataIndex].t + DEMAND_MIN * 60e3)} PKT` : '' }));
+            $('s-peak').innerHTML = `Total distribution load, ${DEMAND_MIN}-minute averages. Peak <b>${fmt(pk.v, 1)} kW</b> at <b>${fmtClock(pk.t)}</b>–${fmtClock(pk.t + DEMAND_MIN * 60e3)} PKT.`;
+        } else {
+            const days = new Map();
+            dem.forEach(x => {
+                const k = pktDayStart(x.t), d = days.get(k) || { pk: null, sum: 0, n: 0 };
+                if (!d.pk || x.v > d.pk.v) d.pk = x;
+                d.sum += x.v; d.n++; days.set(k, d);
+            });
+            const keys = [...days.keys()].sort((a, b) => a - b), rows = keys.map(k => days.get(k));
+            const o = opts({ y: 'kW', unit: 'kW', title: items => items.length ? fmtDayW(keys[items[0].dataIndex]) : '' });
+            o.plugins.tooltip.callbacks.footer = items => {
+                if (!items.length) return '';
+                const r = rows[items[0].dataIndex];
+                return `Peak at ${fmtClock(r.pk.t)} PKT · load factor ${fmt(r.sum / r.n / r.pk.v * 100, 0)}%`;
+            };
+            draw('c-peak', 'bar', { labels: keys.map(fmtDayW), datasets: [
+                { label: 'Peak demand (kW)', data: rows.map(r => r.pk.v), backgroundColor: DIST_COLOR, borderRadius: 3, categoryPercentage: 0.8, barPercentage: 0.9 },
+                { label: 'Average load (kW)', data: rows.map(r => r.sum / r.n), backgroundColor: '#3b82f6', borderRadius: 3, categoryPercentage: 0.8, barPercentage: 0.9 }
+            ] }, o);
+            const top = rows.reduce((b, r) => r.pk.v > b.pk.v ? r : b, rows[0]);
+            $('s-peak').innerHTML = `Highest ${DEMAND_MIN}-minute average load of each day, next to the day's average load. Highest: <b>${fmt(top.pk.v, 1)} kW</b> on <b>${fmtDayW(top.pk.t)}</b> at ${fmtClock(top.pk.t)} PKT.`;
+        }
+        empty('c-peak', '');
+    }
+
+    // ---------- Load duration curve ----------
+    function renderLdc() {
+        if (!DEMAND) { draw('c-ldc', 'line', { labels: [], datasets: [] }, opts()); empty('c-ldc', 'Loading 15-minute demand…'); return; }
+        const dem = (DEMAND || []).map(x => x.v).sort((a, b) => b - a), N = dem.length;
+        const at = p => dem[Math.min(N - 1, Math.floor(p * N))];
+        draw('c-ldc', 'line', { labels: dem.map((_, k) => `${fmt(N > 1 ? k / (N - 1) * 100 : 0, 0)}%`), datasets: [
+            line('Load (kW)', dem, '#3b82f6', { fill: 'origin', backgroundColor: 'rgba(59, 130, 246, 0.15)' })
+        ] }, opts({ y: 'kW', unit: 'kW', legend: false, xTicks: 11, title: items => items.length ? `Load is at or above this ${fmt(N > 1 ? items[0].dataIndex / (N - 1) * 100 : 0, 1)}% of the time` : '' }));
+        $('s-ldc').innerHTML = N
+            ? `${DEMAND_MIN}-minute load values sorted from highest to lowest. Peak <b>${fmt(dem[0], 1)} kW</b>; above <b>${fmt(at(0.1), 1)} kW</b> for 10% of the time; median <b>${fmt(at(0.5), 1)} kW</b>; base load <b>${fmt(at(0.95), 1)} kW</b> (exceeded 95% of the time).`
+            : 'All 15-minute load values, sorted from highest to lowest.';
+        empty('c-ldc', N ? '' : 'No demand data in this period.');
+    }
+
+    // ---------- Heatmap ----------
+    const HM_STOPS = [[13, 35, 71], [29, 78, 216], [34, 211, 238], [236, 254, 255]];
+    function hmColor(x) {
+        const p = Math.max(0, Math.min(1, x)) * (HM_STOPS.length - 1), k = Math.min(HM_STOPS.length - 2, Math.floor(p)), f = p - k;
+        const c = HM_STOPS[k].map((v, j) => Math.round(v + (HM_STOPS[k + 1][j] - v) * f));
+        return `rgb(${c.join(',')})`;
+    }
+    function heatSeries() {
+        const D = DATA, m = $('t-heat-metric').value;
+        if (m === 'dist') return { arr: D.distTot, name: 'Distribution load' };
+        if (m === 'gen') return { arr: D.genTot, name: 'Generation' };
+        if (m === 'solar') return { arr: D.solarTot, name: 'Solar' };
+        const s = [...GEN, ...DIST].find(x => x.id === m);
+        return s ? { arr: D.P[s.id], name: s.label } : { arr: D.distTot, name: 'Distribution load' };
+    }
+    function renderHeat() {
+        const D = DATA, { arr, name } = heatSeries();
+        const sub = Math.max(1, Math.round(D.w / HOUR));
+        const cells = new Map();
+        arr.forEach((v, i) => {
+            if (v === null) return;
+            for (let h = 0; h < sub; h++) {
+                const t = D.times[i] + h * HOUR, k = `${pktDayStart(t)}|${pktHour(t)}`;
+                const c = cells.get(k) || { s: 0, n: 0 }; c.s += v; c.n++; cells.set(k, c);
+            }
+        });
+        const days = [];
+        for (let d = pktDayStart(D.r.start); d < D.r.stop; d += DAY) days.push(d);
+        const vals = [...cells.values()].map(c => c.s / c.n);
+        const lo = vals.length ? Math.min(...vals) : 0, hi = vals.length ? Math.max(...vals) : 1, rng = hi - lo || 1;
+        let html = '<div class="hd"></div>' + Array.from({ length: 24 }, (_, h) => `<div class="hd">${String(h).padStart(2, '0')}</div>`).join('');
+        days.forEach(d => {
+            html += `<div class="rl">${fmtDayW(d)}</div>`;
+            for (let h = 0; h < 24; h++) {
+                const c = cells.get(`${d}|${h}`);
+                if (!c) { html += `<div class="c na" data-r="${fmtDayW(d)}, ${String(h).padStart(2, '0')}:00 · no data"></div>`; continue; }
+                const v = c.s / c.n;
+                html += `<div class="c" style="background:${hmColor((v - lo) / rng)}" data-r="${fmtDayW(d)}, ${String(h).padStart(2, '0')}:00–${String(h + 1).padStart(2, '0')}:00 · ${name} ${fmt(v, 1)} kW" title="${fmt(v, 1)} kW"></div>`;
+            }
+        });
+        $('hm').innerHTML = html;
+        $('hm-min').textContent = vals.length ? `${fmt(lo, 0)} kW` : '--';
+        $('hm-max').textContent = vals.length ? `${fmt(hi, 0)} kW` : '--';
+        $('hm-bar').style.background = `linear-gradient(90deg, ${[0, 0.33, 0.66, 1].map(hmColor).join(', ')})`;
+        $('hm-read').textContent = vals.length ? 'Point at a cell to read its value' : `No ${name.toLowerCase()} data in this period`;
+    }
+
+    // ---------- Voltage & frequency (loaded only when shown) ----------
+    function loadVolt() {
+        const D = DATA;
+        if (!D || !RAW) return;
+        const mi = +$('t-volt-meter').value, m = METERS[mi];
+        if (!m) return;
+        const name = `v${mi}`;
+        if (!RAW.sets[name]) { $('s-volt').textContent = 'Loading…'; empty('c-volt', 'Loading voltage…'); empty('c-freq', 'Loading frequency…'); }
+        ensureSet(name).then(rows => {
+            if (D !== DATA || +$('t-volt-meter').value !== mi) return;
+            const ser = f => { const a = new Array(D.n).fill(null); rows.forEach(r => { if (r._field !== f) return; const i = Math.round((timeOf(r) - D.t0) / D.w), v = parseFloat(r._value); if (i >= 0 && i < D.n && !isNaN(v)) a[i] = v; }); return a; };
+            const V = [m.fields.v1, m.fields.v2, m.fields.v3].map(ser), F = ser(m.fields.freq);
+            draw('c-volt', 'line', { labels: D.labels, datasets: V.map((a, k) => line(`L${k + 1} (V)`, a, PHASE_COLORS[k], { borderWidth: 1.6 })) }, opts({ y: 'V', unit: 'V' }));
+            draw('c-freq', 'line', { labels: D.labels, datasets: [line('Frequency (Hz)', F, '#a78bfa', { borderWidth: 1.6 })] }, opts({ y: 'Hz', unit: 'Hz', dec: 2, legend: false }));
+            const all = V.flat().filter(v => v !== null), fv = F.filter(v => v !== null);
+            const unb = V[0].map((_, i) => { const p = V.map(a => a[i]); if (p.some(v => v === null)) return null; const avg = (p[0] + p[1] + p[2]) / 3; return avg > 0 ? Math.max(...p.map(v => Math.abs(v - avg))) / avg * 100 : null; }).filter(v => v !== null);
+            $('s-volt').innerHTML = all.length
+                ? `${m.label} · ${winText(D.w)} averages. Voltage <b>${fmt(Math.min(...all), 1)}–${fmt(Math.max(...all), 1)} V</b>, highest phase unbalance <b>${unb.length ? fmt(Math.max(...unb), 2) : '--'}%</b>${fv.length ? `; frequency <b>${fmt(Math.min(...fv), 2)}–${fmt(Math.max(...fv), 2)} Hz</b>` : ''}.`
+                : `${m.label}: no voltage data in this period.`;
+            empty('c-volt', all.length ? '' : 'No voltage data for this meter in this period.');
+            empty('c-freq', fv.length ? '' : 'No frequency data for this meter in this period.');
+        }).catch(err => {
+            console.error('Voltage query:', err);
+            if (D === DATA) $('s-volt').textContent = 'Could not load voltage and frequency. Press Refresh to try again.';
+        });
+    }
+
+    // ---------- trend selection ----------
+    let SHOWN = new Set(SECTIONS.filter(s => s.def).map(s => s.key));
+    const isShown = k => SHOWN.has(k);
+    function buildChips() {
+        try { const s = JSON.parse(localStorage.getItem(SEL_KEY)); if (Array.isArray(s)) SHOWN = new Set(s.filter(k => SECTIONS.some(x => x.key === k))); } catch (e) {}
+        const groups = [...new Set(SECTIONS.map(s => s.group))];
+        $('t-chips').innerHTML = groups.map(g => `
+            <div class="chip-group"><span>${g}</span><div class="chips">${SECTIONS.filter(s => s.group === g).map(s =>
+                `<button class="chip" data-sec="${s.key}" aria-pressed="false"><i class="fas ${s.icon}"></i>${s.label}</button>`).join('')}</div></div>`).join('')
+            + `<div class="chip-actions"><button class="btn ghost" id="t-sel-all">Show all</button><button class="btn ghost" id="t-sel-def">Default</button></div>`;
+        $('t-chips').addEventListener('click', e => {
+            const c = e.target.closest('.chip');
+            if (c) { const k = c.dataset.sec; SHOWN.has(k) ? SHOWN.delete(k) : SHOWN.add(k); applyShown(); return; }
+            if (e.target.closest('#t-sel-all')) { SHOWN = new Set(SECTIONS.map(s => s.key)); applyShown(); }
+            if (e.target.closest('#t-sel-def')) { SHOWN = new Set(SECTIONS.filter(s => s.def).map(s => s.key)); applyShown(); }
+        });
+        applyShown();
+    }
+    function applyShown() {
+        document.querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', String(SHOWN.has(c.dataset.sec))));
+        document.querySelectorAll('.t-card[data-sec]').forEach(el => el.hidden = !SHOWN.has(el.dataset.sec));
+        $('t-none').hidden = SHOWN.size > 0;
+        try { localStorage.setItem(SEL_KEY, JSON.stringify([...SHOWN])); } catch (e) {}
+        Object.values(CH).forEach(c => c.resize());
+        loadLazy();   // power factor and voltage data load only when their charts are shown
+    }
+
+    // ---------- CSV export ----------
+    function exportCsv() {
+        if (!DATA) return;
+        const D = DATA, cols = [...GEN, ...DIST];
+        const head = ['Time (PKT)', ...cols.map(s => `${s.label} (kW)`), 'Generation total (kW)', 'Distribution total (kW)', 'Solar total (kW)', 'Facility power factor'];
+        const t = x => new Date(x + PKT).toISOString().slice(0, 16).replace('T', ' ');
+        const v = x => x === null || x === undefined ? '' : (+x).toFixed(3);
+        const lines = [head.join(',')].concat(D.times.map((x, i) =>
+            [t(x), ...cols.map(s => v(D.P[s.id][i])), v(D.genTot[i]), v(D.distTot[i]), v(D.solarTot[i]), v(D.pf ? D.pf[i] : null)].join(',')));
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/csv' }));
+        a.download = `EMS_trends_${pktDateStr(D.r.start)}_to_${pktDateStr(D.r.stop - 1)}.csv`;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    }
+
+    // ---------- start ----------
+    document.addEventListener('DOMContentLoaded', () => {
+        Chart.defaults.font.family = "'Inter', 'Segoe UI', sans-serif";
+        Chart.defaults.color = '#8ea3c6';
+        Chart.defaults.borderColor = 'rgba(110, 150, 220, 0.12)';
+        Object.assign(Chart.defaults.plugins.tooltip, {
+            backgroundColor: 'rgba(8, 22, 46, 0.96)', borderColor: 'rgba(80, 130, 210, 0.45)', borderWidth: 1,
+            titleColor: '#ffffff', bodyColor: '#c9d6ee', footerColor: '#8ea3c6', padding: 10
+        });
+
+        // heatmap and voltage selectors
+        $('t-heat-metric').innerHTML = [['dist', 'Distribution load'], ['gen', 'Generation'], ...(SOLAR_IDS.length ? [['solar', 'Solar']] : []),
+            ...GEN.filter(s => !s.solar).map(s => [s.id, s.label]), ...DIST.map(s => [s.id, `Feeder: ${s.label}`])]
+            .map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
+        const vm = METERS.map((m, i) => [m, i]).filter(([m]) => m.fields.v1);
+        const def = (vm.find(([m]) => m.tag === 'Janitza_Main_Master') || vm[0] || [null, 0])[1];
+        $('t-volt-meter').innerHTML = vm.map(([m, i]) => `<option value="${i}"${i === def ? ' selected' : ''}>${m.label}</option>`).join('');
+
+        buildChips();
+
+        const now = Date.now();
+        $('t-from').value = RANGE.from || pktDateStr(pktDayStart(now) - 6 * DAY);
+        $('t-to').value = RANGE.to || pktDateStr(now);
+        $('t-from').max = $('t-to').max = pktDateStr(now);
+        const savePeriod = () => { try { localStorage.setItem(PERIOD_KEY, JSON.stringify(RANGE)); } catch (e) {} };
+        const syncSeg = () => {
+            document.querySelectorAll('#t-range-seg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.preset === RANGE.preset)));
+            $('t-custom').hidden = RANGE.preset !== 'custom';
+        };
+        $('t-range-seg').addEventListener('click', e => {
+            const b = e.target.closest('button[data-preset]'); if (!b) return;
+            RANGE.preset = b.dataset.preset; syncSeg(); savePeriod();
+            if (RANGE.preset !== 'custom') loadAll();
+        });
+        $('t-apply').addEventListener('click', () => { RANGE.from = $('t-from').value; RANGE.to = $('t-to').value; savePeriod(); loadAll(); });
+        $('t-refresh').addEventListener('click', () => loadAll('refresh'));
+        $('t-export').addEventListener('click', exportCsv);
+        $('t-prof-days').addEventListener('change', () => DATA && renderProfile());
+        $('t-heat-metric').addEventListener('change', () => DATA && renderHeat());
+        $('t-volt-meter').addEventListener('change', loadVolt);
+        $('hm').addEventListener('mouseover', e => { const c = e.target.closest('.c'); if (c) $('hm-read').textContent = c.dataset.r; });
+        syncSeg();
+
+        loadAll();
+        setInterval(() => { const r = getRange(); if (!r.error && r.live && !document.hidden) loadAll('auto'); }, REFRESH_MS);
+
+        const clock = () => { $('pkt-clock').innerText = new Date().toLocaleString('en-US', { timeZone: 'Asia/Karachi', hourCycle: 'h23', weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }).replace(' at', ''); };
+        clock(); setInterval(clock, 1000);
+    });
+</script>
+</body>
+</html>
