@@ -192,6 +192,7 @@
         /* Charts row */
         .charts-row { display: grid; grid-template-columns: 1.27fr 1fr; gap: 14px; }
         .chart-box { position: relative; height: 250px; margin-top: 10px; }
+        .chart-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
         .share-body { display: grid; grid-template-columns: minmax(180px, 1fr) auto; align-items: center; gap: 18px; margin-top: 10px; }
         .share-chart { position: relative; height: 290px; }
         .share-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
@@ -699,7 +700,12 @@
         </section>
         <section class="charts-row">
             <div class="card">
-                <div class="card-title"><i class="fas fa-circle-nodes ic-dist"></i> Distribution · Active Power per Meter and Phase (kW)</div>
+                <div class="chart-head">
+                    <div class="card-title"><i class="fas fa-circle-nodes ic-dist"></i> <span>Distribution · Active Power per Meter<span id="dist-bar-phase-txt"> and Phase</span> (kW)</span></div>
+                    <div class="et-seg" role="group" aria-label="Bars" id="dist-bar-mode">
+                        <button data-m="phase" aria-pressed="true">3 Phases</button><button data-m="total" aria-pressed="false">Total</button>
+                    </div>
+                </div>
                 <div class="chart-box"><canvas id="distBarChart"></canvas></div>
             </div>
             <div class="card">
@@ -1190,29 +1196,49 @@
 
         // ---------- Active power bar charts (one for Generation, one for Distribution) ----------
         // Meters show phase A/B/C. Sources without per-phase power (KE, Genset from iSolarCloud) show one "Total" bar.
-        // writes each bar's kW value just above the bar
+        // writes each bar's value at its end. Wide bars: horizontal text; narrow bars: text turned upright.
+        // Options per chart: plugins.barValueLabels = { unit: 'kW' }
         const barValueLabels = {
             id: 'barValueLabels',
-            afterDatasetsDraw(chart) {
-                const ctx = chart.ctx;
+            afterDatasetsDraw(chart, args, opts) {
+                const ctx = chart.ctx, unit = (opts && opts.unit) || 'kW';
+                const x = chart.scales.x, n = chart.data.labels.length || 1;
+                const catW = x.width / n;
+                const txt = v => `${fmt(v, unit === 'kW' || Math.abs(v) < 100 ? 1 : 0)} ${unit}`;   // kW: 1 decimal; kWh: whole numbers from 100
                 ctx.save();
-                ctx.font = '700 12px Inter, "Segoe UI", sans-serif';
                 ctx.fillStyle = '#ffffff';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'bottom';
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.6)'; ctx.shadowBlur = 3;
                 chart.data.datasets.forEach((d, i) => {
+                    if (!chart.isDatasetVisible(i)) return;
                     const meta = chart.getDatasetMeta(i);
-                    if (meta.hidden || !chart.isDatasetVisible(i)) return;
                     meta.data.forEach((el, k) => {
                         const v = d.data[k];
-                        if (v === null || v === undefined || v === 0 || isNaN(v)) return;
-                        ctx.fillText(`${fmt(v, 1)} kW`, el.x, Math.min(el.y, el.base) - 5);
+                        if (v === null || v === undefined || isNaN(v) || Math.abs(v) < 0.05) return;
+                        // room per bar in this category
+                        const cnt = chart.data.datasets.filter((dd, j) => chart.isDatasetVisible(j) && (!dd.skipNull || (dd.data[k] !== null && dd.data[k] !== undefined))).length || 1;
+                        const t = txt(v), top = Math.min(el.y, el.base);
+                        ctx.font = '700 11px Inter, "Segoe UI", sans-serif';
+                        if (ctx.measureText(t).width + 4 <= catW / cnt) {
+                            ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+                            ctx.fillText(t, el.x, top - 4);
+                        } else {
+                            ctx.save();
+                            ctx.font = '600 10px Inter, "Segoe UI", sans-serif';
+                            ctx.translate(el.x, top - 4); ctx.rotate(-Math.PI / 2);
+                            ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+                            ctx.fillText(t, 0, 0);
+                            ctx.restore();
+                        }
                     });
                 });
                 ctx.restore();
             }
         };
-        function makePhaseBar(canvasId, srcs, valueLabels) {
+        // grid space above the tallest bar, so the labels fit
+        const labelGrace = upright => upright ? '38%' : '15%';
+
+        function makePhaseBar(canvasId, srcs, opt = {}) {
+            const valueLabels = !!opt.valueLabels;
             const withPhases = srcs.some(s => s.kind === 'meter');
             const withTotal = srcs.some(s => s.kind === 'isolar');
             const withSolar = srcs.some(s => s.kind === 'solarTotal');
@@ -1224,6 +1250,11 @@
             const datasets = withPhases ? ['A', 'B', 'C'].map((ph, i) => Object.assign(bar(`Phase ${ph}`, PHASE_COLORS[i]), { phase: i })) : [];
             if (withTotal) datasets.push(bar('Total (no phase data)', TOTAL_BAR_COLOR));
             if (withSolar) datasets.push(Object.assign(bar('Solar Total', SOLAR_TOTAL_COLOR), { solarTotal: true }));
+            if (opt.totalToggle) datasets.push(Object.assign(bar('Total', '#3b82f6'), {
+                meterTotal: true, hidden: true, modeOff: true,
+                backgroundColor: c => barGradient(srcs[c.dataIndex] ? srcs[c.dataIndex].color : '#3b82f6')(c),
+                hoverBackgroundColor: srcs.map(s => s.color)
+            }));
             return new Chart(document.getElementById(canvasId), {
                 type: 'bar',
                 plugins: valueLabels ? [barValueLabels] : [],
@@ -1234,10 +1265,12 @@
                     layout: { padding: { top: valueLabels ? 6 : 0 } },
                     scales: {
                         x: { grid: { display: false }, border: { color: 'rgba(110, 150, 220, 0.25)' }, ticks: { autoSkip: false, maxRotation: 0, color: '#c9d6ee', font: { size: 11 } } },
-                        y: { beginAtZero: true, grace: valueLabels ? '15%' : 0, border: { display: false }, ticks: { maxTicksLimit: 6 } }
+                        y: { beginAtZero: true, grace: valueLabels ? labelGrace(opt.upright) : 0, border: { display: false }, ticks: { maxTicksLimit: 6 } }
                     },
                     plugins: {
-                        legend: { position: 'top', align: 'end', labels: { boxWidth: 16, boxHeight: 10, color: '#c9d6ee', font: { size: 11 } } },
+                        barValueLabels: { unit: 'kW' },
+                        legend: { position: 'top', align: 'end', labels: { boxWidth: 16, boxHeight: 10, color: '#c9d6ee', font: { size: 11 },
+                                  filter: (item, data) => !data.datasets[item.datasetIndex].modeOff } },
                         tooltip: { mode: 'index', intersect: false, filter: item => item.raw !== null && item.raw !== undefined, callbacks: {
                             title: items => items.length ? srcs[items[0].dataIndex].label : '',
                             label: c => ` ${c.dataset.label}: ${fmt(c.parsed.y)} kW`
@@ -1251,12 +1284,29 @@
                 const st = STATE[s.id] || {};
                 const p = st.online && isNum(st.p) ? st.p : 0;
                 chart.data.datasets.forEach(d => {
-                    if (d.phase !== undefined) d.data[k] = s.kind === 'meter' ? (st.online && st.ph ? st.ph[d.phase] : 0) : null;
+                    if (d.meterTotal) d.data[k] = p;
+                    else if (d.phase !== undefined) d.data[k] = s.kind === 'meter' ? (st.online && st.ph ? st.ph[d.phase] : 0) : null;
                     else if (d.solarTotal) d.data[k] = s.kind === 'solarTotal' ? p : null;
                     else d.data[k] = s.kind === 'isolar' ? p : null;
                 });
             });
             chart.update();
+        }
+        // Distribution chart: 3 phases per meter, or one Total bar per meter
+        const DIST_BAR_MODE_KEY = 'ems_dist_bar_mode_v1';
+        function setDistBarMode(mode) {
+            const total = mode === 'total';
+            distBar.data.datasets.forEach((d, i) => {
+                d.modeOff = total ? !d.meterTotal : !!d.meterTotal;
+                d.hidden = d.modeOff;
+                distBar.getDatasetMeta(i).hidden = null;   // forget legend clicks from the other view
+            });
+            distBar.options.plugins.legend.display = !total;
+            distBar.options.scales.y.grace = labelGrace(!total);
+            distBar.update();
+            document.querySelectorAll('#dist-bar-mode button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.m === mode)));
+            document.getElementById('dist-bar-phase-txt').hidden = total;
+            try { localStorage.setItem(DIST_BAR_MODE_KEY, mode); } catch (e) {}
         }
         function updateShare(chart, legendId, srcs, valueOf) {
             const share = srcs.map(s => { const st = STATE[s.id] || {}; return st.online && isNum(st.p) ? valueOf(st.p) : 0; });
@@ -1489,8 +1539,14 @@
             initEnergyTrend();
 
             initTariff();
-            genBar = makePhaseBar('genBarChart', GEN_BAR_SRC, true);
-            distBar = makePhaseBar('distBarChart', DIST_SRC);
+            genBar = makePhaseBar('genBarChart', GEN_BAR_SRC, { valueLabels: true });
+            distBar = makePhaseBar('distBarChart', DIST_SRC, { valueLabels: true, totalToggle: true, upright: true });
+            let distMode = 'phase';
+            try { distMode = localStorage.getItem(DIST_BAR_MODE_KEY) === 'total' ? 'total' : 'phase'; } catch (e) {}
+            setDistBarMode(distMode);
+            document.getElementById('dist-bar-mode').addEventListener('click', e => {
+                const b = e.target.closest('button[data-m]'); if (b) setDistBarMode(b.dataset.m);
+            });
 
             // draws each slice's kW value inside its arc; narrow slices (<7%) get a callout label outside the ring
             const arc0Top = ch => ch.getDatasetMeta(0).data[0].y - ch.getDatasetMeta(0).data[0].outerRadius;
@@ -3135,7 +3191,9 @@
             const options = {
                 responsive: true, maintainAspectRatio: false, animation: false,
                 interaction: { mode: 'index', intersect: false },
+                layout: { padding: { top: 6 } },
                 plugins: {
+                    barValueLabels: { unit: 'kWh' },
                     legend: { position: 'bottom', labels: { boxWidth: 14, boxHeight: 10, color: '#c9d6ee', font: { size: 11 } } },
                     tooltip: { filter: it => it.raw !== null && it.raw !== undefined, callbacks: {
                         title: items => items.length ? titleOf(items[0].dataIndex) : '',
@@ -3144,11 +3202,11 @@
                 },
                 scales: {
                     x: { grid: { display: false }, border: { color: 'rgba(110, 150, 220, 0.25)' }, ticks: { color: '#c9d6ee', maxRotation: 0, autoSkip: true, maxTicksLimit: r.step === 'hour' ? 12 : 16, font: { size: 11 } } },
-                    y: { beginAtZero: true, border: { display: false }, ticks: { maxTicksLimit: 7 }, title: { display: true, text: unitTitle } }
+                    y: { beginAtZero: true, grace: labelGrace(true), border: { display: false }, ticks: { maxTicksLimit: 7 }, title: { display: true, text: unitTitle } }
                 }
             };
             if (ET.chart) { ET.chart.data = { labels, datasets }; ET.chart.options = options; ET.chart.update('none'); }
-            else ET.chart = new Chart($('et-chart'), { type: 'bar', data: { labels, datasets }, options });
+            else ET.chart = new Chart($('et-chart'), { type: 'bar', plugins: [barValueLabels], data: { labels, datasets }, options });
             etEmpty(S.gen === null && S.load === null ? (ET.prog ? `Loading energy data… ${ET.prog.pct}%` : 'No energy data in this period.') : '');
 
             const cell = v => v === null ? '<span class="na">—</span>' : fmt(v, 1);
