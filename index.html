@@ -152,7 +152,7 @@
         .kpi-value.amber { color: var(--amber); }
         .kpi-value.center { text-align: center; padding-left: 0; }
         .kpi.live .kpi-title { font-size: 1.15rem; }
-        #facility-live-kw { font-size: clamp(2.3rem, 2.9vw, 3.2rem); color: var(--cyan); text-shadow: 0 0 18px rgba(34,211,238,0.3); }
+        #facility-live-kw { font-size: clamp(2.5rem, 3.4vw, 4rem); color: var(--cyan); text-shadow: 0 0 18px rgba(34,211,238,0.3); }
         #facility-live-kw .unit { color: var(--cyan); }
         .ic-yellow { color: var(--yellow); filter: drop-shadow(0 0 8px rgba(250,204,21,0.45)); }
         .ic-blue { color: var(--blue); filter: drop-shadow(0 0 8px rgba(59,130,246,0.45)); }
@@ -161,7 +161,7 @@
 
         /* Row 2 */
         .row2 { display: grid; grid-template-columns: 1.6fr 1.15fr 0.78fr; gap: 14px; }
-        .gen-body { display: grid; grid-template-columns: 1fr 1px 0.62fr; gap: 18px; margin-top: 12px; align-items: center; }
+        .gen-body { display: grid; grid-template-columns: 1fr 1px 0.85fr; gap: 18px; margin-top: 12px; align-items: center; }
         .gen-list { display: flex; flex-direction: column; gap: 10px; }
         .gen-row { display: grid; grid-template-columns: 24px 1fr auto; align-items: center; gap: 10px; font-size: 0.9rem; color: var(--text-2); }
         .gen-row .g-ic { color: #a9bbdb; font-size: 0.95rem; display: flex; justify-content: center; }
@@ -171,7 +171,7 @@
         .vdiv { align-self: stretch; background: var(--line); }
         .gen-total { text-align: center; }
         .gen-total-label { font-size: 1.15rem; font-weight: 700; color: #fff; }
-        .gen-total-value { font-size: clamp(2.1rem, 2.7vw, 3rem); font-weight: 800; color: var(--cyan); margin-top: 6px; white-space: nowrap; text-shadow: 0 0 18px rgba(34,211,238,0.35); }
+        .gen-total-value { font-size: clamp(2.4rem, 3.3vw, 3.7rem); font-weight: 800; color: var(--cyan); margin-top: 6px; white-space: nowrap; text-shadow: 0 0 18px rgba(34,211,238,0.35); }
         .gen-total-value .unit { color: var(--cyan); font-size: 0.8em; }
         .dist-body { display: flex; flex-direction: column; gap: 18px; margin-top: 18px; }
         .dist-row { display: grid; grid-template-columns: 30px 1fr auto; align-items: center; gap: 12px; font-size: 0.92rem; color: var(--text-2); }
@@ -683,7 +683,7 @@
         <!-- Charts -->
         <section class="charts-row">
             <div class="card">
-                <div class="card-title"><i class="fas fa-sun ic-sun"></i> Generation · Active Power per Source and Phase (kW)</div>
+                <div class="card-title"><i class="fas fa-sun ic-sun"></i> Generation · Active Power per Source</div>
                 <div class="chart-box"><canvas id="genBarChart"></canvas></div>
             </div>
             <div class="card">
@@ -1122,6 +1122,9 @@
             ? [...GEN_SRC.filter(s => !(s.kind === 'meter' && METERS[s.idx].solar)), SOLAR_TOTAL_SRC]
             : GEN_SRC;
         const GEN_BAR_SRC = GEN_VIEW_SRC;
+        // Generation card list: KE, Genset, Solar 1, Solar 2, then Solar Total
+        const GEN_LIST_SRC = METERS.some(m => m.solar) ? [...GEN_SRC, SOLAR_TOTAL_SRC] : GEN_SRC;
+        const isSolarMeter = s => s.kind === 'meter' && !!METERS[s.idx].solar;
         const DIST_SRC = SOURCES.filter(s => s.group !== 'generation');   // distribution (+ "other", if any)
         const STATE = {};                               // latest computed values per source id
         let SEL = SOURCES.length ? SOURCES[0].id : null; // source shown in the Meter Details panel
@@ -1131,7 +1134,7 @@
         const esc = s => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 
         function buildLayout() {
-            document.getElementById('gen-list').innerHTML = GEN_VIEW_SRC.map(s => `
+            document.getElementById('gen-list').innerHTML = GEN_LIST_SRC.map(s => `
                 <div class="gen-row" title="${esc(s.info)}">
                     <span class="g-ic">${iconHtml(s.icon)}</span><span>${s.label}</span>
                     <span class="gen-val off" id="gr-${s.id}">-- kW</span>
@@ -1187,7 +1190,29 @@
 
         // ---------- Active power bar charts (one for Generation, one for Distribution) ----------
         // Meters show phase A/B/C. Sources without per-phase power (KE, Genset from iSolarCloud) show one "Total" bar.
-        function makePhaseBar(canvasId, srcs) {
+        // writes each bar's kW value just above the bar
+        const barValueLabels = {
+            id: 'barValueLabels',
+            afterDatasetsDraw(chart) {
+                const ctx = chart.ctx;
+                ctx.save();
+                ctx.font = '700 12px Inter, "Segoe UI", sans-serif';
+                ctx.fillStyle = '#ffffff';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'bottom';
+                chart.data.datasets.forEach((d, i) => {
+                    const meta = chart.getDatasetMeta(i);
+                    if (meta.hidden || !chart.isDatasetVisible(i)) return;
+                    meta.data.forEach((el, k) => {
+                        const v = d.data[k];
+                        if (v === null || v === undefined || v === 0 || isNaN(v)) return;
+                        ctx.fillText(`${fmt(v, 1)} kW`, el.x, Math.min(el.y, el.base) - 5);
+                    });
+                });
+                ctx.restore();
+            }
+        };
+        function makePhaseBar(canvasId, srcs, valueLabels) {
             const withPhases = srcs.some(s => s.kind === 'meter');
             const withTotal = srcs.some(s => s.kind === 'isolar');
             const withSolar = srcs.some(s => s.kind === 'solarTotal');
@@ -1201,13 +1226,15 @@
             if (withSolar) datasets.push(Object.assign(bar('Solar Total', SOLAR_TOTAL_COLOR), { solarTotal: true }));
             return new Chart(document.getElementById(canvasId), {
                 type: 'bar',
+                plugins: valueLabels ? [barValueLabels] : [],
                 data: { labels: srcs.map(s => s.label.split(' ')), datasets },   // two-word names wrap onto 2 lines
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    layout: { padding: { top: valueLabels ? 6 : 0 } },
                     scales: {
                         x: { grid: { display: false }, border: { color: 'rgba(110, 150, 220, 0.25)' }, ticks: { autoSkip: false, maxRotation: 0, color: '#c9d6ee', font: { size: 11 } } },
-                        y: { beginAtZero: true, border: { display: false }, ticks: { maxTicksLimit: 6 } }
+                        y: { beginAtZero: true, grace: valueLabels ? '15%' : 0, border: { display: false }, ticks: { maxTicksLimit: 6 } }
                     },
                     plugins: {
                         legend: { position: 'top', align: 'end', labels: { boxWidth: 16, boxHeight: 10, color: '#c9d6ee', font: { size: 11 } } },
@@ -1462,7 +1489,7 @@
             initEnergyTrend();
 
             initTariff();
-            genBar = makePhaseBar('genBarChart', GEN_BAR_SRC);
+            genBar = makePhaseBar('genBarChart', GEN_BAR_SRC, true);
             distBar = makePhaseBar('distBarChart', DIST_SRC);
 
             // draws each slice's kW value inside its arc; narrow slices (<7%) get a callout label outside the ring
@@ -1903,12 +1930,14 @@
             document.getElementById('dist-total-imp').innerText = `${fmt(dt.imp, 0)} kWh`;
             document.getElementById('dist-online').innerText = `${dt.online} / ${dt.count}`;
 
-            GEN_VIEW_SRC.forEach(s => {
+            GEN_LIST_SRC.forEach(s => {
                 const st = STATE[s.id] || {}, el = document.getElementById(`gr-${s.id}`);
                 const on = st.online && isNum(st.p);
-                el.innerText = on ? `${fmt(st.p, 1)} kW` : '-- kW';
+                // solar meters: size of the power, same as Solar Total (CTs may face either way)
+                const p = on && isSolarMeter(s) ? Math.abs(st.p) : st.p;
+                el.innerText = on ? `${fmt(p, 1)} kW` : '-- kW';
                 el.classList.toggle('off', !on);
-                el.classList.toggle('negative', on && st.p < 0);
+                el.classList.toggle('negative', on && p < 0);
             });
 
             renderRows();
