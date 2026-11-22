@@ -262,6 +262,20 @@
         .note-energy   { background: rgba(239, 68, 68, 0.13); color: #fca5a5; border-color: rgba(239, 68, 68, 0.4); }
         .note-idle     { background: rgba(148, 163, 184, 0.12); color: #cbd5e1; border-color: rgba(148, 163, 184, 0.3); }
         .note-source   { background: rgba(34, 211, 238, 0.1); color: #67e8f9; border-color: rgba(34, 211, 238, 0.3); }
+        .note-export   { background: rgba(244, 114, 182, 0.14); color: #f9a8d4; border-color: rgba(244, 114, 182, 0.45); }
+
+        /* KE export warning (no net metering) */
+        .export-alert { display: flex; align-items: center; gap: 14px; padding: 12px 18px; border-radius: 12px;
+                        background: linear-gradient(90deg, rgba(190, 24, 93, 0.28), rgba(190, 24, 93, 0.1)); border: 1px solid rgba(244, 114, 182, 0.6); }
+        .export-alert[hidden] { display: none; }
+        .export-alert > i { font-size: 1.5rem; color: #f472b6; }
+        .export-alert b { display: block; color: #fff; font-size: 0.98rem; }
+        .export-alert span { font-size: 0.82rem; color: #fbcfe8; }
+        .gen-total-sub { font-size: 0.8rem; font-weight: 600; color: #f9a8d4; margin-top: 6px; }
+        .gen-total-sub[hidden] { display: none; }
+        .share-legend .lg-note { font-size: 0.76rem; font-weight: 600; color: var(--muted); margin-left: 2px; }
+        .share-legend .lg-neg { color: #f9a8d4; }
+        .et-s.warn { border-color: rgba(244, 114, 182, 0.6); background: rgba(190, 24, 93, 0.16); }
 
         .detail-card { padding: 14px 16px 16px; }
         .pd-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
@@ -560,6 +574,11 @@
             <div class="load-sub"><span id="load-sub">Step 1 of 3: requesting live meter values</span><span id="load-time">0 s</span></div>
         </div>
 
+        <div class="export-alert" id="export-alert" role="alert" hidden>
+            <i class="fas fa-triangle-exclamation"></i>
+            <div><b id="export-alert-title">Exporting to KE</b><span id="export-alert-text"></span></div>
+        </div>
+
         <!-- KPI cards -->
         <section class="kpi-row">
             <div class="card kpi" title="Energy used by all distribution meters this month, from the 1st at 00:00 PKT up to now, from their energy import counters">
@@ -620,6 +639,7 @@
                     <div class="gen-total">
                         <div class="gen-total-label">Total Generation</div>
                         <div class="gen-total-value" id="gen-total-kw">-- <span class="unit">kW</span></div>
+                        <div class="gen-total-sub" id="gen-export-sub" hidden></div>
                     </div>
                 </div>
             </div>
@@ -713,7 +733,7 @@
                 <div class="share-body">
                     <div class="share-chart">
                         <canvas id="distShareChart"></canvas>
-                        <div class="share-center"><b id="share-total">-- kW</b><span>Total Load</span></div>
+                        <div class="share-center"><b id="share-total">-- kW</b><span id="share-total-sub">Total Load</span></div>
                     </div>
                     <ul class="share-legend" id="share-legend"></ul>
                 </div>
@@ -979,6 +999,13 @@
         const NOISE_POWER_W = 10;      // power readings smaller than this are shown as 0.00 kW
         const REACTIVE_PF = 0.5;       // |P| / S below this = mostly reactive load
         const MIN_S_FOR_PF_VA = 200;   // only judge power factor above this apparent power
+
+        // --- NO NET METERING ---
+        // This facility has NO net metering: energy pushed back into KE is not credited.
+        // KE power is negative when solar exports. Only the positive part (import) counts as supply / purchase;
+        // the negative part is tracked separately as "export (not credited)" and raises an alert.
+        const EXPORT_ALERT_KW = 0.5;   // KE export above this raises the warning banner and the bell
+        const isGenset = s => /genset|generator/i.test(`${s.label} ${s.device || ''}`);
 
         // --- FIELD MAPS (as written by ems_combined_logger.py) ---
         const JANITZA_FIELDS = {
@@ -1309,7 +1336,7 @@
             try { localStorage.setItem(DIST_BAR_MODE_KEY, mode); } catch (e) {}
         }
         function updateShare(chart, legendId, srcs, valueOf) {
-            const share = srcs.map(s => { const st = STATE[s.id] || {}; return st.online && isNum(st.p) ? valueOf(st.p) : 0; });
+            const share = srcs.map(s => { const st = STATE[s.id] || {}; return st.online && isNum(st.p) ? valueOf(st.p, s) : 0; });
             chart.data.datasets[0].data = share;
             chart.update();
             renderShareLegend(legendId, srcs, share);
@@ -1867,6 +1894,8 @@
                 title: `Power factor ${pf.toFixed(2)}: the current is mostly reactive, so very little real power is used. Typical of capacitor banks, lightly loaded motors or transformers.` }),
             energy: () => ({ cls: 'note-energy', icon: 'fa-triangle-exclamation', label: 'Energy not counting',
                 title: 'Current is flowing but both energy counters read 0. The meter may store energy in different registers (different model) or the counters were reset. Compare with the energy value on the meter display.' }),
+            export: kw => ({ cls: 'note-export', icon: 'fa-arrow-right-from-bracket', label: `Exporting ${fmt(kw, 1)} kW`,
+                title: 'Power is flowing back into KE (solar output is higher than the facility load). This facility has NO net metering, so this energy is NOT credited: it is given away. Check the zero-export / export-limit setting of the solar inverters or logger.' }),
             source: () => ({ cls: 'note-source', icon: 'fa-cloud', label: 'iSolarCloud · same values as portal',
                 title: 'Read from the Sungrow iSolarCloud portal. The portal gets a new reading from the Logger1000 about every 5 minutes; the logger checks the portal every minute, so the values here match the iSolarCloud page.' })
         };
@@ -1899,7 +1928,7 @@
             const offlineNames = [];
             const groupTotals = {};
             ['generation', 'distribution', 'other'].forEach(g =>
-                groupTotals[g] = { w: 0, imp: 0, exp: 0, online: 0, count: 0 });
+                groupTotals[g] = { w: 0, imp: 0, exp: 0, online: 0, count: 0, expW: 0 });
             const subW = { production: 0, utility: 0 };
 
             METERS.forEach((m, i) => {
@@ -1958,19 +1987,37 @@
             mo.innerText = `${onlineCount} / ${METERS.length}`;
             mo.classList.toggle('green', onlineCount === METERS.length);
             mo.classList.toggle('amber', onlineCount < METERS.length);
-            document.getElementById('meters-offline-list').innerText =
-                offlineNames.length ? `Offline: ${offlineNames.join(', ')}` : 'All meters reporting';
-            document.getElementById('bell-dot').hidden = offlineNames.length === 0;
-
             renderIsolar(isolarCsv, isolarDetailCsv, groupTotals.generation);
+
+            // KE export (no net metering): banner + bell
+            const expKw = groupTotals.generation.expW / 1000;
+            const exporting = expKw >= EXPORT_ALERT_KW;
+            const banner = document.getElementById('export-alert');
+            banner.hidden = !exporting;
+            if (exporting) {
+                const rate = TARIFF.tou ? TARIFF.offRate : TARIFF.rate;
+                document.getElementById('export-alert-title').textContent = `Solar is exporting ${fmt(expKw, 1)} kW to KE`;
+                document.getElementById('export-alert-text').textContent =
+                    `No net metering: this energy is NOT credited${isNum(rate) ? ` (about PKR ${fmt(expKw * rate, 0)} lost per hour at ${fmt(rate, 2)} PKR/kWh)` : ''}. ` +
+                    'Check the zero-export / export-limit setting of the solar inverters.';
+            }
+            const bellLines = [];
+            if (exporting) bellLines.push(`Exporting ${fmt(expKw, 1)} kW to KE (no net metering, not credited)`);
+            bellLines.push(offlineNames.length ? `Offline: ${offlineNames.join(', ')}` : 'All meters reporting');
+            document.getElementById('meters-offline-list').innerText = bellLines.join('\n');
+            document.getElementById('bell-dot').hidden = offlineNames.length === 0 && !exporting;
 
             // Solar Total = Solar 1 + Solar 2 (size of the power, solar CTs may face either way)
             const solarLive = METERS.map((m, i) => m.solar ? STATE[`m${i}`] : null).filter(st => st && st.online && isNum(st.p));
             STATE['solar-total'] = { online: solarLive.length > 0, p: solarLive.reduce((a, st) => a + Math.abs(st.p), 0) };
 
+            // Total Generation = KE import + Genset + Solar (export to KE is NOT subtracted here, it is shown below)
             const g = groupTotals.generation, dt = groupTotals.distribution;
             setVal('gen-total-kw', g.w / 1000, 'kW', 1);
             document.getElementById('gen-total-kw').classList.toggle('negative', g.w < 0);
+            const genExp = document.getElementById('gen-export-sub');
+            genExp.hidden = !exporting;
+            genExp.textContent = exporting ? `of which ${fmt(expKw, 1)} kW exported to KE · not credited` : '';
 
             // Solar 1 + Solar 2
             const solarSt = METERS.map((m, i) => m.solar ? STATE[`m${i}`] : null).filter(Boolean);
@@ -1991,7 +2038,7 @@
                 const on = st.online && isNum(st.p);
                 // solar meters: size of the power, same as Solar Total (CTs may face either way)
                 const p = on && isSolarMeter(s) ? Math.abs(st.p) : st.p;
-                el.innerText = on ? `${fmt(p, 1)} kW` : '-- kW';
+                el.innerText = on ? `${fmt(p, 1)} kW${s.kind === 'isolar' && p < 0 ? ' (export)' : ''}` : '-- kW';
                 el.classList.toggle('off', !on);
                 el.classList.toggle('negative', on && p < 0);
             });
@@ -2007,17 +2054,29 @@
 
             updatePhaseBar(genBar, GEN_BAR_SRC);
             updatePhaseBar(distBar, DIST_SRC);
-            // generation share uses the size of each source (solar may read negative when its CTs face the other way)
-            const genShareTot = updateShare(genShare, 'gen-share-legend', GEN_VIEW_SRC, p => Math.abs(p));
+            // generation share: solar uses the size of its power (CTs may face either way);
+            // KE / Genset count only when supplying (export is not generation)
+            const genShareTot = updateShare(genShare, 'gen-share-legend', GEN_VIEW_SRC, (p, s) => s.kind === 'isolar' ? Math.max(p, 0) : Math.abs(p));
             document.getElementById('gen-share-total').innerText = `${fmt(genShareTot, 1)} kW`;
-            updateShare(distShare, 'share-legend', DIST_SRC, p => Math.max(p, 0));
-            document.getElementById('share-total').innerText = `${fmt(dt.w / 1000, 1)} kW`;
+            // distribution share: only feeders drawing power make slices; the centre is the sum of the slices,
+            // so slices, percentages and the total always agree. Reverse feeders are listed in the legend.
+            const distShareTot = updateShare(distShare, 'share-legend', DIST_SRC, p => Math.max(p, 0));
+            document.getElementById('share-total').innerText = `${fmt(distShareTot, 1)} kW`;
+            const revKw = DIST_SRC.reduce((a, s) => { const st = STATE[s.id] || {}; return a + (st.online && isNum(st.p) && st.p < 0 ? -st.p : 0); }, 0);
+            document.getElementById('share-total-sub').textContent = revKw > 0.05 ? `Total Load · ${fmt(revKw, 1)} kW reverse not incl.` : 'Total Load';
         }
 
         function renderShareLegend(listId, srcs, share) {
             const tot = share.reduce((a, b) => a + b, 0);
-            document.getElementById(listId).innerHTML = srcs.map((s, k) => `
-                <li title="${esc(s.label)}"><span class="dot" style="background:${s.color}"></span>${esc(s.label)} – <b>${tot > 0 ? (share[k] / tot * 100).toFixed(1) : '0.0'}%</b></li>`).join('');
+            document.getElementById(listId).innerHTML = srcs.map((s, k) => {
+                const st = STATE[s.id];
+                const pct = `<b>${tot > 0 ? (share[k] / tot * 100).toFixed(1) : '0.0'}%</b>`;
+                let extra = '';
+                if (st && !st.online) extra = ' <span class="lg-note">offline</span>';
+                else if (st && isNum(st.p) && st.p < -0.05 && !share[k])
+                    extra = ` <span class="lg-note lg-neg">${fmt(st.p, 1)} kW ${s.kind === 'isolar' ? 'export' : 'reverse'}</span>`;
+                return `<li title="${esc(s.label)}"><span class="dot" style="background:${s.color}"></span>${esc(s.label)} – ${pct}${extra}</li>`;
+            }).join('');
         }
 
         // ---------- Meters table ----------
@@ -2140,7 +2199,12 @@
                 if (online) {
                     gt.online++;
                     const p = d.meter_active_power_kw || 0, q = d.reactive_power_kvar;
-                    gt.w += p * 1000;
+                    // no net metering: only import is supply; export is tracked separately
+                    gt.w += Math.max(p, 0) * 1000;
+                    if (p < 0 && !isGenset(s)) {
+                        gt.expW += -p * 1000;
+                        if (-p >= EXPORT_ALERT_KW) st.notes.unshift(NOTE.export(-p));
+                    }
                     st.p = p;
                     st.q = q;
                     st.cur = [d.phase_a_current_a, d.phase_b_current_a, d.phase_c_current_a];
@@ -2932,7 +2996,7 @@
         // (same idea as the iSolarCloud energy page). Loads after the dashboard's first load.
         // Energy = integral of active power in each hour or day. Finished periods are kept in memory.
         // =====================================================================
-        const ET_COLORS = { gen: '#60a5fa', load: '#facc15', solar: '#f59e0b', ke: '#ef4444', genset: '#9ca3af' };
+        const ET_COLORS = { gen: '#60a5fa', load: '#facc15', solar: '#f59e0b', ke: '#ef4444', genset: '#9ca3af', exp: '#f472b6' };
         const ET_REFRESH_MS = 5 * 60 * 1000;    // the current period reloads every 5 minutes
         const ET_MAX_DAYS = 92;
         const ET_VIEW_KEY = 'ems_et_view_v1';
@@ -2975,7 +3039,7 @@
         const ET_CONC = 3;                      // batches loading at the same time
         const ET_SETTLE_MS = 15 * 60 * 1000;    // an hour / day counts as finished 15 min after it ends (late readings)
         const ET_UNIT_MAX = 2000;               // most hours / days kept in the browser
-        const ET_UNIT_KEY = 'ems_et_units_v1_' + (() => {   // new key when the meter list changes
+        const ET_UNIT_KEY = 'ems_et_units_v2_' + (() => {   // v2: KE stored as import + export (old net values discarded)   // new key when the meter list changes
             const sig = JSON.stringify([METERS.map(m => [m.measurement, m.tag, m.fields.pTotal]), ISOLAR_SOURCES.map(x => x.device)]);
             let h = 0; for (const c of sig) h = (h * 31 + c.charCodeAt(0)) | 0;
             return (h >>> 0).toString(36);
@@ -3008,14 +3072,20 @@
   |> filter(fn: (r) => ${fields.map(f => `r._field == "${f}"`).join(' or ')})
   ${integ}
   |> keep(columns: ["_time", "_value", "_measurement", "meter_name"])`),
-                !ISOLAR_SOURCES.length ? Promise.resolve({ rows: [], ok: true }) : runFlux(`from(bucket: "${INFLUX_BUCKET}")
+                // KE / Genset: import (positive power) and export (negative power) are integrated SEPARATELY.
+                // Integrating the signed power would let export cancel import inside the same hour, and with
+                // no net metering export is never credited, so it must not reduce the purchased energy.
+                !ISOLAR_SOURCES.length ? Promise.resolve({ imp: [], exp: [], ok: true }) : Promise.all(['imp', 'exp'].map(dir => runFlux(`from(bucket: "${INFLUX_BUCKET}")
   ${range}
   |> filter(fn: (r) => r._measurement == "isolarcloud_device")
   |> filter(fn: (r) => ${ISOLAR_SOURCES.map(s => `r.device_name == "${s.device}"`).join(' or ')})
   |> filter(fn: (r) => r._field == "meter_active_power_kw")
+  |> map(fn: (r) => ({ r with _value: ${dir === 'imp'
+        ? 'if float(v: r._value) > 0.0 then float(v: r._value) else 0.0'
+        : 'if float(v: r._value) < 0.0 then -float(v: r._value) else 0.0'} }))
   ${integ}
-  |> keep(columns: ["_time", "_value", "device_name"])`).then(rows => ({ rows, ok: true }))
-                    .catch(err => { console.error('Energy trend (iSolarCloud):', err); return { rows: [], ok: false }; })
+  |> keep(columns: ["_time", "_value", "device_name"])`))).then(([imp, exp]) => ({ imp, exp, ok: true }))
+                    .catch(err => { console.error('Energy trend (iSolarCloud):', err); return { imp: [], exp: [], ok: false }; })
             ]);
             const now = Date.now();
             const per = new Map(ts.map(t => [t, { m: [], i: [] }]));
@@ -3025,10 +3095,14 @@
                 const v = parseFloat(r._value), u = slot(new Date(r._time).getTime());
                 if (u && !isNaN(v)) u.m.push([r._measurement, r.meter_name, r3(v)]);
             });
-            iRes.rows.forEach(r => {
+            // u.i entries: [device, import kWh, export kWh]
+            [[iRes.imp, 1], [iRes.exp, 2]].forEach(([rows, k]) => rows.forEach(r => {
                 const v = parseFloat(r._value), u = slot(new Date(r._time).getTime());
-                if (u && !isNaN(v)) u.i.push([r.device_name, r3(v)]);
-            });
+                if (!u || isNaN(v)) return;
+                let e = u.i.find(x => x[0] === r.device_name);
+                if (!e) u.i.push(e = [r.device_name, 0, 0]);
+                e[k] = r3(e[k] + v);
+            }));
             // only complete answers for finished hours / days are kept for good; the rest reloads after 5 min
             ts.forEach(t => { const u = per.get(t); u.at = now; u.final = iRes.ok && t + unit <= now - ET_SETTLE_MS; ET.units.set(etUnitKey(unit, t), u); });
         }
@@ -3040,7 +3114,7 @@
                 const u = ET.units.get(etUnitKey(unit, t)); if (!u) return;
                 const iso = new Date(t).toISOString();
                 u.m.forEach(([meas, tag, v]) => mRows.push({ _time: iso, _value: v, _measurement: meas, meter_name: tag }));
-                u.i.forEach(([dev, v]) => iRows.push({ _time: iso, _value: v, device_name: dev }));
+                u.i.forEach(([dev, v, ex]) => iRows.push({ _time: iso, _value: v, _exp: ex || 0, device_name: dev }));
             });
             return [mRows, iRows];
         }
@@ -3072,7 +3146,7 @@
             else { const y = etParts(r.start).y; for (let m = 0; m < 12; m++) keys.push(etDate(y, m)); }
             const idx = t => r.step === 'hour' ? Math.floor((t - r.start) / ET_HOUR) : r.step === 'day' ? Math.floor((t - r.start) / ET_DAY) : etParts(t).m;
             const z = () => keys.map(() => null);
-            const B = { keys, gen: z(), load: z(), solar: z(), ke: z(), genset: z() };
+            const B = { keys, gen: z(), load: z(), solar: z(), ke: z(), genset: z(), exp: z() };
             const add = (arr, i, v) => { arr[i] = (arr[i] || 0) + v; };
             const byKey = {};
             METERS.forEach(m => byKey[`${m.measurement}|${m.tag}`] = m);
@@ -3085,8 +3159,11 @@
             iRows.forEach(row => {
                 const j = ISOLAR_SOURCES.findIndex(s => s.device === row.device_name), v = parseFloat(row._value), i = idx(new Date(row._time).getTime());
                 if (j < 0 || isNaN(v) || i < 0 || i >= keys.length) return;
+                // v = import only (never negative). Export to KE goes to its own series and is NOT subtracted.
+                const gs = isGenset(ISOLAR_SOURCES[j]);
                 add(B.gen, i, v);
-                add(/genset|generator/i.test(ISOLAR_SOURCES[j].label + ISOLAR_SOURCES[j].device) ? B.genset : B.ke, i, v);
+                add(gs ? B.genset : B.ke, i, v);
+                if (!gs) add(B.exp, i, parseFloat(row._exp) || 0);
             });
             return B;
         }
@@ -3162,14 +3239,24 @@
             const lbl = t => r.step === 'hour' ? `${String(Math.round((t - r.start) / ET_HOUR)).padStart(2, '0')}:00` : r.step === 'day' ? etDdMon(t) : ET_MON[etParts(t).m];
             const labels = B.keys.map(lbl);
             const sum = a => a.some(v => v !== null) ? a.reduce((x, v) => x + (v || 0), 0) : null;
-            const S = { gen: sum(B.gen), load: sum(B.load), solar: sum(B.solar), ke: sum(B.ke), genset: sum(B.genset) };
-            const tile = (k, name, v, extra) => `<div class="et-s"><div class="l"><span class="et-dot" style="background:${ET_COLORS[k]}"></span>${name}</div><div class="v">${etKwh(v)}</div>${extra ? `<div class="x">${extra}</div>` : ''}</div>`;
-            const gap = isNum(S.gen) && isNum(S.load) ? S.gen - S.load : null;
+            const S = { gen: sum(B.gen), load: sum(B.load), solar: sum(B.solar), ke: sum(B.ke), genset: sum(B.genset), exp: sum(B.exp) };
+            const tile = (k, name, v, extra, cls) => `<div class="et-s${cls ? ' ' + cls : ''}"><div class="l"><span class="et-dot" style="background:${ET_COLORS[k]}"></span>${name}</div><div class="v">${etKwh(v)}</div>${extra ? `<div class="x">${extra}</div>` : ''}</div>`;
+            // Generation = KE import + Genset + Solar. Energy used on site = Generation − export to KE.
+            const expE = isNum(S.exp) ? S.exp : 0;
+            const used = isNum(S.gen) ? S.gen - expE : null;
+            const gap = isNum(used) && isNum(S.load) ? used - S.load : null;
+            const expRate = TARIFF.tou ? TARIFF.offRate : TARIFF.rate;
+            const exporting = expE >= 0.5;
             $('et-sum').innerHTML = [
-                tile('gen', 'Generation', S.gen, 'KE + Genset + Solar'),
-                tile('load', 'Consumption', S.load, gap !== null && S.gen > 0 ? `Gen − cons: ${fmt(gap, 0)} kWh (${fmt(gap / S.gen * 100, 1)}%)` : 'All distribution feeders'),
-                tile('solar', 'Solar', S.solar, isNum(S.solar) && S.gen > 0 ? `${fmt(S.solar / S.gen * 100, 1)}% of generation` : 'Solar total'),
-                tile('ke', 'KE (energy purchase)', S.ke, 'Grid supply'),
+                tile('gen', 'Generation', S.gen, 'KE import + Genset + Solar'),
+                tile('load', 'Consumption', S.load, gap !== null && used > 0 ? `Losses / unmetered: ${fmt(gap, 0)} kWh (${fmt(gap / used * 100, 1)}%)` : 'All distribution feeders'),
+                tile('solar', 'Solar', S.solar, isNum(S.solar) && S.solar > 0
+                    ? (exporting ? `${fmt(Math.max(S.solar - expE, 0) / S.solar * 100, 1)}% used on site` : `${fmt(S.solar / S.gen * 100, 1)}% of generation`)
+                    : 'Solar total'),
+                tile('ke', 'KE (energy purchase)', S.ke, 'Grid import (billed)'),
+                tile('exp', 'Export to KE', S.exp, exporting
+                    ? `No net metering: not credited${isNum(expRate) ? ` · ≈ PKR ${fmt(expE * expRate, 0)} lost` : ''}`
+                    : 'No net metering', exporting ? 'warn' : ''),
                 tile('genset', 'Genset', S.genset, 'Generator')
             ].join('');
 
@@ -3181,7 +3268,8 @@
                 bar('Generation', 'gen', B.gen, hid('Generation', false)),
                 bar('Consumption', 'load', B.load, hid('Consumption', false)),
                 bar('Solar', 'solar', B.solar, hid('Solar', true)),
-                bar('KE', 'ke', B.ke, hid('KE', true)),
+                bar('KE import', 'ke', B.ke, hid('KE import', true)),
+                bar('Export to KE (not credited)', 'exp', B.exp, hid('Export to KE (not credited)', false)),
                 bar('Genset', 'genset', B.genset, hid('Genset', true))
             ];
             const unitTitle = r.step === 'hour' ? 'kWh per hour' : r.step === 'day' ? 'kWh per day' : 'kWh per month';
@@ -3211,9 +3299,9 @@
 
             const cell = v => v === null ? '<span class="na">—</span>' : fmt(v, 1);
             $('et-table').innerHTML = `<table class="md-table"><thead><tr><th>${r.step === 'hour' ? 'Hour (PKT)' : r.step === 'day' ? 'Day' : 'Month'}</th>
-                <th>Generation (kWh)</th><th>Consumption (kWh)</th><th>Solar (kWh)</th><th>KE (kWh)</th><th>Genset (kWh)</th></tr></thead><tbody>
-                ${B.keys.map((_, i) => `<tr><td>${titleOf(i)}</td><td>${cell(B.gen[i])}</td><td>${cell(B.load[i])}</td><td>${cell(B.solar[i])}</td><td>${cell(B.ke[i])}</td><td>${cell(B.genset[i])}</td></tr>`).join('')}
-                <tr class="md-total"><td>Total</td><td>${cell(S.gen)}</td><td>${cell(S.load)}</td><td>${cell(S.solar)}</td><td>${cell(S.ke)}</td><td>${cell(S.genset)}</td></tr></tbody></table>`;
+                <th>Generation (kWh)</th><th>Consumption (kWh)</th><th>Solar (kWh)</th><th>KE import (kWh)</th><th>Export to KE (kWh)</th><th>Genset (kWh)</th></tr></thead><tbody>
+                ${B.keys.map((_, i) => `<tr><td>${titleOf(i)}</td><td>${cell(B.gen[i])}</td><td>${cell(B.load[i])}</td><td>${cell(B.solar[i])}</td><td>${cell(B.ke[i])}</td><td>${cell(B.exp[i])}</td><td>${cell(B.genset[i])}</td></tr>`).join('')}
+                <tr class="md-total"><td>Total</td><td>${cell(S.gen)}</td><td>${cell(S.load)}</td><td>${cell(S.solar)}</td><td>${cell(S.ke)}</td><td>${cell(S.exp)}</td><td>${cell(S.genset)}</td></tr></tbody></table>`;
             const live = r.stop > Date.now();
             if (ET.prog) { $('et-status').textContent = `Loading… ${ET.prog.pct}%`; return; }
             $('et-status').textContent = `Energy from the integral of active power · ${live ? `updated ${fmtClock(new Date())} PKT, refreshes every 5 min` : 'finished period'}`;
