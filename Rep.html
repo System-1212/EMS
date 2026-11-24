@@ -242,6 +242,13 @@ footer.site span:first-child { letter-spacing: 1.7px; color: #b8cbdf; }
 .lchart .pk { paint-order: stroke; stroke: #0c1828; stroke-width: 4px; stroke-linejoin: round; }
 @media print { .lchart .pk { stroke: #fff; } }
 .section[data-kind="cmp"] { --accent: var(--green); }
+.section[data-kind="chk"] { --accent: var(--amber); }
+@media (min-width: 1061px) { .span2 { grid-column: span 2; } }
+.chk-list { margin: 0; padding-left: 18px; font-size: 12px; line-height: 1.6; color: #b9cde2; }
+.chk-list b { color: #e6f4ff; font-weight: 600; }
+td.ok { color: var(--green); }
+td.neg { color: var(--red); }
+.dev-list label small { margin-left: auto; font-size: 10px; }
 .grp-h { margin: 12px 0 4px 4px; font-size: 10px; letter-spacing: 1.4px; font-weight: 600; color: var(--muted); text-transform: uppercase; }
 .grp-h:first-of-type { margin-top: 0; }
 td small { color: #93adc7; font-weight: 500; }
@@ -361,6 +368,7 @@ th.on-c { color: #ffb3aa; } th.off-c { color: #9fd0ff; }
       <button role="tab" data-tab="dist" aria-selected="true" aria-controls="sec-dist">DISTRIBUTION</button>
       <button role="tab" data-tab="gen" aria-selected="false" aria-controls="sec-gen">GENERATION</button>
       <button role="tab" data-tab="cmp" aria-selected="false" aria-controls="sec-cmp">COMPARE MACHINES</button>
+      <button role="tab" data-tab="chk" aria-selected="false" aria-controls="sec-chk">DATA CHECK</button>
     </div>
     <span class="hint">Energy, cost and electrical parameters from the Toyo energy cloud. All times PKT.</span>
   </div>
@@ -369,6 +377,7 @@ th.on-c { color: #ffb3aa; } th.off-c { color: #9fd0ff; }
     <section id="sec-dist" class="section" data-kind="dist" role="tabpanel"></section>
     <section id="sec-gen" class="section" data-kind="gen" role="tabpanel" hidden></section>
     <section id="sec-cmp" class="section" data-kind="cmp" role="tabpanel" hidden></section>
+    <section id="sec-chk" class="section" data-kind="chk" role="tabpanel" hidden></section>
   </main>
 
   <footer class="site"><span>TOYO PACKAGING · ENERGY AND COST REPORTS</span><span id="footSrc"></span></footer>
@@ -871,7 +880,14 @@ function meterJobs(m, range, paramKeys) {
   // highest / lowest: a combined meter is added up minute by minute first
   const minute = g => fluxBase(m, range.start, range.stop, g.names) + (g.fn ? MINUTE_GRID + COMBINE("1m", g.fn) : "");
   const jobs = [];
-  split(cntK).forEach(g => jobs.push({ m, kind: "cnt", flux: hourly(range.start - HOUR, g, "max") }));
+  if (comb) {
+    // energy of a combined meter: counter and power of each of its meters, queried one by one
+    m.tag.forEach((t, i) => {
+      const pm = { ...m, tag: t };
+      if (cntK.length) jobs.push({ m, part: i, kind: "cnt", flux: fluxBase(pm, range.start - HOUR, range.stop, cntK.map(k => f[k])) + HOURLY("max") + KEEP });
+      jobs.push({ m, part: i, kind: "mean", flux: fluxBase(pm, range.start, range.stop, [f.pTotal]) + HOURLY("mean") + KEEP });
+    });
+  } else split(cntK).forEach(g => jobs.push({ m, kind: "cnt", flux: hourly(range.start - HOUR, g, "max") }));
   split(meanK).forEach(g => jobs.push({ m, kind: "mean", flux: hourly(range.start, g, "mean") }));
   split(pf).forEach(g => {
     jobs.push({ m, kind: "hmax", flux: minute(g) + HOURLY("max") + KEEP });
@@ -898,7 +914,8 @@ async function loadAll(meters, range, paramKeys, onProgress, extra = []) {
   await Promise.all(Array.from({ length: Math.min(4, jobs.length) }, worker));
   const raw = {};
   jobs.forEach((job, k) => {
-    const r = raw[job.m.id] = raw[job.m.id] || {};
+    let r = raw[job.m.id] = raw[job.m.id] || {};
+    if (job.part !== undefined) { r.parts = r.parts || []; r = r.parts[job.part] = r.parts[job.part] || {}; }
     r[job.kind] = (r[job.kind] || []).concat(parseInfluxCsv(texts[k]));
   });
   const out = {};
@@ -933,36 +950,11 @@ function counterDeltas(map, range) {
 
 function processMeter(m, range, raw, paramKeys) {
   const f = m.fields, sc = f.kw ? 1 : 0.001;
-  // Power estimate: average active power x hours covered (direction ignored)
-  const pMean = seriesOf(raw.mean, f.pTotal);
-  const estimate = t => {
-    if (!pMean.has(t)) return null;
-    const hrs = (Math.min(t + HOUR, range.stop) - Math.max(t, range.start)) / HOUR;
-    return Math.abs(pMean.get(t) * sc) * hrs;
-  };
-  // Energy counter: use the one (import or export) that counted more
-  let ctr = null;
-  ["kwhImp", "kwhExp"].forEach(k => {
-    if (!f[k]) return;
-    const c = counterDeltas(seriesOf(raw.cnt, f[k]), range);
-    if (c.total > 0.01 && (!ctr || c.total > ctr.total)) { ctr = c; ctr.key = k; }
-  });
-  const hours = [];
-  let fromCounter = 0, fromPower = 0, noData = 0;
-  for (let t = range.start; t < range.stop; t += HOUR) {
-    let kwh = null, src = null;
-    if (ctr) {
-      const c = ctr.out.get(t);
-      if (c && isNum(c.kwh)) { kwh = c.kwh; src = "counter"; }
-      else if (c || pMean.has(t)) { const e = estimate(t); if (e !== null) { kwh = e; src = "power"; } }
-    } else {
-      const e = estimate(t); if (e !== null) { kwh = e; src = "power"; }
-    }
-    if (src === "counter") fromCounter++; else if (src === "power") fromPower++; else noData++;
-    hours.push({ t, kwh, src });
-  }
-  const total = hours.reduce((s, h) => s + (h.kwh || 0), 0);
-  const method = ctr ? (fromPower ? "mixed" : "counter") : (fromPower ? "power" : "none");
+  // Energy: a combined meter (Solar Total) works out each of its meters on its own, then adds them,
+  // so a counter that is stuck on one meter is caught on that meter
+  const en = isCombined(m)
+    ? mergeEnergy(m.tag.map((t, i) => meterEnergy({ ...m, tag: t }, range, (raw.parts || [])[i] || {})))
+    : meterEnergy(m, range, raw);
 
   // Electrical parameters
   const params = {};
@@ -978,8 +970,62 @@ function processMeter(m, range, raw, paramKeys) {
     const vals = [...mean.values()];
     params[k] = vals.length ? { mean, hmax, hmin, peak, low, avg: vals.reduce((a, b) => a + b, 0) / vals.length } : null;
   });
-  return { m, hours, total, method, ctrKey: ctr && ctr.key, badReadings: ctr ? ctr.bad : 0, fromCounter, fromPower, noData, params,
-           hasData: hours.some(h => h.src) };
+  return { m, ...en, params, hasData: en.hours.some(h => h.src) };
+}
+
+function mergeEnergy(list) {
+  const hours = list[0].hours.map((h, i) => {
+    const hs = list.map(e => e.hours[i]).filter(x => x.src);
+    if (!hs.length) return { t: h.t, kwh: null, src: null };
+    return { t: h.t, kwh: hs.reduce((s, x) => s + x.kwh, 0), src: hs.every(x => x.src === "counter") ? "counter" : "power" };
+  });
+  const fromCounter = hours.filter(h => h.src === "counter").length, fromPower = hours.filter(h => h.src === "power").length;
+  const withCtr = list.find(e => e.ctrKey);
+  return { hours, total: hours.reduce((s, h) => s + (h.kwh || 0), 0),
+    method: withCtr ? (fromPower ? "mixed" : "counter") : (fromPower ? "power" : "none"), ctrKey: withCtr ? withCtr.ctrKey : null,
+    badReadings: list.reduce((s, e) => s + e.badReadings, 0), stuck: list.reduce((s, e) => s + e.stuck, 0),
+    fromCounter, fromPower, noData: hours.length - fromCounter - fromPower };
+}
+
+/* Energy of one meter per hour, from its energy counter, or from active power where the counter fails */
+function meterEnergy(m, range, raw) {
+  const f = m.fields, sc = f.kw ? 1 : 0.001;
+  // Power estimate: average active power x hours covered (direction ignored)
+  const pMean = seriesOf(raw.mean, f.pTotal);
+  const estimate = t => {
+    if (!pMean.has(t)) return null;
+    const hrs = (Math.min(t + HOUR, range.stop) - Math.max(t, range.start)) / HOUR;
+    return Math.abs(pMean.get(t) * sc) * hrs;
+  };
+  // Energy counter: use the one (import or export) that counted more
+  let ctr = null;
+  ["kwhImp", "kwhExp"].forEach(k => {
+    if (!f[k]) return;
+    const c = counterDeltas(seriesOf(raw.cnt, f[k]), range);
+    if (c.total > 0.01 && (!ctr || c.total > ctr.total)) { ctr = c; ctr.key = k; }
+  });
+  const hours = [];
+  let fromCounter = 0, fromPower = 0, noData = 0, stuck = 0;
+  for (let t = range.start; t < range.stop; t += HOUR) {
+    let kwh = null, src = null;
+    if (ctr) {
+      const c = ctr.out.get(t);
+      if (c && isNum(c.kwh)) {
+        // a counter that moves far less than the power readings in the same hour is not counting: use power
+        const e = estimate(t);
+        if (e !== null && e > 1 && c.kwh < 0.5 * e) { kwh = e; src = "power"; stuck++; }
+        else { kwh = c.kwh; src = "counter"; }
+      }
+      else if (c || pMean.has(t)) { const e = estimate(t); if (e !== null) { kwh = e; src = "power"; } }
+    } else {
+      const e = estimate(t); if (e !== null) { kwh = e; src = "power"; }
+    }
+    if (src === "counter") fromCounter++; else if (src === "power") fromPower++; else noData++;
+    hours.push({ t, kwh, src });
+  }
+  const total = hours.reduce((s, h) => s + (h.kwh || 0), 0);
+  const method = ctr ? (fromPower ? "mixed" : "counter") : (fromPower ? "power" : "none");
+  return { hours, total, method, ctrKey: ctr && ctr.key, badReadings: ctr ? ctr.bad : 0, stuck, fromCounter, fromPower, noData };
 }
 
 /* Energy of one meter in the hour that contains time t */
@@ -1349,7 +1395,7 @@ ${tariffFieldset(kind)}
     const { cur, group, T } = state;
     const gw = GROUP_WORD[group];
     const showPer = state.meters.length > 1 && state.meters.length <= 6;
-    const tou = T.mode === "tou";
+    const tou = T.mode === "tou" && !!(C.cats.kePeak || C.cats.keOff);   // only when KE energy is in the report
     const hourly = group === "hour";
     const tot = k => (C.cats[k] || { kwh: 0, cost: 0 });
     const periodTag = b => { const f = peakFraction(T, b.s);
@@ -1384,6 +1430,7 @@ ${tariffFieldset(kind)}
     if (d.method === "power") parts.push("Calculated from active power (energy counter not counting)");
     else if (d.method === "mixed") parts.push(d.fromPower + " hour(s) calculated from active power");
     if (d.badReadings) parts.push(d.badReadings + " wrong counter reading(s) skipped");
+    if (d.stuck) parts.push(d.stuck + " hour(s) where the counter did not follow the power readings");
     const gaps = d.noData; if (gaps) parts.push(gaps + " hour(s) without readings");
     return parts.join(". ");
   }
@@ -1548,6 +1595,7 @@ ${tariffFieldset(kind)}
       out.push(s);
     });
 
+    C.list.filter(d => d.stuck).forEach(d => out.push(`<span class="warn">${esc(d.m.label)}: in ${d.stuck} hour${d.stuck > 1 ? "s" : ""} the energy counter moved much less than the power readings, so those hours were calculated from active power. Use the Data Check tab to look at this meter's readings.</span>`));
     const calc = C.list.filter(d => d.method === "power").map(d => esc(d.m.label));
     if (calc.length) out.push(`<span class="warn">Energy of ${calc.join(", ")} was calculated from active power, because ${calc.length > 1 ? "their energy counters" : "its energy counter"} did not count in this period.</span>`);
     const empty = C.bks.length - C.withData.length;
@@ -1562,7 +1610,7 @@ ${tariffFieldset(kind)}
     const pw = methods.filter(d => d.method === "power").map(d => esc(d.m.label));
     return `
       <p><b>Energy (kWh).</b> For every hour, energy is the increase of the meter's energy counter in that hour${ctr.length ? ` (used for ${ctr.join(", ")})` : ""}. ` +
-      `Where a meter has no counter, the counter does not count, or a reading is clearly wrong (it goes down or jumps more than ${fmt(CONFIG.maxKwhPerHour, 0)} kWh in an hour), ` +
+      `Where a meter has no counter, the counter does not count (it moves less than half of what the average power in that hour adds up to), or a reading is clearly wrong (it goes down or jumps more than ${fmt(CONFIG.maxKwhPerHour, 0)} kWh in an hour), ` +
       `the energy is calculated from the average active power in that hour: average kW × 1 hour${pw.length ? ` (used for ${pw.join(", ")})` : ""}. ` +
       `If a meter sent no readings for some time, the energy used during that gap appears in the next hour with readings.</p>
       ${costExplain(state.T, state.meters)}
@@ -1579,7 +1627,7 @@ ${tariffFieldset(kind)}
     const L = [line(["Toyo Packaging", S.title + " energy and cost report"]), line(["Period", fmtRange(range)]),
       line(["Tariff", tariffText(T)]), ...(kind === "dist" ? [line(["Distribution priced by", T.basis === "mix" ? "Source mix of each hour" : "KE tariff only"])] : []),
       line(["Generated", fmtDateTime(state.generated) + " PKT"]), ""];
-    const tou = T.mode === "tou", hourly = group === "hour";
+    const tou = T.mode === "tou" && !!(C.cats.kePeak || C.cats.keOff), hourly = group === "hour";
     const tp = b => { const f = peakFraction(T, b.s); return f >= 1 ? "On-peak" : f > 0 ? "Part on-peak" : "Off-peak"; };
     const tot = k => (C.cats[k] || { kwh: 0, cost: 0 });
     L.push(line([GROUP_WORD[group][0].toUpperCase() + GROUP_WORD[group].slice(1), ...(tou && hourly ? ["Tariff period"] : []), "Energy kWh", "Cost " + cur, "Cost share %",
@@ -2048,14 +2096,258 @@ ${tariffFieldset("cmp")}
 }
 
 
+/* ================================================================
+   DATA CHECK (fourth tab)
+   Raw readings of each physical meter per hour or day: number of
+   power readings, average / highest / lowest power, the energy the
+   power adds up to, and how much the energy counters moved.
+   Solar Total is shown as its two meters.
+   ================================================================ */
+const PHYS = METERS.flatMap(m => Array.isArray(m.tag)
+  ? m.tag.map((t, i) => ({ ...m, id: m.id + "p" + i, tag: t, label: m.label.replace(/ Total$/, "") + " " + (i + 1), info: t }))
+  : [{ ...m, info: m.tag }]);
+
+function chkJobs(pm, range, group) {
+  const f = pm.fields, daily = group === "day";
+  const W = fn => '  |> aggregateWindow(every: ' + (daily ? "1d" : "1h") + ', fn: ' + fn + ', createEmpty: false, timeSrc: "_start"' +
+    (daily ? ', offset: -' + CONFIG.tzOffsetHours + 'h' : "") + ')\n';   // days start at 00:00 PKT
+  const p = [f.pTotal], c = ["kwhImp", "kwhExp"].filter(k => f[k]).map(k => f[k]);
+  const base = (names, start) => fluxBase(pm, start, range.stop, names);
+  const jobs = [
+    { pm, kind: "count", flux: base(p, range.start) + W("count") + KEEP },
+    { pm, kind: "mean",  flux: base(p, range.start) + W("mean") + KEEP },
+    { pm, kind: "max",   flux: base(p, range.start) + W("max") + KEEP },
+    { pm, kind: "min",   flux: base(p, range.start) + W("min") + KEEP },
+    { pm, kind: "pkwh",  flux: base(p, range.start) + HOURLY("mean") + (daily ? W("sum") : "") + KEEP }
+  ];
+  if (c.length) jobs.push(
+    { pm, kind: "first", flux: base(c, range.start) + W("first") + KEEP },
+    { pm, kind: "last",  flux: base(c, range.start - (daily ? DAY : HOUR)) + W("last") + KEEP });
+  return jobs;
+}
+
+function chkProcess(pm, range, group, raw) {
+  const f = pm.fields, sc = f.kw ? 1 : 0.001;
+  const bks = buckets(range, group);
+  const at = t => bks.findIndex(b => t >= b.s && t < b.e);
+  const R = bks.map(b => ({ b, count: 0, mean: null, max: null, min: null, pkwh: null, first: {}, last: {} }));
+  const prev = {};
+  ["count", "mean", "max", "min", "pkwh"].forEach(k => (raw[k] || []).forEach(r => {
+    const i = at(r.t); if (i < 0) return;
+    R[i][k] = k === "count" ? (R[i].count + r.v) : r.v * sc;
+  }));
+  ["first", "last"].forEach(k => (raw[k] || []).forEach(r => {
+    if (k === "last" && r.t < range.start) { prev[r.field] = r.v; return; }
+    const i = at(r.t); if (i >= 0) R[i][k][r.field] = r.v;
+  }));
+  // counter change per bucket: end of this bucket minus end of the bucket before (or its own first reading)
+  const counters = { imp: f.kwhImp, exp: f.kwhExp };
+  Object.entries(counters).forEach(([key, name]) => {
+    let seen = name ? prev[name] : undefined;
+    R.forEach(x => {
+      x[key] = null;
+      if (!name) return;
+      const a = x.first[name], z = x.last[name];
+      if (z === undefined) return;
+      const from = seen !== undefined ? seen : a;
+      if (from !== undefined) x[key] = z - from;
+      seen = z;
+    });
+  });
+  const hasCtr = !!(f.kwhImp || f.kwhExp);
+  R.forEach(x => {
+    const flags = [];
+    const best = Math.max(isNum(x.imp) ? x.imp : -Infinity, isNum(x.exp) ? x.exp : -Infinity);
+    const pk = isNum(x.pkwh) ? Math.abs(x.pkwh) : 0;
+    if (!x.count) flags.push("No power readings");
+    else {
+      if (isNum(x.pkwh) && x.pkwh < -1) flags.push("Power is negative (reverse direction or export)");
+      if (hasCtr && best === -Infinity) flags.push("No counter readings");
+      else if (hasCtr && pk > 2 && best < 0.5 * pk) flags.push("Counter did not follow power");
+      else if (hasCtr && best > 2 * pk + 5) flags.push("Counter rose much more than power");
+      if ((isNum(x.imp) && x.imp < 0) || (isNum(x.exp) && x.exp < 0)) flags.push("Counter went down");
+    }
+    x.flags = flags;
+  });
+  const sum = k => R.reduce((s, x) => s + (isNum(x[k]) ? x[k] : 0), 0);
+  const any = k => R.some(x => isNum(x[k]));
+  return { pm, R, hasCtr, count: sum("count"), pkwh: sum("pkwh"), imp: any("imp") ? sum("imp") : null, exp: any("exp") ? sum("exp") : null,
+    max: R.reduce((m, x) => isNum(x.max) && (m === null || x.max > m) ? x.max : m, null),
+    empty: R.filter(x => !x.count).length, stuck: R.filter(x => x.flags.includes("Counter did not follow power")).length,
+    neg: R.filter(x => x.flags.some(s => s.startsWith("Power is negative"))).length };
+}
+
+function buildCheck() {
+  const el = document.getElementById("sec-chk");
+  const today = toDateStr(Date.now());
+  const list = (g, title) => `<p class="grp-h">${title}</p><div class="dev-list">
+      ${PHYS.filter(m => m.group === g).map(m => `<label><input type="checkbox" value="${m.id}"${m.src === "solar" ? " checked" : ""}> ${esc(m.label)} <small>${esc(m.info)}</small></label>`).join("")}</div>`;
+  el.innerHTML = `
+    <p class="intro">Look at the raw readings stored for each meter, to find out why a report value looks wrong. Solar Total is shown as its two meters, Solar 1 and Solar 2.</p>
+    <div class="controls">
+      <fieldset class="panel">
+        <legend>PERIOD</legend>
+        <label>Period
+          <select class="f-preset">
+            <option value="today">Today</option><option value="yesterday">Yesterday</option><option value="last24">Last 24 hours</option>
+            <option value="last7" selected>Last 7 days</option><option value="thismonth">This month</option><option value="lastmonth">Last month</option>
+            <option value="last3m">Last 3 months</option><option value="custom">Choose dates and times</option>
+          </select>
+        </label>
+        <div class="custom four" hidden>
+          <label>From date <input type="date" class="f-fd" value="${today}" max="${today}"></label>
+          <label>From time <input type="time" class="f-ft" value="00:00" step="3600"></label>
+          <label>To date <input type="date" class="f-td" value="${today}" max="${today}"></label>
+          <label>To time <input type="time" class="f-tt" value="23:59"></label>
+        </div>
+        <label>Check per <select class="f-group"><option value="hour">Hour</option><option value="day">Day</option></select></label>
+        <p class="range-text"></p>
+      </fieldset>
+      <fieldset class="panel span2">
+        <legend>HOW TO READ THE CHECK</legend>
+        <ul class="chk-list">
+          <li><b>Power readings</b>: how many active power values the logger stored. 0 means the meter or logger was not sending.</li>
+          <li><b>kWh from power</b>: the hourly average power added up. This is roughly the energy the meter really saw.</li>
+          <li><b>Import / export counter change</b>: how much the meter's own kWh counters moved. One of them should be close to kWh from power.</li>
+          <li><b>Counter did not follow power</b>: power shows energy but the counter hardly moved, so a report that trusts the counter shows too little.</li>
+          <li><b>Negative power</b>: the meter sees power flowing the other way (solar export, or a reversed CT). Energy then goes to the export counter.</li>
+        </ul>
+      </fieldset>
+      <fieldset class="panel wide">
+        <legend>METERS TO CHECK</legend>
+        <div class="dev-tools">
+          <button type="button" class="linkbtn sel-solar">Solar meters</button>
+          <button type="button" class="linkbtn sel-gen">All generation</button>
+          <button type="button" class="linkbtn sel-none">Clear</button>
+          <span class="dev-count"></span>
+        </div>
+        ${list("gen", "Generation")}
+        ${list("dist", "Distribution")}
+      </fieldset>
+    </div>
+    <div class="actions">
+      <button type="button" class="btn primary run">CHECK DATA</button>
+      <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-label="Download progress" hidden>
+        <div class="p-top"><span class="p-title">Downloading data, please wait…</span><span class="p-pct">0%</span></div>
+        <div class="p-track"><div class="p-fill"></div></div>
+        <div class="p-sub">Connecting to the data server</div>
+      </div>
+      <div class="banner" role="alert" hidden><strong class="b-head"></strong><span class="b-text"></span></div>
+      <span class="status" role="status" aria-live="polite"></span>
+    </div>
+    <div class="results panel"></div>`;
+
+  const $ = s => el.querySelector(s);
+  const boxes = [...el.querySelectorAll(".dev-list input")];
+  const selection = () => ({ preset: $(".f-preset").value, fromDate: $(".f-fd").value, fromTime: $(".f-ft").value, toDate: $(".f-td").value, toTime: $(".f-tt").value });
+  function updateRangeText(setGroup) {
+    $(".custom").hidden = $(".f-preset").value !== "custom";
+    try { const r = rangeFor(selection(), Date.now()); if (setGroup) $(".f-group").value = r.stop - r.start <= 2 * DAY ? "hour" : "day"; $(".range-text").textContent = "Period: " + fmtRange(r); }
+    catch (e) { $(".range-text").textContent = e.message; }
+  }
+  const updateCount = () => { $(".dev-count").textContent = boxes.filter(b => b.checked).length + " selected"; };
+  const pick = fn => () => { boxes.forEach(b => b.checked = fn(PHYS.find(m => m.id === b.value))); updateCount(); };
+  $(".f-preset").addEventListener("change", () => updateRangeText(true));
+  [".f-fd", ".f-ft", ".f-td", ".f-tt"].forEach(s => ["change", "input"].forEach(ev => $(s).addEventListener(ev, () => updateRangeText(true))));
+  $(".sel-solar").addEventListener("click", pick(m => m.src === "solar"));
+  $(".sel-gen").addEventListener("click", pick(m => m.group === "gen"));
+  $(".sel-none").addEventListener("click", pick(() => false));
+  boxes.forEach(b => b.addEventListener("change", updateCount));
+  const prog = makeProgress($(".progress"));
+  const showError = (h, t) => { $(".b-head").textContent = h; $(".b-text").textContent = t; $(".banner").hidden = false; };
+
+  $(".run").addEventListener("click", async () => {
+    $(".banner").hidden = true; $(".status").textContent = "";
+    let range, group, sel;
+    try {
+      range = rangeFor(selection(), Date.now());
+      group = $(".f-group").value;
+      sel = PHYS.filter(m => boxes.some(b => b.checked && b.value === m.id));
+      if (!sel.length) throw new Error("Select at least one meter.");
+      if (group === "hour" && range.stop - range.start > 7 * DAY) throw new Error("Checking per hour works for up to 7 days. Choose per day for longer periods.");
+    } catch (e) { showError("Check the selection.", e.message); return; }
+    $(".run").disabled = true; prog.start();
+    try {
+      const jobs = sel.flatMap(pm => chkJobs(pm, range, group));
+      const texts = new Array(jobs.length);
+      let next = 0, done = 0;
+      prog.step(0, jobs.length);
+      await Promise.all(Array.from({ length: Math.min(4, jobs.length) }, async () => {
+        while (next < jobs.length) { const j = next++; texts[j] = await influx(jobs[j].flux); done++; prog.step(done, jobs.length); }
+      }));
+      prog.calc();
+      const raw = {};
+      jobs.forEach((job, k) => { const r = raw[job.pm.id] = raw[job.pm.id] || {}; r[job.kind] = (r[job.kind] || []).concat(parseInfluxCsv(texts[k])); });
+      const res = sel.map(pm => chkProcess(pm, range, group, raw[pm.id] || {}));
+      render(res, range, group);
+      prog.finish();
+      $(".status").textContent = "Checked " + fmtTime(Date.now()) + " PKT";
+    } catch (e) { prog.hide(); showError("Could not check the data.", e.message); }
+    finally { $(".run").disabled = false; }
+  });
+
+  function render(res, range, group) {
+    const gw = GROUP_WORD[group];
+    const n = v => isNum(v) ? fmtKwh(v) : "–";
+    const verdict = x => {
+      if (!x.count) return "No power readings at all in this period.";
+      const out = [];
+      if (x.empty) out.push(`${x.empty} ${gw}${x.empty > 1 ? "s" : ""} without readings`);
+      if (x.stuck) out.push(`counter did not follow power in ${x.stuck} ${gw}${x.stuck > 1 ? "s" : ""}`);
+      if (x.neg) out.push(`negative power in ${x.neg} ${gw}${x.neg > 1 ? "s" : ""}`);
+      return out.length ? out.join("; ") : "Looks consistent";
+    };
+    const overview = res.map(x => `<tr><td>${esc(x.pm.label)} <small>${esc(x.pm.info)}</small></td>
+      <td class="n">${x.count.toLocaleString("en-US")}</td><td class="n">${isNum(x.max) ? fmt(x.max, 2) : "–"}</td>
+      <td class="n kwh">${n(x.pkwh)}</td><td class="n">${x.hasCtr ? n(x.imp) : "no counter"}</td><td class="n">${x.hasCtr ? n(x.exp) : "no counter"}</td>
+      <td class="${verdict(x) === "Looks consistent" ? "ok" : "flag"}">${esc(verdict(x))}</td></tr>`).join("");
+    const card = x => {
+      const rows = x.R.map(r => `<tr${r.flags.length ? ' class="peak"' : ""}>
+        <td>${esc(bucketLabel(r.b, group, dayStart(range.start) !== dayStart(range.stop - 1)))}</td>
+        <td class="n">${r.count.toLocaleString("en-US")}</td>
+        <td class="n">${isNum(r.mean) ? fmt(r.mean, 2) : "–"}</td><td class="n">${isNum(r.max) ? fmt(r.max, 2) : "–"}</td><td class="n${isNum(r.min) && r.min < 0 ? " neg" : ""}">${isNum(r.min) ? fmt(r.min, 2) : "–"}</td>
+        <td class="n kwh${isNum(r.pkwh) && r.pkwh < 0 ? " neg" : ""}">${n(r.pkwh)}</td>
+        <td class="n">${x.hasCtr ? n(r.imp) : "–"}</td><td class="n">${x.hasCtr ? n(r.exp) : "–"}</td>
+        <td class="flag">${esc(r.flags.join(". "))}</td></tr>`).join("");
+      return `<div class="card" style="margin-top:16px"><h2>${esc(x.pm.label.toUpperCase())}</h2>
+        <p class="sub">${esc(x.pm.info)}, ${esc(x.pm.meas.join(", "))}. ${esc(verdict(x))}.</p>
+        <div class="tablebox" style="margin-top:0"><table>
+          <thead><tr><th>${group === "hour" ? "Hour (PKT)" : "Day"}</th><th class="n">Power readings</th><th class="n">Average kW</th><th class="n">Highest kW</th><th class="n">Lowest kW</th>
+            <th class="n">kWh from power</th><th class="n">Import counter change</th><th class="n">Export counter change</th><th>Check</th></tr></thead>
+          <tbody>${rows}<tr class="sum"><td>Total</td><td class="n">${x.count.toLocaleString("en-US")}</td><td></td><td class="n">${isNum(x.max) ? fmt(x.max, 2) : "–"}</td><td></td>
+            <td class="n">${n(x.pkwh)}</td><td class="n">${x.hasCtr ? n(x.imp) : "–"}</td><td class="n">${x.hasCtr ? n(x.exp) : "–"}</td><td></td></tr></tbody>
+        </table></div></div>`;
+    };
+    $(".results").innerHTML = `
+      <div class="rep-head"><div class="rep-id">
+        <span class="rep-logo-tile"><img class="rep-logo" src="${document.getElementById("brandLogo").src}" alt="Toyo Packaging"></span>
+        <div><h3>Data check: raw meter readings</h3>
+          <p class="meta"><b>Period:</b> ${esc(fmtRange(range))}<br><b>Per:</b> ${gw} &nbsp;&nbsp;<b>Checked:</b> ${esc(fmtDateTime(Date.now()))} PKT</p></div></div>
+        <div class="rep-tools"><button type="button" class="btn f-print">PRINT</button></div></div>
+      <div class="rep-body">
+        <div class="card"><h2>OVERVIEW</h2><p class="sub">kWh from power should be close to one of the counter changes. Counter changes are in kWh as stored in the database.</p>
+          <div class="tablebox" style="margin-top:0"><table>
+            <thead><tr><th>Meter</th><th class="n">Power readings</th><th class="n">Highest kW</th><th class="n">kWh from power</th><th class="n">Import counter change</th><th class="n">Export counter change</th><th>Result</th></tr></thead>
+            <tbody>${overview}</tbody></table></div></div>
+        ${res.map(card).join("")}
+        <p class="rep-foot">Highest and lowest kW are the highest and lowest single stored readings. kWh from power is the sum of the hourly average power. A counter change is the counter at the end of the ${gw} minus the counter at the end of the ${gw} before.</p>
+      </div>`;
+    $(".f-print").addEventListener("click", () => window.print());
+  }
+
+  updateRangeText(true);
+  updateCount();
+}
+
 document.querySelectorAll(".seg button").forEach(btn => btn.addEventListener("click", () => {
   document.querySelectorAll(".seg button").forEach(b => b.setAttribute("aria-selected", String(b === btn)));
-  ["dist", "gen", "cmp"].forEach(k => document.getElementById("sec-" + k).hidden = btn.dataset.tab !== k);
+  ["dist", "gen", "cmp", "chk"].forEach(k => document.getElementById("sec-" + k).hidden = btn.dataset.tab !== k);
 }));
 
 buildSection("dist");
 buildSection("gen");
 buildCompare();
+buildCheck();
 
 function tickClock() {
   const t = P(Date.now());
