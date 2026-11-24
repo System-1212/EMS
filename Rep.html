@@ -327,6 +327,24 @@ td.cost { font-weight: 600; color: var(--amber); }
   .param, .summary { break-inside: avoid; }
 }
 
+/* ---------- Tariffs ---------- */
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+.two label { margin-top: 0; }
+.t-flat { margin-top: 12px; }
+fieldset.tariff label.t-basis-l { margin-top: 12px; }
+.t-sub { margin: 14px 0 0; font-size: 10px; letter-spacing: 1.2px; font-weight: 600; color: var(--muted); text-transform: uppercase; }
+.t-sub + .two { margin-top: 6px; }
+.tag-tp { display: inline-block; font-size: 9.5px; letter-spacing: .8px; font-weight: 700; border-radius: 4px; padding: 1px 6px; border: 1px solid; }
+.tag-tp.on { color: #ffd6d0; background: #ff786e2e; border-color: #ff786e66; }
+.tag-tp.part { color: #ffe7bd; background: #ffc9672a; border-color: #ffc96766; }
+.tag-tp.off { color: #cfe6ff; background: #63afff22; border-color: #63afff55; }
+th.on-c { color: #ffb3aa; } th.off-c { color: #9fd0ff; }
+@media print {
+  .tag-tp.on { color: #a32116; background: #ffe0dc; border-color: #f2a59c; }
+  .tag-tp.part { color: #7a4c00; background: #fff1d6; border-color: #e8c27a; }
+  .tag-tp.off { color: #1d4f91; background: #e6f0ff; border-color: #a9cbf2; }
+  th.on-c, th.off-c { color: #333; }
+}
 </style>
 </head>
 <body>
@@ -385,10 +403,11 @@ const ISOLAR_MEAS = ["isolarcloud_device", "isolarcloud_detail"];
 
 const METERS = [
   // --- Generation ---
-  { group: "gen",  label: "KE",            info: "Grid supply (K-Electric)", meas: ISOLAR_MEAS, tagKey: "device_name", tag: "Grid - 1", fields: ISOLAR },
-  { group: "gen",  label: "Genset",        info: "Generator",                meas: ISOLAR_MEAS, tagKey: "device_name", tag: "Genset",   fields: ISOLAR },
-  { group: "gen",  label: "Solar 1",       info: "Janitza Unit 9",  meas: ["janitza_feeder"], tagKey: "meter_name", tag: "Janitza_Unit_09", fields: JANITZA },
-  { group: "gen",  label: "Solar 2",       info: "Janitza Unit 10", meas: ["janitza_feeder"], tagKey: "meter_name", tag: "Janitza_Unit_10", fields: JANITZA },
+  // src = which tariff the source is priced at: "ke" (grid), "gen" (generator) or "solar"
+  { group: "gen",  label: "KE",            info: "Grid supply (K-Electric)", src: "ke",    meas: ISOLAR_MEAS, tagKey: "device_name", tag: "Grid - 1", fields: ISOLAR },
+  { group: "gen",  label: "Genset",        info: "Generator",                src: "gen",   meas: ISOLAR_MEAS, tagKey: "device_name", tag: "Genset",   fields: ISOLAR },
+  // Solar Total = Solar 1 (Janitza Unit 9) + Solar 2 (Janitza Unit 10), added together in the database query
+  { group: "gen",  label: "Solar Total",   info: "Janitza Unit 9 + Unit 10", src: "solar", meas: ["janitza_feeder"], tagKey: "meter_name", tag: ["Janitza_Unit_09", "Janitza_Unit_10"], fields: JANITZA },
   // --- Distribution ---
   { group: "dist", label: "Metallizer",    info: "Janitza Main Master", meas: ["janitza_umg96pql"], tagKey: "meter_name", tag: "Janitza_Main_Master", fields: JANITZA },
   { group: "dist", label: "Holo",          info: "Janitza Unit 2", meas: ["janitza_feeder"], tagKey: "meter_name", tag: "Janitza_Unit_02", fields: JANITZA },
@@ -403,8 +422,8 @@ const METERS = [
 METERS.forEach((m, i) => m.id = "m" + i);
 
 const SECTIONS = {
-  dist: { title: "Distribution", intro: "Energy, cost and electrical values of the production and utility feeders. Choose the period, enter the per unit cost, pick the parameters and the meters, then create the report.", noun: "meter", nouns: "meters", legend: "DEPARTMENTS AND MACHINES" },
-  gen:  { title: "Generation",   intro: "Energy, cost and electrical values of the supply sources (KE, genset, solar). Choose the period, enter the per unit cost, pick the parameters and the sources, then create the report.", noun: "source", nouns: "sources", legend: "SOURCES" }
+  dist: { title: "Distribution", intro: "Energy, cost and electrical values of the production and utility feeders. Choose the period, enter the tariffs (KE on-peak / off-peak, solar, generator), pick the parameters and the meters, then create the report.", noun: "meter", nouns: "meters", legend: "DEPARTMENTS AND MACHINES" },
+  gen:  { title: "Generation",   intro: "Energy, cost and electrical values of the supply sources (KE, genset, solar). Choose the period, enter the tariffs, pick the parameters and the sources, then create the report.", noun: "source", nouns: "sources", legend: "SOURCES" }
 };
 
 /* Electrical parameters the user can add to the report */
@@ -450,14 +469,262 @@ function pct(x) { return (x * 100).toFixed(x >= 0.1 ? 0 : 1) + "%"; }
 function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
 const isNum = v => typeof v === "number" && isFinite(v);
 
-/* ---------- Unit cost (shared by both tabs, saved in this browser) ---------- */
-const RATE_KEY = "toyo-report-rate", CUR_KEY = "toyo-report-currency";
-function savedRate() { try { return localStorage.getItem(RATE_KEY) || ""; } catch (e) { return ""; } }
-function savedCur() { try { return localStorage.getItem(CUR_KEY) || CONFIG.currency; } catch (e) { return CONFIG.currency; } }
-function saveRate(r, c) { try { localStorage.setItem(RATE_KEY, r); localStorage.setItem(CUR_KEY, c); } catch (e) { /* storage blocked */ } }
 function money(v, cur) {
   const d = Math.abs(v) >= 1000 ? 0 : 2;
   return (cur ? cur + " " : "") + fmt(v, d);
+}
+
+/* ================================================================
+   Tariffs (shared by all tabs, saved in this browser)
+   KE: flat rate, or on-peak / off-peak with peak hours.
+   Solar and generator: own rate per kWh.
+   Distribution meters are priced either by the source mix of each
+   hour (share of KE, solar, genset measured by the generation meters)
+   or at the KE tariff only.
+   ================================================================ */
+const TARIFF_KEY = "toyo-report-tariff";
+function loadTariff() {
+  const d = { cur: CONFIG.currency, mode: "tou", flat: "", peak: "", off: "", pFrom: "18:00", pTo: "22:00", solar: "", gen: "", basis: "mix" };
+  try {
+    const s = JSON.parse(localStorage.getItem(TARIFF_KEY) || "null");
+    if (s) return Object.assign(d, s);
+    const old = localStorage.getItem("toyo-report-rate");          // value saved by the older version of this page
+    if (old) { d.flat = old; d.peak = old; d.off = old; d.cur = localStorage.getItem("toyo-report-currency") || d.cur; }
+  } catch (e) { /* storage blocked */ }
+  return d;
+}
+function saveTariff(t) { try { localStorage.setItem(TARIFF_KEY, JSON.stringify(t)); } catch (e) { /* storage blocked */ } }
+
+const CATS = {
+  ke:     { name: "KE (flat rate)", color: "#63afff" },
+  kePeak: { name: "KE on-peak",     color: "#ff786e" },
+  keOff:  { name: "KE off-peak",    color: "#61dfff" },
+  solar:  { name: "Solar",          color: "#ffc967" },
+  gen:    { name: "Genset",         color: "#b99aff" }
+};
+const CAT_ORDER = ["kePeak", "keOff", "ke", "solar", "gen"];
+const hmText = m => pad(Math.floor(m / 60) % 24) + ":" + pad(m % 60);
+function peakWindow(T) { return hmText(T.ps) + "–" + hmText(T.pe); }
+function catName(T, c) { return c === "kePeak" ? "KE on-peak (" + peakWindow(T) + ")" : CATS[c].name; }
+function catRate(T, c) { return c === "ke" ? T.flat : c === "kePeak" ? T.peak : c === "keOff" ? T.off : c === "solar" ? T.solar : T.gen; }
+
+function tariffFieldset(kind) {
+  return `
+      <fieldset class="panel tariff">
+        <legend>TARIFFS (PER kWh)</legend>
+        <div class="rate-row">
+          <label>Currency <input type="text" class="t-cur" maxlength="5"></label>
+          <label>KE (grid) tariff
+            <select class="t-mode"><option value="tou">On-peak and off-peak</option><option value="flat">Flat rate</option></select>
+          </label>
+        </div>
+        <div class="t-tou">
+          <div class="two">
+            <label>On-peak rate <input type="number" class="t-peak rate-big" min="0" step="0.01" inputmode="decimal" placeholder="e.g. 62.00"></label>
+            <label>Off-peak rate <input type="number" class="t-off rate-big" min="0" step="0.01" inputmode="decimal" placeholder="e.g. 48.00"></label>
+          </div>
+          <div class="two">
+            <label>Peak from <input type="time" class="t-pfrom" step="900"></label>
+            <label>Peak to <input type="time" class="t-pto" step="900"></label>
+          </div>
+        </div>
+        <div class="t-flat"><label>KE per unit cost <input type="number" class="t-flat-rate rate-big" min="0" step="0.01" inputmode="decimal" placeholder="e.g. 52.50"></label></div>
+        <p class="t-sub">Own generation</p>
+        <div class="two">
+          <label>Solar tariff <input type="number" class="t-solar rate-big" min="0" step="0.01" inputmode="decimal" placeholder="e.g. 0"></label>
+          <label>Generator tariff <input type="number" class="t-gen rate-big" min="0" step="0.01" inputmode="decimal" placeholder="e.g. 75.00"></label>
+        </div>
+        ${kind !== "gen" ? `<label class="t-basis-l">Cost of distribution meters
+          <select class="t-basis"><option value="mix">Source mix of each hour (KE, solar, genset)</option><option value="grid">KE tariff only</option></select>
+        </label>` : ""}
+        <p class="hint-s">${kind === "gen"
+          ? "KE is priced at the KE tariff, solar at the solar tariff and the genset at the generator tariff."
+          : "With source mix, each hour of distribution energy is split by how much KE, solar and the genset supplied the plant in that hour, and each part is priced at its own tariff."}
+          Set the peak hours to those on your KE bill (they change by season). Saved in this browser and shared by all tabs.</p>
+      </fieldset>`;
+}
+function readTariffInputs(box) {
+  const q = s => box.querySelector(s);
+  const t = loadTariff();
+  Object.assign(t, { cur: q(".t-cur").value.trim(), mode: q(".t-mode").value, flat: q(".t-flat-rate").value, peak: q(".t-peak").value,
+    off: q(".t-off").value, pFrom: q(".t-pfrom").value, pTo: q(".t-pto").value, solar: q(".t-solar").value, gen: q(".t-gen").value });
+  if (q(".t-basis")) t.basis = q(".t-basis").value;
+  return t;
+}
+function showTariffMode(box) {
+  const tou = box.querySelector(".t-mode").value === "tou";
+  box.querySelector(".t-tou").hidden = !tou;
+  box.querySelector(".t-flat").hidden = tou;
+}
+function writeTariffInputs(box, t) {
+  const set = (s, v) => { const x = box.querySelector(s); if (x && x.value !== v) x.value = v; };
+  set(".t-cur", t.cur); set(".t-mode", t.mode); set(".t-flat-rate", t.flat); set(".t-peak", t.peak); set(".t-off", t.off);
+  set(".t-pfrom", t.pFrom); set(".t-pto", t.pTo); set(".t-solar", t.solar); set(".t-gen", t.gen); set(".t-basis", t.basis);
+  showTariffMode(box);
+}
+function bindTariff(el) {
+  const box = el.querySelector(".tariff");
+  writeTariffInputs(box, loadTariff());
+  const changed = () => {
+    const t = readTariffInputs(box);
+    saveTariff(t);
+    showTariffMode(box);
+    document.querySelectorAll("fieldset.tariff").forEach(b => { if (b !== box) writeTariffInputs(b, t); });
+  };
+  box.querySelectorAll("input, select").forEach(x => { x.addEventListener("input", changed); x.addEventListener("change", changed); });
+}
+
+/* Tariff values checked and ready to use. sel = meters in the report. */
+function needsMix(sel, T) { return T.basis === "mix" && sel.some(m => m.group === "dist"); }
+function mixMeters(sel, T) { return needsMix(sel, T) ? METERS.filter(m => m.group === "gen" && !sel.includes(m)) : []; }
+function readTariff(box, sel) {
+  const t = readTariffInputs(box);
+  const num = s => (s === "" || s == null) ? NaN : Number(s);
+  const T = { cur: t.cur || CONFIG.currency, mode: t.mode, basis: t.basis || "mix" };
+  if (T.mode === "flat") {
+    T.flat = num(t.flat);
+    if (!(T.flat > 0)) throw new Error("Enter the KE per unit cost (the price of 1 kWh) in the Tariffs box.");
+  } else {
+    T.peak = num(t.peak); T.off = num(t.off);
+    if (!(T.peak > 0)) throw new Error("Enter the KE on-peak rate in the Tariffs box.");
+    if (!(T.off > 0)) throw new Error("Enter the KE off-peak rate in the Tariffs box.");
+    if (!t.pFrom || !t.pTo) throw new Error("Enter the start and end of the KE peak hours.");
+    T.ps = parseHM(t.pFrom) / MIN; T.pe = parseHM(t.pTo) / MIN;
+    if (T.ps === T.pe) throw new Error("The peak hours must start and end at different times.");
+  }
+  const mix = needsMix(sel, T);
+  const needSolar = mix || sel.some(m => m.src === "solar"), needGen = mix || sel.some(m => m.src === "gen");
+  T.solar = num(t.solar); T.gen = num(t.gen);
+  if (needSolar && !(T.solar >= 0)) throw new Error("Enter the solar tariff in the Tariffs box (enter 0 to count solar energy as free).");
+  if (needGen && !(T.gen >= 0)) throw new Error("Enter the generator tariff in the Tariffs box.");
+  if (!(T.solar >= 0)) T.solar = 0;
+  if (!(T.gen >= 0)) T.gen = 0;
+  return T;
+}
+function tariffText(T) {
+  const r = v => T.cur + " " + fmt(v, 2);
+  const ke = T.mode === "tou" ? "KE on-peak " + r(T.peak) + " (" + peakWindow(T) + "), off-peak " + r(T.off) : "KE " + r(T.flat);
+  return ke + ", solar " + r(T.solar) + ", genset " + r(T.gen) + " per kWh";
+}
+
+/* Part of the clock hour starting at t that falls in the KE peak window (0 to 1) */
+function peakFraction(T, t) {
+  if (T.mode !== "tou") return 0;
+  const m0 = P(t).getUTCHours() * 60, m1 = m0 + 60;
+  const ov = (a, b) => Math.max(0, Math.min(m1, b) - Math.max(m0, a));
+  return (T.ps < T.pe ? ov(T.ps, T.pe) : ov(T.ps, 1440) + ov(0, T.pe)) / 60;
+}
+function keParts(T, t, kwh) {
+  if (T.mode !== "tou") return [["ke", kwh]];
+  const f = peakFraction(T, t);
+  return [["kePeak", kwh * f], ["keOff", kwh * (1 - f)]].filter(p => p[1] > 0);
+}
+/* Supply of the plant per hour, from the generation meters: Map t -> {ke, solar, gen} kWh */
+function buildMix(data) {
+  const mix = new Map();
+  METERS.filter(m => m.group === "gen" && data[m.id]).forEach(m => data[m.id].hours.forEach(h => {
+    if (!h.src || !(h.kwh > 0)) return;
+    const o = mix.get(h.t) || { ke: 0, solar: 0, gen: 0 };
+    o[m.src] += h.kwh; mix.set(h.t, o);
+  }));
+  return mix;
+}
+function mixTotals(mix) {
+  const o = { ke: 0, solar: 0, gen: 0 };
+  if (mix) mix.forEach(x => { o.ke += x.ke; o.solar += x.solar; o.gen += x.gen; });
+  o.sum = o.ke + o.solar + o.gen;
+  return o;
+}
+/* Cost of every hour of every meter: h.cost, h.parts [{c, kwh, cost}], d.cost, d.cats */
+function applyTariff(T, list, mix) {
+  list.forEach(d => {
+    d.cost = 0; d.cats = {}; d.gapTs = [];
+    d.hours.forEach(h => {
+      h.cost = 0; h.parts = [];
+      if (!h.src) return;
+      let parts;
+      if (d.m.group === "gen") parts = d.m.src === "ke" ? keParts(T, h.t, h.kwh) : [[d.m.src, h.kwh]];
+      else if (T.basis === "mix" && mix) {
+        const o = mix.get(h.t), sum = o ? o.ke + o.solar + o.gen : 0;
+        if (sum > 0) parts = [...keParts(T, h.t, h.kwh * o.ke / sum), ["solar", h.kwh * o.solar / sum], ["gen", h.kwh * o.gen / sum]].filter(p => p[1] > 0);
+        else { parts = keParts(T, h.t, h.kwh); if (h.kwh > 0) d.gapTs.push(h.t); }   // no supply readings: KE tariff
+      } else parts = keParts(T, h.t, h.kwh);
+      h.parts = parts.map(([c, k]) => ({ c, kwh: k, cost: k * catRate(T, c) }));
+      h.parts.forEach(p => {
+        h.cost += p.cost;
+        const a = d.cats[p.c] = d.cats[p.c] || { kwh: 0, cost: 0 };
+        a.kwh += p.kwh; a.cost += p.cost;
+      });
+      d.cost += h.cost;
+    });
+  });
+}
+function mergeCats(list) {
+  const o = {};
+  list.forEach(d => Object.entries(d.cats || {}).forEach(([c, a]) => { const x = o[c] = o[c] || { kwh: 0, cost: 0 }; x.kwh += a.kwh; x.cost += a.cost; }));
+  return o;
+}
+function avgRate(cost, kwh, cur) { return kwh > 0 ? cur + " " + fmt(cost / kwh, 2) : "–"; }
+function rateNote(T, h, cur) {
+  const f = peakFraction(T, h.t);
+  return (h.kwh > 0 ? "Average " + avgRate(h.cost, h.kwh, cur) + " per kWh" : "") +
+    (T.mode === "tou" ? (f >= 1 ? ", on-peak hour" : f > 0 ? ", partly on-peak" : ", off-peak hour") : "");
+}
+function tariffSub(T, sel) {
+  const dist = sel.some(m => m.group === "dist"), gen = sel.some(m => m.group === "gen");
+  const parts = [];
+  if (dist) parts.push(T.basis === "mix" ? "Distribution energy is split each hour by the plant's supply mix (KE, solar, genset), each part at its own tariff." : "Distribution energy is priced at the KE tariff.");
+  if (gen) parts.push("Each generation source is priced at its own tariff.");
+  if (T.mode === "tou") parts.push("KE peak hours: " + peakWindow(T) + " PKT.");
+  return parts.join(" ");
+}
+function tariffCard(cats, T, cur, sel) {
+  const keys = CAT_ORDER.filter(c => cats[c] && cats[c].kwh > 0);
+  const totK = keys.reduce((s, c) => s + cats[c].kwh, 0), totC = keys.reduce((s, c) => s + cats[c].cost, 0);
+  if (!keys.length) return "";
+  const rows = keys.map(c => { const a = cats[c], col = CATS[c].color;
+    return `<tr><td><span class="dot" style="--c:${col}"></span>&nbsp; ${esc(catName(T, c))}</td>
+      <td class="n">${esc(cur)} ${fmt(catRate(T, c), 2)}</td><td class="n kwh">${fmtKwh(a.kwh)}</td><td class="n">${pct(totK > 0 ? a.kwh / totK : 0)}</td>
+      <td class="n cost">${esc(money(a.cost, cur))}</td>
+      <td class="n">${pct(totC > 0 ? a.cost / totC : 0)}<span class="share"><i style="width:${(totC > 0 ? a.cost / totC * 100 : 0).toFixed(1)}%;--c:${col}"></i></span></td></tr>`; }).join("");
+  return `<div class="card" style="margin-top:16px"><h2>COST BY TARIFF</h2><p class="sub">${esc(tariffSub(T, sel))}</p>
+    <div class="tablebox" style="margin-top:0"><table>
+      <thead><tr><th>Tariff</th><th class="n">Rate per kWh</th><th class="n">Energy (kWh)</th><th class="n">Energy share</th><th class="n">Cost (${esc(cur)})</th><th class="n">Cost share</th></tr></thead>
+      <tbody>${rows}<tr class="sum"><td>Total</td><td class="n">${esc(avgRate(totC, totK, cur))} avg</td><td class="n">${fmtKwh(totK)}</td><td class="n">100%</td><td class="n">${esc(money(totC, cur))}</td><td class="n">100%</td></tr></tbody>
+    </table></div></div>`;
+}
+function costExplain(T, sel) {
+  const r = v => esc(T.cur) + " " + fmt(v, 2);
+  const dist = sel.some(m => m.group === "dist"), gen = sel.some(m => m.group === "gen");
+  let s = `<p><b>Cost.</b> Every hour's energy is priced at the tariff that applies to it. `;
+  s += T.mode === "tou"
+    ? `KE energy uses the on-peak rate (${r(T.peak)} per kWh) between ${peakWindow(T)} PKT and the off-peak rate (${r(T.off)}) at other times. If the peak starts or ends inside an hour, that hour is split by minutes, assuming an even load within the hour. `
+    : `KE energy uses a flat rate of ${r(T.flat)} per kWh. `;
+  s += `Solar energy uses ${r(T.solar)} and genset energy ${r(T.gen)} per kWh. `;
+  if (gen) s += `Each generation source is priced at its own tariff. `;
+  if (dist) s += T.basis === "mix"
+    ? `For distribution meters, each hour's energy is split by the plant's supply in that hour, measured by the KE, genset and solar meters (for example 60% KE, 30% solar, 10% genset), and each part is priced at its own tariff. Hours without supply readings use the KE tariff. `
+    : `Distribution meters are priced at the KE tariff only. `;
+  s += `“Per kWh” is cost ÷ energy, the average rate actually paid. Fixed charges and taxes are not included.</p>`;
+  return s;
+}
+function tariffCsv(cats, T, cur, line) {
+  const keys = CAT_ORDER.filter(c => cats[c] && cats[c].kwh > 0);
+  return [line(["Tariff", "Rate " + cur + " per kWh", "Energy kWh", "Cost " + cur])]
+    .concat(keys.map(c => line([catName(T, c), catRate(T, c).toFixed(2), cats[c].kwh.toFixed(2), cats[c].cost.toFixed(2)])));
+}
+/* Sentences for the summaries */
+function tariffSentences(cats, T, cur, sel, mix, gaps) {
+  const out = [];
+  const keys = CAT_ORDER.filter(c => cats[c] && cats[c].kwh > 0);
+  const totC = keys.reduce((s, c) => s + cats[c].cost, 0);
+  if (keys.length > 1) out.push("By tariff: " + keys.map(c => `${esc(catName(T, c))} <b>${fmtKwh(cats[c].kwh)} kWh</b>, ${esc(money(cats[c].cost, cur))} (${pct(totC > 0 ? cats[c].cost / totC : 0)} of the cost)`).join("; ") + ".");
+  if (needsMix(sel, T)) {
+    const m = mixTotals(mix);
+    if (m.sum > 0) out.push(`Distribution energy was priced by the plant's supply in each hour. Over the period KE supplied ${pct(m.ke / m.sum)}, solar ${pct(m.solar / m.sum)} and the genset ${pct(m.gen / m.sum)} of the measured supply.`);
+    if (gaps) out.push(`<span class="warn">For ${gaps} hour${gaps > 1 ? "s" : ""} there were no supply readings from the generation meters, so the KE tariff was used.</span>`);
+  }
+  return out;
 }
 
 /* ================================================================
@@ -573,33 +840,51 @@ function fluxBase(m, start, stop, fieldNames) {
   return 'from(bucket: ' + JSON.stringify(CONFIG.bucket) + ')\n' +
     '  |> range(start: ' + new Date(start).toISOString() + ', stop: ' + new Date(stop).toISOString() + ')\n' +
     '  |> filter(fn: (r) => ' + m.meas.map(x => 'r._measurement == "' + x + '"').join(" or ") + ')\n' +
-    '  |> filter(fn: (r) => r.' + m.tagKey + ' == ' + JSON.stringify(m.tag) + ')\n' +
+    '  |> filter(fn: (r) => ' + [].concat(m.tag).map(t => 'r.' + m.tagKey + ' == ' + JSON.stringify(t)).join(" or ") + ')\n' +
     '  |> filter(fn: (r) => ' + fieldNames.map(f => 'r._field == "' + f + '"').join(" or ") + ')\n';
 }
 const KEEP = '  |> keep(columns: ["_time", "_value", "_field"])';
 const HOURLY = fn => '  |> aggregateWindow(every: 1h, fn: ' + fn + ', createEmpty: false, timeSrc: "_start")\n';
 
+/* A combined meter (several tags, e.g. Solar Total) adds its meters together in the query:
+   each meter is first put on the same time grid, then the values at the same time are
+   added (energy, power, current) or averaged (voltage). */
+const isCombined = m => Array.isArray(m.tag) && m.tag.length > 1;
+const COMBINE = (every, fn) => '  |> group(columns: ["_field"])\n  |> sort(columns: ["_time"])\n' +
+  '  |> aggregateWindow(every: ' + every + ', fn: ' + fn + ', createEmpty: false, timeSrc: "_start")\n';
+const MINUTE_GRID = '  |> aggregateWindow(every: 1m, fn: mean, createEmpty: false, timeSrc: "_start")\n';
+
 /* Query list for one meter */
 function meterJobs(m, range, paramKeys) {
-  const f = m.fields;
+  const f = m.fields, comb = isCombined(m);
   const pf = [...new Set(paramKeys.flatMap(k => PARAMS.find(p => p.key === k).fields))].filter(k => f[k]);
-  const meanF = [...new Set(["pTotal", ...pf])].filter(k => f[k]).map(k => f[k]);
+  const meanK = [...new Set(["pTotal", ...pf])].filter(k => f[k]);
+  const cntK = ["kwhImp", "kwhExp"].filter(k => f[k]);
+  // groups of field names; a combined meter needs separate queries for added and averaged values
+  const split = keys => {
+    if (!keys.length) return [];
+    if (!comb) return [{ names: keys.map(k => f[k]), fn: null }];
+    const v = keys.filter(k => k[0] === "v"), s = keys.filter(k => k[0] !== "v");
+    return [[s, "sum"], [v, "mean"]].filter(x => x[0].length).map(([ks, fn]) => ({ names: ks.map(k => f[k]), fn }));
+  };
+  const hourly = (start, g, agg) => fluxBase(m, start, range.stop, g.names) + HOURLY(agg) + (g.fn ? COMBINE("1h", g.fn) : "") + KEEP;
+  // highest / lowest: a combined meter is added up minute by minute first
+  const minute = g => fluxBase(m, range.start, range.stop, g.names) + (g.fn ? MINUTE_GRID + COMBINE("1m", g.fn) : "");
   const jobs = [];
-  const cnt = ["kwhImp", "kwhExp"].filter(k => f[k]).map(k => f[k]);
-  if (cnt.length) jobs.push({ m, kind: "cnt", flux: fluxBase(m, range.start - HOUR, range.stop, cnt) + HOURLY("max") + KEEP });
-  if (meanF.length) jobs.push({ m, kind: "mean", flux: fluxBase(m, range.start, range.stop, meanF) + HOURLY("mean") + KEEP });
-  if (pf.length) {
-    const names = pf.map(k => f[k]);
-    jobs.push({ m, kind: "hmax", flux: fluxBase(m, range.start, range.stop, names) + HOURLY("max") + KEEP });
-    jobs.push({ m, kind: "hmin", flux: fluxBase(m, range.start, range.stop, names) + HOURLY("min") + KEEP });
-    jobs.push({ m, kind: "peak", flux: fluxBase(m, range.start, range.stop, names) + '  |> max()\n' + KEEP });
-    jobs.push({ m, kind: "low",  flux: fluxBase(m, range.start, range.stop, names) + '  |> min()\n' + KEEP });
-  }
+  split(cntK).forEach(g => jobs.push({ m, kind: "cnt", flux: hourly(range.start - HOUR, g, "max") }));
+  split(meanK).forEach(g => jobs.push({ m, kind: "mean", flux: hourly(range.start, g, "mean") }));
+  split(pf).forEach(g => {
+    jobs.push({ m, kind: "hmax", flux: minute(g) + HOURLY("max") + KEEP });
+    jobs.push({ m, kind: "hmin", flux: minute(g) + HOURLY("min") + KEEP });
+    jobs.push({ m, kind: "peak", flux: minute(g) + '  |> max()\n' + KEEP });
+    jobs.push({ m, kind: "low",  flux: minute(g) + '  |> min()\n' + KEEP });
+  });
   return jobs;
 }
 
-async function loadAll(meters, range, paramKeys, onProgress) {
-  const jobs = meters.flatMap(m => meterJobs(m, range, paramKeys));
+async function loadAll(meters, range, paramKeys, onProgress, extra = []) {
+  // extra = generation meters loaded only for the source mix (energy, no parameters)
+  const jobs = meters.flatMap(m => meterJobs(m, range, paramKeys)).concat(extra.flatMap(m => meterJobs(m, range, [])));
   const texts = new Array(jobs.length);
   let next = 0, done = 0;
   onProgress(0, jobs.length);
@@ -614,10 +899,11 @@ async function loadAll(meters, range, paramKeys, onProgress) {
   const raw = {};
   jobs.forEach((job, k) => {
     const r = raw[job.m.id] = raw[job.m.id] || {};
-    r[job.kind] = parseInfluxCsv(texts[k]);
+    r[job.kind] = (r[job.kind] || []).concat(parseInfluxCsv(texts[k]));
   });
   const out = {};
   meters.forEach(m => out[m.id] = processMeter(m, range, raw[m.id] || {}, paramKeys));
+  extra.forEach(m => out[m.id] = processMeter(m, range, raw[m.id] || {}, []));
   return out;
 }
 
@@ -843,14 +1129,7 @@ function buildSection(kind) {
         <p class="range-text"></p>
       </fieldset>
 
-      <fieldset class="panel">
-        <legend>COST</legend>
-        <div class="rate-row">
-          <label>Currency <input type="text" class="f-cur" maxlength="5" value="${esc(savedCur())}"></label>
-          <label>Per unit cost (per kWh) <input type="number" class="f-rate rate-big" min="0" step="0.01" inputmode="decimal" placeholder="e.g. 52.50" value="${esc(savedRate())}"></label>
-        </div>
-        <p class="hint-s">Every cost in the report is energy (kWh) × this per unit cost. The value is saved in this browser and shared by both tabs.</p>
-      </fieldset>
+${tariffFieldset(kind)}
 
       <fieldset class="panel">
         <legend>PARAMETERS</legend>
@@ -903,11 +1182,7 @@ function buildSection(kind) {
   $(".sel-all").addEventListener("click", () => { boxes.forEach(b => b.checked = true); updateCount(); });
   $(".sel-none").addEventListener("click", () => { boxes.forEach(b => b.checked = false); updateCount(); });
   boxes.forEach(b => b.addEventListener("change", updateCount));
-  [".f-rate", ".f-cur"].forEach(s => $(s).addEventListener("input", () => {
-    saveRate($(".f-rate").value, $(".f-cur").value.trim() || CONFIG.currency);
-    document.querySelectorAll(".f-rate").forEach(x => { if (x !== $(".f-rate")) x.value = $(".f-rate").value; });
-    document.querySelectorAll(".f-cur").forEach(x => { if (x !== $(".f-cur")) x.value = $(".f-cur").value; });
-  }));
+  bindTariff(el);
 
   const prog = makeProgress($(".progress"));
   function showError(head, text) { $(".b-head").textContent = head; $(".b-text").textContent = text; $(".banner").hidden = false; }
@@ -916,23 +1191,24 @@ function buildSection(kind) {
     $(".banner").hidden = true; $(".status").textContent = "";
     const ids = boxes.filter(b => b.checked).map(b => b.value);
     const paramKeys = [...el.querySelectorAll(".f-param")].filter(b => b.checked).map(b => b.value);
-    const rate = Number($(".f-rate").value), cur = $(".f-cur").value.trim() || CONFIG.currency;
-    let range, group;
+    let range, group, T, sel;
     try {
       range = rangeFor(selection(), Date.now());
       group = $(".f-group").value;
-      if (!(rate > 0)) throw new Error("Enter the per unit cost (the price of 1 kWh) in the Cost box.");
       if (!ids.length) throw new Error("Select at least one " + S.noun + ".");
+      sel = METERS.filter(m => ids.includes(m.id));
+      T = readTariff($(".tariff"), sel);
       if (group === "hour" && range.stop - range.start > 62 * DAY) throw new Error("Cost per hour works for up to 62 days. Choose cost per day or per month for longer periods.");
     } catch (e) { showError("Check the selection.", e.message); return; }
     $(".run").disabled = true;
     prog.start();
     try {
-      const sel = METERS.filter(m => ids.includes(m.id));
-      const data = await loadAll(sel, range, paramKeys, (d, t) => prog.step(d, t));
+      const data = await loadAll(sel, range, paramKeys, (d, t) => prog.step(d, t), mixMeters(sel, T));
       prog.calc();
       await new Promise(r => requestAnimationFrame(() => setTimeout(r, 120)));
-      Object.assign(state, { data, range, group, rate, cur, meters: sel, paramKeys, generated: Date.now(), paramMeter: {} });
+      const mix = needsMix(sel, T) ? buildMix(data) : null;
+      applyTariff(T, Object.values(data), mix);
+      Object.assign(state, { data, range, group, T, cur: T.cur, mix, meters: sel, paramKeys, generated: Date.now(), paramMeter: {} });
       render();
       prog.finish();
       $(".status").textContent = "Updated " + fmtTime(state.generated) + " PKT";
@@ -944,32 +1220,45 @@ function buildSection(kind) {
 
   /* ---------- Report ---------- */
   function compute() {
-    const { data, range, group, rate, meters } = state;
+    const { data, range, group, meters } = state;
     const list = meters.map(m => data[m.id]);
     const multiDay = dayStart(range.start) !== dayStart(range.stop - 1);
     const bks = buckets(range, group).map(b => {
-      let kwh = 0, has = false; const per = {};
+      let kwh = 0, cost = 0, onPeak = 0, offPeak = 0, onCost = 0, offCost = 0, has = false; const per = {};
       list.forEach(d => {
         let k = 0;
-        d.hours.forEach(h => { if (h.t >= b.s && h.t < b.e && h.src) { k += h.kwh; has = true; } });
+        d.hours.forEach(h => {
+          if (h.t >= b.s && h.t < b.e && h.src) {
+            k += h.kwh; cost += h.cost; has = true;
+            h.parts.forEach(p => {
+              if (p.c === "kePeak") { onPeak += p.kwh; onCost += p.cost; }
+              else if (p.c === "keOff") { offPeak += p.kwh; offCost += p.cost; }
+            });
+          }
+        });
         per[d.m.id] = k; kwh += k;
       });
-      return { ...b, kwh, cost: kwh * rate, has, per, label: bucketLabel(b, group, multiDay), axis: axisLabel(b, group, multiDay) };
+      return { ...b, kwh, cost, onPeak, offPeak, onCost, offCost, has, per, label: bucketLabel(b, group, multiDay), axis: axisLabel(b, group, multiDay) };
     });
     const total = list.reduce((s, d) => s + d.total, 0);
+    const cost = list.reduce((s, d) => s + d.cost, 0);
     const withData = bks.filter(b => b.has);
-    const peak = withData.reduce((p, b) => (!p || b.kwh > p.kwh) ? b : p, null);
-    const lowest = withData.reduce((p, b) => (!p || b.kwh < p.kwh) ? b : p, null);
+    const peak = withData.reduce((p, b) => (!p || b.cost > p.cost) ? b : p, null);
+    const lowest = withData.reduce((p, b) => (!p || b.cost < p.cost) ? b : p, null);
     bks.forEach(b => b.peak = b === peak);
-    const ranked = list.filter(d => d.hasData).sort((a, b) => b.total - a.total);
+    const ranked = list.filter(d => d.hasData).sort((a, b) => b.cost - a.cost || b.total - a.total);
     ranked.forEach((d, i) => d.color = PALETTE[i % PALETTE.length]);
-    const blocks = DAY_BLOCKS.map(([name, a, z, color]) => ({ name: name + " (" + pad(a) + ":00–" + pad(z) + ":00)", short: name.toLowerCase(), hours: pad(a) + ":00 to " + pad(z) + ":00", color,
-      value: list.reduce((s, d) => s + d.hours.filter(h => h.src && P(h.t).getUTCHours() >= a && P(h.t).getUTCHours() < z).reduce((x, h) => x + h.kwh, 0), 0) }));
-    return { list, bks, total, cost: total * rate, withData, peak, lowest, ranked, blocks, multiDay, missing: list.filter(d => !d.hasData) };
+    const blocks = DAY_BLOCKS.map(([name, a, z, color]) => {
+      const hs = list.flatMap(d => d.hours.filter(h => h.src && P(h.t).getUTCHours() >= a && P(h.t).getUTCHours() < z));
+      return { name: name + " (" + pad(a) + ":00–" + pad(z) + ":00)", short: name.toLowerCase(), hours: pad(a) + ":00 to " + pad(z) + ":00", color,
+        value: hs.reduce((x, h) => x + h.kwh, 0), cost: hs.reduce((x, h) => x + h.cost, 0) };
+    });
+    const gaps = new Set(list.flatMap(d => d.gapTs || [])).size;
+    return { list, bks, total, cost, withData, peak, lowest, ranked, blocks, cats: mergeCats(list), gaps, multiDay, missing: list.filter(d => !d.hasData) };
   }
 
   function render() {
-    const { range, group, rate, cur, meters } = state;
+    const { range, group, T, cur, meters } = state;
     const C = state.c = compute();
     const many = meters.length > 1;
     const gw = GROUP_WORD[group];
@@ -981,7 +1270,8 @@ function buildSection(kind) {
             <h3>${esc(S.title)} energy and cost report${many ? "" : ": " + esc(meters[0].label)}</h3>
             <p class="meta"><b>Period:</b> ${esc(fmtRange(range))}<br>
               <b>${many ? "Meters" : "Meter"}:</b> ${many ? esc(meters.map(m => m.label).join(", ")) : esc(meters[0].label + " (" + meters[0].info + ")")}<br>
-              <b>Per unit cost:</b> ${esc(cur)} ${fmt(rate, 2)} per kWh &nbsp;&nbsp;<b>Cost per:</b> ${gw} &nbsp;&nbsp;<b>Generated:</b> ${esc(fmtDateTime(state.generated))} PKT</p>
+              <b>Tariff:</b> ${esc(tariffText(T))}<br>
+              ${kind === "dist" ? `<b>Distribution priced by:</b> ${T.basis === "mix" ? "source mix of each hour" : "KE tariff only"} &nbsp;&nbsp;` : ""}<b>Cost per:</b> ${gw} &nbsp;&nbsp;<b>Generated:</b> ${esc(fmtDateTime(state.generated))} PKT</p>
           </div>
         </div>
         <div class="rep-tools">
@@ -995,27 +1285,28 @@ function buildSection(kind) {
       body = `<p>No readings in this period for the selected ${S.nouns}. Choose another period, or check that the logger was running.</p>`;
     } else {
       const avg = C.withData.length ? C.total / C.withData.length : 0;
+      const avgCost = C.withData.length ? C.cost / C.withData.length : 0;
       const kpis = `<div class="kpis">
         <div class="kpi main"><div class="k">Total energy</div><div class="v">${fmtKwh(C.total)}<small>kWh</small></div>
           <div class="s">${C.ranked.length} of ${meters.length} ${many ? S.nouns : S.noun} with readings</div></div>
         <div class="kpi cost"><div class="k">Total cost</div><div class="v">${esc(money(C.cost, cur))}</div>
-          <div class="s">At ${esc(cur)} ${fmt(rate, 2)} per kWh</div></div>
-        <div class="kpi" style="--c:${PALETTE[2]}"><div class="k">Average per ${gw}</div><div class="v">${esc(money(avg * rate, cur))}</div>
+          <div class="s">Average ${esc(avgRate(C.cost, C.total, cur))} per kWh</div></div>
+        <div class="kpi" style="--c:${PALETTE[2]}"><div class="k">Average per ${gw}</div><div class="v">${esc(money(avgCost, cur))}</div>
           <div class="s">${fmtKwh(avg)} kWh, over ${C.withData.length} ${gw}${C.withData.length === 1 ? "" : "s"} with readings</div></div>
         <div class="kpi peak"><div class="k">Highest ${gw}</div><div class="v">${esc(money(C.peak.cost, cur))}</div>
           <div class="s">${fmtKwh(C.peak.kwh)} kWh, ${esc(C.peak.label)}</div></div>
       </div>`;
 
       const pieTitle = many ? "COST BY " + S.noun.toUpperCase() : "COST BY TIME OF DAY";
-      const slices = many ? C.ranked.filter(d => d.total > 0).map(d => ({ name: d.m.label, value: d.total * rate, color: d.color }))
-                          : C.blocks.filter(b => b.value > 0).map(b => ({ name: b.name, value: b.value * rate, color: b.color }));
-      const legend = slices.map(s => `<li><span class="dot" style="--c:${s.color}"></span><span>${esc(s.name)}<br><small style="color:var(--muted)">${esc(money(s.value, cur))}, ${fmtKwh(s.value / rate)} kWh</small></span><span class="pct">${pct(C.cost > 0 ? s.value / C.cost : 0)}</span></li>`).join("");
+      const slices = many ? C.ranked.filter(d => d.cost > 0).map(d => ({ name: d.m.label, value: d.cost, kwh: d.total, color: d.color }))
+                          : C.blocks.filter(b => b.cost > 0).map(b => ({ name: b.name, value: b.cost, kwh: b.value, color: b.color }));
+      const legend = slices.map(s => `<li><span class="dot" style="--c:${s.color}"></span><span>${esc(s.name)}<br><small style="color:var(--muted)">${esc(money(s.value, cur))}, ${fmtKwh(s.kwh)} kWh</small></span><span class="pct">${pct(C.cost > 0 ? s.value / C.cost : 0)}</span></li>`).join("");
 
       body = kpis + `
         <div class="card summary"><h2>SUMMARY</h2><div class="sum-text"></div></div>
         <div class="charts">
           <div class="card"><h2>${pieTitle}</h2><p class="sub">Share of the total cost</p>
-            ${C.cost > 0 ? `<div class="donut-wrap">${donutChart(slices, C.cost, short(C.cost), cur + " total", v => money(v, cur))}<ul class="legend">${legend}</ul></div>` : "<p>No energy recorded in this period.</p>"}
+            ${C.cost > 0 ? `<div class="donut-wrap">${donutChart(slices, C.cost, short(C.cost), cur + " total", v => money(v, cur))}<ul class="legend">${legend}</ul></div>` : "<p>No cost in this period.</p>"}
           </div>
           <div class="card">
             <div class="card-head"><h2>${state.metric === "cost" ? "COST" : "ENERGY"} PER ${gw.toUpperCase()}</h2></div>
@@ -1025,6 +1316,7 @@ function buildSection(kind) {
             <p class="note"><span class="dot" style="--c:var(--red)"></span> highest ${gw} &nbsp;&nbsp; <span class="dot" style="--c:var(--bar-empty)"></span> no readings</p>
           </div>
         </div>
+        ${tariffCard(C.cats, T, cur, meters)}
         ${periodTable(C)}
         ${many ? meterTable(C) : ""}
         ${state.paramKeys.length ? `<h2 class="sec-title">ELECTRICAL PARAMETERS</h2>` + state.paramKeys.map(k => `<div class="card param" data-param="${k}"></div>`).join("") : ""}
@@ -1054,22 +1346,34 @@ function buildSection(kind) {
   }
 
   function periodTable(C) {
-    const { cur, group } = state;
+    const { cur, group, T } = state;
     const gw = GROUP_WORD[group];
     const showPer = state.meters.length > 1 && state.meters.length <= 6;
+    const tou = T.mode === "tou";
+    const hourly = group === "hour";
+    const tot = k => (C.cats[k] || { kwh: 0, cost: 0 });
+    const periodTag = b => { const f = peakFraction(T, b.s);
+      return f >= 1 ? '<span class="tag-tp on">ON-PEAK</span>' : f > 0 ? '<span class="tag-tp part">PART ON-PEAK</span>' : '<span class="tag-tp off">OFF-PEAK</span>'; };
+    const touCells = b => `<td class="n on-c">${b.has ? fmtKwh(b.onPeak) : "–"}</td><td class="n on-c">${b.has ? esc(money(b.onCost, cur)) : "–"}</td>
+        <td class="n off-c">${b.has ? fmtKwh(b.offPeak) : "–"}</td><td class="n off-c">${b.has ? esc(money(b.offCost, cur)) : "–"}</td>`;
     const rows = C.bks.map(b => `<tr${b.peak ? ' class="peak"' : ""}>
         <td>${esc(b.label)}${b.peak ? '<span class="tag-peak">HIGHEST</span>' : ""}</td>
+        ${tou && hourly ? `<td>${periodTag(b)}</td>` : ""}
         <td class="n kwh">${b.has ? fmtKwh(b.kwh) : "–"}</td>
         <td class="n cost">${b.has ? esc(money(b.cost, cur)) : "–"}</td>
-        <td class="n">${b.has && C.total > 0 ? pct(b.kwh / C.total) + `<span class="share"><i style="width:${(b.kwh / C.total * 100).toFixed(1)}%;--c:var(--amber)"></i></span>` : "–"}</td>
+        <td class="n">${b.has ? esc(avgRate(b.cost, b.kwh, cur)) : "–"}</td>
+        <td class="n">${b.has && C.cost > 0 ? pct(b.cost / C.cost) + `<span class="share"><i style="width:${(b.cost / C.cost * 100).toFixed(1)}%;--c:var(--amber)"></i></span>` : "–"}</td>
+        ${tou ? touCells(b) : ""}
         ${showPer ? state.meters.map(m => `<td class="n">${b.has ? fmtKwh(b.per[m.id]) : "–"}</td>`).join("") : ""}
         <td class="flag">${b.has ? "" : "No readings"}</td></tr>`).join("");
     return `<div class="card" style="margin-top:16px"><h2>COST PER ${gw.toUpperCase()}</h2>
-      <p class="sub">Energy and cost of every ${gw}. The highest ${gw} is marked.${showPer ? " Meter columns are in kWh." : ""}</p>
+      <p class="sub">Energy and cost of every ${gw}. The highest-cost ${gw} is marked.${tou ? ` On-peak and off-peak columns are the KE energy and cost at the on-peak rate (${esc(cur)} ${fmt(T.peak, 2)}, ${peakWindow(T)}) and the off-peak rate (${esc(cur)} ${fmt(T.off, 2)}).` : ""}${showPer ? " Meter columns are in kWh." : ""}</p>
       <div class="tablebox" style="margin-top:0"><table>
-        <thead><tr><th>${gw === "hour" ? "Hour (PKT)" : gw === "day" ? "Day" : "Month"}</th><th class="n">Energy (kWh)</th><th class="n">Cost (${esc(cur)})</th><th class="n">Share</th>
+        <thead><tr><th>${gw === "hour" ? "Hour (PKT)" : gw === "day" ? "Day" : "Month"}</th>${tou && hourly ? "<th>Tariff period</th>" : ""}<th class="n">Energy (kWh)</th><th class="n">Cost (${esc(cur)})</th><th class="n">Per kWh</th><th class="n">Cost share</th>
+          ${tou ? `<th class="n on-c">On-peak kWh</th><th class="n on-c">On-peak cost</th><th class="n off-c">Off-peak kWh</th><th class="n off-c">Off-peak cost</th>` : ""}
           ${showPer ? state.meters.map(m => `<th class="n">${esc(m.label)}</th>`).join("") : ""}<th>Note</th></tr></thead>
-        <tbody>${rows}<tr class="sum"><td>Total</td><td class="n">${fmtKwh(C.total)}</td><td class="n">${esc(money(C.cost, cur))}</td><td class="n">100%</td>
+        <tbody>${rows}<tr class="sum"><td>Total</td>${tou && hourly ? "<td></td>" : ""}<td class="n">${fmtKwh(C.total)}</td><td class="n">${esc(money(C.cost, cur))}</td><td class="n">${esc(avgRate(C.cost, C.total, cur))}</td><td class="n">100%</td>
+          ${tou ? `<td class="n">${fmtKwh(tot("kePeak").kwh)}</td><td class="n">${esc(money(tot("kePeak").cost, cur))}</td><td class="n">${fmtKwh(tot("keOff").kwh)}</td><td class="n">${esc(money(tot("keOff").cost, cur))}</td>` : ""}
           ${showPer ? state.meters.map(m => `<td class="n">${fmtKwh(state.data[m.id].total)}</td>`).join("") : ""}<td></td></tr></tbody>
       </table></div></div>`;
   }
@@ -1085,16 +1389,17 @@ function buildSection(kind) {
   }
 
   function meterTable(C) {
-    const { cur, rate } = state;
+    const { cur } = state;
     const rows = [...C.ranked, ...C.missing].map(d => `<tr>
       <td><span class="dot" style="--c:${d.color || "var(--grid)"}"></span>&nbsp; ${esc(d.m.label)}</td>
-      <td class="n kwh">${d.hasData ? fmtKwh(d.total) : "–"}</td><td class="n cost">${d.hasData ? esc(money(d.total * rate, cur)) : "–"}</td>
-      <td class="n">${d.hasData && C.total > 0 ? pct(d.total / C.total) + `<span class="share"><i style="width:${(d.total / C.total * 100).toFixed(1)}%;--c:${d.color}"></i></span>` : "–"}</td>
+      <td class="n kwh">${d.hasData ? fmtKwh(d.total) : "–"}</td><td class="n cost">${d.hasData ? esc(money(d.cost, cur)) : "–"}</td>
+      <td class="n">${d.hasData ? esc(avgRate(d.cost, d.total, cur)) : "–"}</td>
+      <td class="n">${d.hasData && C.cost > 0 ? pct(d.cost / C.cost) + `<span class="share"><i style="width:${(d.cost / C.cost * 100).toFixed(1)}%;--c:${d.color}"></i></span>` : "–"}</td>
       <td class="flag">${esc(methodNote(d))}</td></tr>`).join("");
-    return `<div class="card" style="margin-top:16px"><h2>COST BY ${S.noun.toUpperCase()}</h2><p class="sub">Highest first</p>
+    return `<div class="card" style="margin-top:16px"><h2>COST BY ${S.noun.toUpperCase()}</h2><p class="sub">Highest cost first</p>
       <div class="tablebox" style="margin-top:0"><table>
-      <thead><tr><th>${S.noun[0].toUpperCase() + S.noun.slice(1)}</th><th class="n">Energy (kWh)</th><th class="n">Cost (${esc(cur)})</th><th class="n">Share</th><th>Note</th></tr></thead>
-      <tbody>${rows}<tr class="sum"><td>Total</td><td class="n">${fmtKwh(C.total)}</td><td class="n">${esc(money(C.cost, cur))}</td><td class="n">100%</td><td></td></tr></tbody>
+      <thead><tr><th>${S.noun[0].toUpperCase() + S.noun.slice(1)}</th><th class="n">Energy (kWh)</th><th class="n">Cost (${esc(cur)})</th><th class="n">Per kWh</th><th class="n">Cost share</th><th>Note</th></tr></thead>
+      <tbody>${rows}<tr class="sum"><td>Total</td><td class="n">${fmtKwh(C.total)}</td><td class="n">${esc(money(C.cost, cur))}</td><td class="n">${esc(avgRate(C.cost, C.total, cur))}</td><td class="n">100%</td><td></td></tr></tbody>
       </table></div></div>`;
   }
 
@@ -1110,7 +1415,7 @@ function buildSection(kind) {
   }
 
   function hlBox(p, x, kindText, cls) {
-    const { cur, rate } = state;
+    const { cur, T } = state;
     const d = state.data[x.m.id], h = hourOf(d, x.t);
     const hs = Math.floor(x.t / HOUR) * HOUR;
     return `<div class="hl${cls ? " " + cls : ""}">
@@ -1119,14 +1424,14 @@ function buildSection(kind) {
       <div><div class="k">Date and time</div><div class="v">${fmtTime(x.t)}</div><div class="s">${esc(fmtDate(x.t))} PKT</div></div>
       <div><div class="k">Time frame</div><div class="v">${fmtTime(hs)}–${endTime(hs + HOUR)}</div><div class="s">The hour of this reading</div></div>
       <div><div class="k">Energy in that hour</div><div class="v">${h && h.src ? fmtKwh(h.kwh) : "–"}<small>kWh</small></div><div class="s">${esc(x.m.label)}</div></div>
-      <div><div class="k">Cost in that hour</div><div class="v">${h && h.src ? esc(money(h.kwh * rate, cur)) : "–"}</div><div class="s">At ${esc(cur)} ${fmt(rate, 2)} per kWh</div></div>
+      <div><div class="k">Cost in that hour</div><div class="v">${h && h.src ? esc(money(h.cost, cur)) : "–"}</div><div class="s">${h && h.src ? esc(rateNote(T, h, cur)) : ""}</div></div>
     </div>`;
   }
 
   function renderParam(key) {
     const p = PARAMS.find(x => x.key === key);
     const box = el.querySelector(`.param[data-param="${key}"]`);
-    const { cur, rate, meters, group } = state;
+    const { cur, meters, group } = state;
     const C = state.c, gw = GROUP_WORD[group];
     const avail = meters.filter(m => p.fields.some(k => state.data[m.id].params[k]));
     if (!avail.length) {
@@ -1165,7 +1470,7 @@ function buildSection(kind) {
         <td>${s.peak ? esc(fmtDateTime(s.peak.t)) : "–"}</td>
         <td class="n">${s.low ? fmt(s.low.v, dec) : "–"}</td><td>${s.low ? esc(fmtDateTime(s.low.t)) : "–"}</td>
         <td class="n">${fmt(s.avg, dec)}</td>
-        <td class="n">${h && h.src ? fmtKwh(h.kwh) : "–"}</td><td class="n cost">${h && h.src ? esc(money(h.kwh * rate, cur)) : "–"}</td></tr>`;
+        <td class="n">${h && h.src ? fmtKwh(h.kwh) : "–"}</td><td class="n cost">${h && h.src ? esc(money(h.cost, cur)) : "–"}</td></tr>`;
     })).join("");
 
     box.innerHTML = `
@@ -1192,26 +1497,28 @@ function buildSection(kind) {
 
   /* ---------- Summary and explanation ---------- */
   function summary(C) {
-    const { cur, rate, range, meters, group } = state;
+    const { cur, T, range, meters, group } = state;
     const gw = GROUP_WORD[group];
     const many = meters.length > 1;
     const who = many ? "The " + meters.length + " selected " + S.nouns : esc(meters[0].label);
+    const share = v => pct(C.cost > 0 ? v / C.cost : 0);
     const out = [];
-    out.push(`${who} used <b>${fmtKwh(C.total)} kWh</b> from ${esc(fmtRange(range))}. At ${esc(cur)} ${fmt(rate, 2)} per kWh this costs <b>${esc(money(C.cost, cur))}</b>.`);
+    out.push(`${who} used <b>${fmtKwh(C.total)} kWh</b> from ${esc(fmtRange(range))}, costing <b>${esc(money(C.cost, cur))}</b> (average ${esc(avgRate(C.cost, C.total, cur))} per kWh).`);
+    tariffSentences(C.cats, T, cur, meters, state.mix, C.gaps).forEach(s => out.push(s));
     const hrs = C.list[0].hours.length;
     if (C.withData.length > 1) {
       const avg = C.total / C.withData.length;
-      out.push(`On average that is ${fmtKwh(avg)} kWh and ${esc(money(avg * rate, cur))} per ${gw}${group !== "hour" ? `, or ${esc(money(C.cost / hrs, cur))} per hour` : ""}.`);
-      out.push(`The most expensive ${gw} was <b>${esc(C.peak.label)}</b>: ${fmtKwh(C.peak.kwh)} kWh costing <b>${esc(money(C.peak.cost, cur))}</b>, ${pct(C.total > 0 ? C.peak.kwh / C.total : 0)} of the total cost. ` +
+      out.push(`On average that is ${fmtKwh(avg)} kWh and ${esc(money(C.cost / C.withData.length, cur))} per ${gw}${group !== "hour" ? `, or ${esc(money(C.cost / hrs, cur))} per hour` : ""}.`);
+      out.push(`The most expensive ${gw} was <b>${esc(C.peak.label)}</b>: ${fmtKwh(C.peak.kwh)} kWh costing <b>${esc(money(C.peak.cost, cur))}</b>, ${share(C.peak.cost)} of the total cost. ` +
         `The lowest was ${esc(C.lowest.label)} with ${fmtKwh(C.lowest.kwh)} kWh (${esc(money(C.lowest.cost, cur))}).`);
     }
     if (many && C.ranked.length > 1) {
       const t = C.ranked[0];
-      out.push(`<b>${esc(t.m.label)}</b> had the largest share: ${fmtKwh(t.total)} kWh, ${esc(money(t.total * rate, cur))}, ${pct(t.total / C.total)} of the cost. ` +
-        (C.ranked.length > 2 ? `Next were ${C.ranked.slice(1, 3).map(d => esc(d.m.label) + " (" + pct(d.total / C.total) + ")").join(" and ")}.` : ""));
+      out.push(`<b>${esc(t.m.label)}</b> had the largest share: ${fmtKwh(t.total)} kWh, ${esc(money(t.cost, cur))}, ${share(t.cost)} of the cost. ` +
+        (C.ranked.length > 2 ? `Next were ${C.ranked.slice(1, 3).map(d => esc(d.m.label) + " (" + share(d.cost) + ")").join(" and ")}.` : ""));
     }
     const topBlock = [...C.blocks].sort((a, b) => b.value - a.value)[0];
-    if (topBlock.value > 0 && hrs >= 12) out.push(`Most energy was used in the ${topBlock.short}, ${topBlock.hours}: ${pct(topBlock.value / C.total)} of the total, ${esc(money(topBlock.value * rate, cur))}.`);
+    if (topBlock.value > 0 && hrs >= 12) out.push(`Most energy was used in the ${topBlock.short}, ${topBlock.hours}: ${pct(topBlock.value / C.total)} of the energy, ${esc(money(topBlock.cost, cur))}.`);
 
     state.paramKeys.forEach(key => {
       const p = PARAMS.find(x => x.key === key);
@@ -1220,7 +1527,7 @@ function buildSection(kind) {
       const dec = p.unit === "V" ? 1 : 2;
       const where = (many ? esc(pk.m.label) : "") + (p.fields.length > 1 ? (many ? ", " : "") + "phase " + PHASE[pk.k] : "");
       let s = `${esc(p.label)} was highest at <b>${fmt(pk.v, dec)} ${p.unit}</b> on ${esc(fmtDate(pk.t))} at ${fmtTime(pk.t)}${where ? " (" + where + ")" : ""}.`;
-      if (h && h.src && p.unit !== "V") s += ` In the hour ${fmtTime(hs)}–${endTime(hs + HOUR)} ${many ? "this " + S.noun : "it"} used ${fmtKwh(h.kwh)} kWh, costing ${esc(money(h.kwh * rate, cur))}.`;
+      if (h && h.src && p.unit !== "V") s += ` In the hour ${fmtTime(hs)}–${endTime(hs + HOUR)} ${many ? "this " + S.noun : "it"} used ${fmtKwh(h.kwh)} kWh, costing ${esc(money(h.cost, cur))}${T.mode === "tou" && peakFraction(T, hs) > 0 ? " (on-peak)" : ""}.`;
       if (key === "iPhase") {
         state.meters.forEach(m => {
           const a = ["i1", "i2", "i3"].map(k => state.data[m.id].params[k] && state.data[m.id].params[k].avg);
@@ -1250,7 +1557,6 @@ function buildSection(kind) {
   }
 
   function explanation(C) {
-    const { cur, rate } = state;
     const methods = C.list.filter(d => d.hasData);
     const ctr = methods.filter(d => d.method !== "power").map(d => esc(d.m.label));
     const pw = methods.filter(d => d.method === "power").map(d => esc(d.m.label));
@@ -1259,25 +1565,34 @@ function buildSection(kind) {
       `Where a meter has no counter, the counter does not count, or a reading is clearly wrong (it goes down or jumps more than ${fmt(CONFIG.maxKwhPerHour, 0)} kWh in an hour), ` +
       `the energy is calculated from the average active power in that hour: average kW × 1 hour${pw.length ? ` (used for ${pw.join(", ")})` : ""}. ` +
       `If a meter sent no readings for some time, the energy used during that gap appears in the next hour with readings.</p>
-      <p><b>Cost.</b> Cost = energy in kWh × the per unit cost, here ${esc(cur)} ${fmt(rate, 2)} per kWh. This is a flat rate. It does not include fixed charges, taxes, or separate peak and off-peak rates.</p>
-      <p><b>Cost per ${GROUP_WORD[state.group]}.</b> The hourly energy is added up for each ${GROUP_WORD[state.group]} (by Pakistan time). Share is that ${GROUP_WORD[state.group]}'s part of the total. The ${GROUP_WORD[state.group]} with the most energy, and so the highest cost, is marked in red.</p>
+      ${costExplain(state.T, state.meters)}
+      <p><b>Cost per ${GROUP_WORD[state.group]}.</b> The hourly energy and cost are added up for each ${GROUP_WORD[state.group]} (by Pakistan time). Cost share is that ${GROUP_WORD[state.group]}'s part of the total cost. The ${GROUP_WORD[state.group]} with the highest cost is marked in red.</p>
       ${state.paramKeys.length ? `<p><b>Electrical parameters.</b> “Highest” and “lowest” are single readings stored by the logger, with their exact time. The time frame is the clock hour that contains this reading, and its energy and cost are that meter's energy and cost in that hour. “Average” is the average of the hourly averages. In the chart the line is the average per ${GROUP_WORD[state.group]} and the dashed line is the highest hourly value in each ${GROUP_WORD[state.group]}.</p>` : ""}
       ${S.noun === "meter" && state.meters.length > 1 ? "<p><b>Totals.</b> The total adds up the selected meters. If one selected meter feeds another selected meter, that energy is counted twice.</p>" : ""}`;
   }
 
   /* ---------- CSV ---------- */
   function downloadCsv() {
-    const { range, cur, rate, meters, group } = state, C = state.c;
+    const { range, cur, T, meters, group } = state, C = state.c;
     const q = s => '"' + String(s).replace(/"/g, '""') + '"';
     const line = a => a.map(q).join(",");
     const L = [line(["Toyo Packaging", S.title + " energy and cost report"]), line(["Period", fmtRange(range)]),
-      line(["Per unit cost", cur + " " + rate.toFixed(2) + " per kWh"]), line(["Generated", fmtDateTime(state.generated) + " PKT"]), ""];
-    L.push(line([GROUP_WORD[group][0].toUpperCase() + GROUP_WORD[group].slice(1), "Energy kWh", "Cost " + cur, "Share %", ...meters.map(m => m.label + " kWh")]));
-    C.bks.forEach(b => L.push(line([b.label, b.has ? b.kwh.toFixed(2) : "", b.has ? b.cost.toFixed(2) : "", b.has && C.total ? (b.kwh / C.total * 100).toFixed(1) : "",
+      line(["Tariff", tariffText(T)]), ...(kind === "dist" ? [line(["Distribution priced by", T.basis === "mix" ? "Source mix of each hour" : "KE tariff only"])] : []),
+      line(["Generated", fmtDateTime(state.generated) + " PKT"]), ""];
+    const tou = T.mode === "tou", hourly = group === "hour";
+    const tp = b => { const f = peakFraction(T, b.s); return f >= 1 ? "On-peak" : f > 0 ? "Part on-peak" : "Off-peak"; };
+    const tot = k => (C.cats[k] || { kwh: 0, cost: 0 });
+    L.push(line([GROUP_WORD[group][0].toUpperCase() + GROUP_WORD[group].slice(1), ...(tou && hourly ? ["Tariff period"] : []), "Energy kWh", "Cost " + cur, "Cost share %",
+      ...(tou ? ["On-peak kWh", "On-peak cost " + cur, "Off-peak kWh", "Off-peak cost " + cur] : []), ...meters.map(m => m.label + " kWh")]));
+    C.bks.forEach(b => L.push(line([b.label, ...(tou && hourly ? [tp(b)] : []), b.has ? b.kwh.toFixed(2) : "", b.has ? b.cost.toFixed(2) : "", b.has && C.cost ? (b.cost / C.cost * 100).toFixed(1) : "",
+      ...(tou ? (b.has ? [b.onPeak, b.onCost, b.offPeak, b.offCost].map(v => v.toFixed(2)) : ["", "", "", ""]) : []),
       ...meters.map(m => b.has ? b.per[m.id].toFixed(2) : "")])));
-    L.push(line(["Total", C.total.toFixed(2), C.cost.toFixed(2), "100", ...meters.map(m => state.data[m.id].total.toFixed(2))]), "");
-    L.push(line([S.noun, "Energy kWh", "Cost " + cur, "Note"]));
-    C.list.forEach(d => L.push(line([d.m.label, d.total.toFixed(2), (d.total * rate).toFixed(2), methodNote(d)])));
+    L.push(line(["Total", ...(tou && hourly ? [""] : []), C.total.toFixed(2), C.cost.toFixed(2), "100",
+      ...(tou ? [tot("kePeak").kwh, tot("kePeak").cost, tot("keOff").kwh, tot("keOff").cost].map(v => v.toFixed(2)) : []),
+      ...meters.map(m => state.data[m.id].total.toFixed(2))]), "");
+    L.push(...tariffCsv(C.cats, T, cur, line), "");
+    L.push(line([S.noun, "Energy kWh", "Cost " + cur, "Average " + cur + " per kWh", "Note"]));
+    C.list.forEach(d => L.push(line([d.m.label, d.total.toFixed(2), d.cost.toFixed(2), d.total > 0 ? (d.cost / d.total).toFixed(2) : "", methodNote(d)])));
     if (state.paramKeys.length) {
       L.push("", line(["Parameter", S.noun, "Phase", "Highest", "Time of highest", "Lowest", "Time of lowest", "Average", "kWh in hour of highest", "Cost in hour of highest"]));
       state.paramKeys.forEach(key => {
@@ -1287,7 +1602,7 @@ function buildSection(kind) {
           const h = s.peak ? hourOf(state.data[m.id], s.peak.t) : null;
           L.push(line([p.label + " (" + p.unit + ")", m.label, PHASE[k], s.peak ? s.peak.v.toFixed(2) : "", s.peak ? fmtDateTime(s.peak.t) : "",
             s.low ? s.low.v.toFixed(2) : "", s.low ? fmtDateTime(s.low.t) : "", s.avg.toFixed(2),
-            h && h.src ? h.kwh.toFixed(2) : "", h && h.src ? (h.kwh * rate).toFixed(2) : ""]));
+            h && h.src ? h.kwh.toFixed(2) : "", h && h.src ? h.cost.toFixed(2) : ""]));
         }));
       });
     }
@@ -1349,7 +1664,7 @@ function buildCompare() {
   const groupList = (g, title) => `<p class="grp-h">${title}</p><div class="dev-list">
       ${METERS.filter(m => m.group === g).map(m => `<label><input type="checkbox" value="${m.id}"> ${esc(m.label)}</label>`).join("")}</div>`;
   el.innerHTML = `
-    <p class="intro">Compare machines side by side over the same period: how much energy each one used, what it cost, its average active power and its highest active power peak. Choose the period, enter the per unit cost and pick 2 or more machines.</p>
+    <p class="intro">Compare machines side by side over the same period: how much energy each one used, what it cost, its average active power and its highest active power peak. Choose the period, enter the tariffs and pick 2 or more machines.</p>
     <div class="controls">
       <fieldset class="panel">
         <legend>PERIOD</legend>
@@ -1372,21 +1687,15 @@ function buildCompare() {
         <p class="range-text"></p>
       </fieldset>
 
-      <fieldset class="panel">
-        <legend>COST</legend>
-        <div class="rate-row">
-          <label>Currency <input type="text" class="f-cur" maxlength="5" value="${esc(savedCur())}"></label>
-          <label>Per unit cost (per kWh) <input type="number" class="f-rate rate-big" min="0" step="0.01" inputmode="decimal" placeholder="e.g. 52.50" value="${esc(savedRate())}"></label>
-        </div>
-        <p class="hint-s">The same per unit cost is used for every machine, so cost follows energy. It is shared with the other tabs.</p>
-      </fieldset>
+${tariffFieldset("cmp")}
 
       <fieldset class="panel">
         <legend>RANK MACHINES BY</legend>
-        <label class="chk"><input type="radio" name="cmp-order" value="energy" checked> Energy and cost <small>kWh</small></label>
+        <label class="chk"><input type="radio" name="cmp-order" value="cost" checked> Cost <small>with tariffs</small></label>
+        <label class="chk"><input type="radio" name="cmp-order" value="energy"> Energy <small>kWh</small></label>
         <label class="chk"><input type="radio" name="cmp-order" value="peak"> Highest active power peak <small>kW</small></label>
         <label class="chk"><input type="radio" name="cmp-order" value="avg"> Average active power <small>kW</small></label>
-        <p class="hint-s">Tables and bar charts list the machines in this order. Every report includes all three.</p>
+        <p class="hint-s">Tables and bar charts list the machines in this order. Every report includes all of them.</p>
       </fieldset>
 
       <fieldset class="panel wide">
@@ -1430,11 +1739,7 @@ function buildCompare() {
   $(".sel-dist").addEventListener("click", () => { boxes.forEach(b => b.checked = METERS.find(m => m.id === b.value).group === "dist"); updateCount(); });
   $(".sel-none").addEventListener("click", () => { boxes.forEach(b => b.checked = false); updateCount(); });
   boxes.forEach(b => b.addEventListener("change", updateCount));
-  [".f-rate", ".f-cur"].forEach(s => $(s).addEventListener("input", () => {
-    saveRate($(".f-rate").value, $(".f-cur").value.trim() || CONFIG.currency);
-    document.querySelectorAll(".f-rate").forEach(x => { if (x !== $(".f-rate")) x.value = $(".f-rate").value; });
-    document.querySelectorAll(".f-cur").forEach(x => { if (x !== $(".f-cur")) x.value = $(".f-cur").value; });
-  }));
+  bindTariff(el);
   el.querySelectorAll('input[name="cmp-order"]').forEach(r => r.addEventListener("change", () => { if (state.data) render(); }));
 
   const prog = makeProgress($(".progress"));
@@ -1443,22 +1748,23 @@ function buildCompare() {
   $(".run").addEventListener("click", async () => {
     $(".banner").hidden = true; $(".status").textContent = "";
     const ids = boxes.filter(b => b.checked).map(b => b.value);
-    const rate = Number($(".f-rate").value), cur = $(".f-cur").value.trim() || CONFIG.currency;
-    let range, group;
+    let range, group, T, sel;
     try {
       range = rangeFor(selection(), Date.now());
       group = $(".f-group").value;
-      if (!(rate > 0)) throw new Error("Enter the per unit cost (the price of 1 kWh) in the Cost box.");
       if (ids.length < 2) throw new Error("Select at least 2 machines to compare.");
+      sel = METERS.filter(m => ids.includes(m.id));
+      T = readTariff($(".tariff"), sel);
       if (group === "hour" && range.stop - range.start > 62 * DAY) throw new Error("Comparing per hour works for up to 62 days. Choose per day or per month for longer periods.");
     } catch (e) { showError("Check the selection.", e.message); return; }
     $(".run").disabled = true; prog.start();
     try {
-      const sel = METERS.filter(m => ids.includes(m.id));
-      const data = await loadAll(sel, range, ["pTotal"], (d, t) => prog.step(d, t));
+      const data = await loadAll(sel, range, ["pTotal"], (d, t) => prog.step(d, t), mixMeters(sel, T));
       prog.calc();
       await new Promise(r => requestAnimationFrame(() => setTimeout(r, 120)));
-      Object.assign(state, { data, range, group, rate, cur, meters: sel, generated: Date.now() });
+      const mix = needsMix(sel, T) ? buildMix(data) : null;
+      applyTariff(T, Object.values(data), mix);
+      Object.assign(state, { data, range, group, T, cur: T.cur, mix, meters: sel, generated: Date.now() });
       render(); prog.finish();
       $(".status").textContent = "Updated " + fmtTime(state.generated) + " PKT";
     } catch (e) { prog.hide(); showError("Could not create the comparison.", e.message); }
@@ -1467,12 +1773,12 @@ function buildCompare() {
 
   /* ---------- calculation ---------- */
   function compute() {
-    const { data, range, group, rate, meters } = state;
+    const { data, range, group, meters } = state;
     const multiDay = dayStart(range.start) !== dayStart(range.stop - 1);
     const bks = buckets(range, group).map(b => ({ ...b, label: bucketLabel(b, group, multiDay), axis: axisLabel(b, group, multiDay) }));
     const list = meters.map((m, i) => {
       const d = data[m.id];
-      const r = { m, d, color: PALETTE[i % PALETTE.length], kwh: d.total, cost: d.total * rate, has: d.hasData };
+      const r = { m, d, color: PALETTE[i % PALETTE.length], kwh: d.total, cost: d.cost, has: d.hasData };
       const pt = d.params.pTotal;
       if (pt) {
         r.avg = Math.abs(pt.avg);
@@ -1487,13 +1793,14 @@ function buildCompare() {
       }
       r.peakHour = r.peak ? hourOf(d, r.peak.t) : null;
       r.lf = r.peak && r.peak.v > 0 && isNum(r.avg) ? Math.min(1, r.avg / r.peak.v) : null;
-      r.bk = bks.map(b => {
-        let k = 0, has = false;
-        d.hours.forEach(h => { if (h.t >= b.s && h.t < b.e && h.src) { k += h.kwh; has = true; } });
-        return has ? k : null;
+      r.bk = []; r.bkCost = [];
+      bks.forEach(b => {
+        let k = 0, c = 0, has = false;
+        d.hours.forEach(h => { if (h.t >= b.s && h.t < b.e && h.src) { k += h.kwh; c += h.cost; has = true; } });
+        r.bk.push(has ? k : null); r.bkCost.push(has ? c : null);
       });
-      const bi = r.bk.reduce((best, v, i) => (v !== null && (best < 0 || v > r.bk[best])) ? i : best, -1);
-      r.topBk = bi >= 0 ? { b: bks[bi], kwh: r.bk[bi] } : null;
+      const bi = r.bkCost.reduce((best, v, i) => (v !== null && (best < 0 || v > r.bkCost[best])) ? i : best, -1);
+      r.topBk = bi >= 0 ? { b: bks[bi], kwh: r.bk[bi], cost: r.bkCost[bi] } : null;
       r.leads = 0;
       return r;
     });
@@ -1503,9 +1810,11 @@ function buildCompare() {
       b.leader = vals.some(v => v !== null && v > 0) ? list.findIndex(r => r.bk[i] === mx) : -1;
       if (b.leader >= 0) list[b.leader].leads++;
       b.total = vals.reduce((s, v) => s + (v || 0), 0);
+      b.totalCost = list.reduce((s, r) => s + (r.bkCost[i] || 0), 0);
       b.has = vals.some(v => v !== null);
     });
     const total = list.reduce((s, r) => s + r.kwh, 0);
+    const cost = list.reduce((s, r) => s + r.cost, 0);
     list.forEach(r => r.share = total > 0 ? r.kwh / total : 0);
     const withData = list.filter(r => r.has);
     const byEnergy = [...withData].sort((a, b) => b.kwh - a.kwh);
@@ -1513,19 +1822,20 @@ function buildCompare() {
     const byPeak = [...withPeak].sort((a, b) => b.peak.v - a.peak.v);
     const topPeak = byPeak[0] || null;
     list.forEach(r => r.topPeak = r === topPeak);
-    const order = (el.querySelector('input[name="cmp-order"]:checked') || {}).value || "energy";
-    const key = { energy: r => r.kwh, peak: r => r.peak ? r.peak.v : -1, avg: r => isNum(r.avg) ? r.avg : -1 }[order];
+    const order = (el.querySelector('input[name="cmp-order"]:checked') || {}).value || "cost";
+    const key = { cost: r => r.cost, energy: r => r.kwh, peak: r => r.peak ? r.peak.v : -1, avg: r => isNum(r.avg) ? r.avg : -1 }[order];
     const ranked = [...withData].sort((a, b) => key(b) - key(a));
-    return { bks, list, total, cost: total * rate, withData, byEnergy, byPeak, topPeak, ranked, order, multiDay,
+    const gaps = new Set(list.flatMap(r => r.d.gapTs || [])).size;
+    return { bks, list, total, cost, withData, byEnergy, byPeak, topPeak, ranked, order, multiDay, cats: mergeCats(list.map(r => r.d)), gaps,
              missing: list.filter(r => !r.has) };
   }
 
   /* ---------- report ---------- */
   function render() {
-    const { range, rate, cur, group } = state;
+    const { range, T, cur, group } = state;
     const C = state.c = compute();
     const gw = GROUP_WORD[group];
-    const orderText = { energy: "energy and cost", peak: "highest active power peak", avg: "average active power" }[C.order];
+    const orderText = { cost: "cost", energy: "energy", peak: "highest active power peak", avg: "average active power" }[C.order];
     const head = `
       <div class="rep-head">
         <div class="rep-id">
@@ -1534,7 +1844,8 @@ function buildCompare() {
             <h3>Machine comparison: energy, cost and active power</h3>
             <p class="meta"><b>Period:</b> ${esc(fmtRange(range))}<br>
               <b>Machines:</b> ${esc(state.meters.map(m => m.label).join(", "))}<br>
-              <b>Per unit cost:</b> ${esc(cur)} ${fmt(rate, 2)} per kWh &nbsp;&nbsp;<b>Compared per:</b> ${gw} &nbsp;&nbsp;<b>Ranked by:</b> ${orderText}
+              <b>Tariff:</b> ${esc(tariffText(T))}<br>
+              ${state.meters.some(m => m.group === "dist") ? `<b>Distribution priced by:</b> ${T.basis === "mix" ? "source mix of each hour" : "KE tariff only"} &nbsp;&nbsp;` : ""}<b>Compared per:</b> ${gw} &nbsp;&nbsp;<b>Ranked by:</b> ${orderText}
               &nbsp;&nbsp;<b>Generated:</b> ${esc(fmtDateTime(state.generated))} PKT</p>
           </div>
         </div>
@@ -1552,25 +1863,26 @@ function buildCompare() {
         <div class="kpi main"><div class="k">Compared total</div><div class="v">${fmtKwh(C.total)}<small>kWh</small></div>
           <div class="s">${C.withData.length} of ${C.list.length} machines with readings</div></div>
         <div class="kpi cost"><div class="k">Compared cost</div><div class="v">${esc(money(C.cost, cur))}</div>
-          <div class="s">At ${esc(cur)} ${fmt(rate, 2)} per kWh</div></div>
+          <div class="s">Average ${esc(avgRate(C.cost, C.total, cur))} per kWh</div></div>
         <div class="kpi" style="--c:${top.color}"><div class="k">Highest consumer</div><div class="v">${esc(top.m.label)}</div>
           <div class="s">${fmtKwh(top.kwh)} kWh, ${esc(money(top.cost, cur))}, ${pct(top.share)}${C.byEnergy.length > 1 && low.kwh > 0 ? `<br>${(top.kwh / low.kwh).toFixed(1)}× ${esc(low.m.label)}` : ""}</div></div>
         <div class="kpi peak"><div class="k">Highest power peak</div><div class="v">${C.topPeak ? fmt(C.topPeak.peak.v, 2) + "<small>kW</small>" : "–"}</div>
           <div class="s">${C.topPeak ? esc(C.topPeak.m.label) + ", " + esc(fmtDateTime(C.topPeak.peak.t)) + " PKT" : "No power readings"}</div></div>
       </div>`;
-      const slices = C.byEnergy.filter(r => r.kwh > 0).map(r => ({ name: r.m.label, value: r.cost, color: r.color }));
-      const legend = slices.map(s => `<li><span class="dot" style="--c:${s.color}"></span><span>${esc(s.name)}<br><small style="color:var(--muted)">${esc(money(s.value, cur))}, ${fmtKwh(s.value / rate)} kWh</small></span><span class="pct">${pct(C.cost > 0 ? s.value / C.cost : 0)}</span></li>`).join("");
+      const slices = [...C.withData].sort((a, b) => b.cost - a.cost).filter(r => r.cost > 0).map(r => ({ name: r.m.label, value: r.cost, kwh: r.kwh, color: r.color }));
+      const legend = slices.map(s => `<li><span class="dot" style="--c:${s.color}"></span><span>${esc(s.name)}<br><small style="color:var(--muted)">${esc(money(s.value, cur))}, ${fmtKwh(s.kwh)} kWh</small></span><span class="pct">${pct(C.cost > 0 ? s.value / C.cost : 0)}</span></li>`).join("");
       body = kpis + `
         <div class="card summary"><h2>SUMMARY</h2><div class="sum-text">${summary(C)}</div></div>
         ${comparisonTable(C)}
         <div class="charts">
           <div class="card"><h2>COST SHARE</h2><p class="sub">Each machine's part of the compared cost</p>
-            ${C.cost > 0 ? `<div class="donut-wrap">${donutChart(slices, C.cost, short(C.cost), cur + " total", v => money(v, cur))}<ul class="legend">${legend}</ul></div>` : "<p>No energy recorded.</p>"}
+            ${C.cost > 0 ? `<div class="donut-wrap">${donutChart(slices, C.cost, short(C.cost), cur + " total", v => money(v, cur))}<ul class="legend">${legend}</ul></div>` : "<p>No cost in this period.</p>"}
           </div>
           <div class="card"><h2>COST AND ENERGY BY MACHINE</h2><p class="sub">Ranked by ${orderText}. Bar length is cost; kWh is in the table.</p>
             ${hBars(C.ranked.map(r => ({ name: r.m.label, value: r.cost, color: r.color })), v => money(v, cur))}
           </div>
         </div>
+        ${tariffCard(C.cats, T, cur, state.meters)}
         <div class="card" style="margin-top:16px"><h2>AVERAGE AND HIGHEST ACTIVE POWER</h2>
           <p class="sub">Light column: average active power. Solid column: highest single reading. The highest peak of all machines has a red outline.</p>
           ${C.withData.some(r => r.peak) ? powerColumns(C.ranked.map(r => ({ name: r.m.label, color: r.color, avg: r.avg, peak: r.peak ? r.peak.v : null, top: r.topPeak })), "kW") : "<p>No active power readings for these machines.</p>"}
@@ -1602,7 +1914,7 @@ function buildCompare() {
     $(".per-title").textContent = (cost ? "COST" : "ENERGY") + " PER " + gw.toUpperCase() + ", MACHINE BY MACHINE";
     $(".card-tools .print-only").textContent = cost ? "In " + cur : "In kWh";
     $(".per-chart").innerHTML = lineChart(C.bks.map(b => b.axis),
-      C.list.map(r => ({ name: r.m.label, color: r.color, values: r.bk.map(v => v === null ? null : cost ? v * state.rate : v) })),
+      C.list.map(r => ({ name: r.m.label, color: r.color, values: cost ? r.bkCost : r.bk })),
       cost ? cur : "kWh", null) || "<p>No readings.</p>";
   }
 
@@ -1617,40 +1929,41 @@ function buildCompare() {
   }
 
   function comparisonTable(C) {
-    const { cur, rate, group } = state, gw = GROUP_WORD[group];
+    const { cur, group } = state, gw = GROUP_WORD[group];
     const minK = Math.min(...C.byEnergy.map(r => r.kwh).filter(v => v > 0));
     const rows = [...C.ranked, ...C.missing].map((r, i) => {
-      if (!r.has) return `<tr><td><span class="dot" style="--c:var(--grid)"></span>&nbsp; ${esc(r.m.label)}</td><td colspan="11" class="flag">No readings in this period</td></tr>`;
+      if (!r.has) return `<tr><td><span class="dot" style="--c:var(--grid)"></span>&nbsp; ${esc(r.m.label)}</td><td colspan="12" class="flag">No readings in this period</td></tr>`;
       const ph = r.peakHour, hs = r.peak ? Math.floor(r.peak.t / HOUR) * HOUR : 0;
       return `<tr${i === 0 ? ' class="peak"' : ""}>
         <td><span class="dot" style="--c:${r.color}"></span>&nbsp; ${esc(r.m.label)}${i === 0 ? '<span class="tag-peak">#1</span>' : ""}</td>
         <td class="n kwh">${fmtKwh(r.kwh)}</td><td class="n cost">${esc(money(r.cost, cur))}</td>
+        <td class="n">${esc(avgRate(r.cost, r.kwh, cur))}</td>
         <td class="n">${pct(r.share)}<span class="share"><i style="width:${(r.share * 100).toFixed(1)}%;--c:${r.color}"></i></span></td>
         <td class="n">${r.kwh > 0 && isFinite(minK) ? (r.kwh / minK).toFixed(1) + "×" : "–"}</td>
         <td class="n">${isNum(r.avg) ? fmt(r.avg, 2) : "–"}</td>
         <td class="n kwh">${r.peak ? fmt(r.peak.v, 2) : "–"}${r.topPeak ? '<span class="tag-peak">HIGHEST</span>' : ""}</td>
         <td>${r.peak ? esc(fmtDateTime(r.peak.t)) + (r.peak.reverse ? " (reverse)" : "") : "–"}</td>
         <td class="n">${ph && ph.src ? fmtKwh(ph.kwh) : "–"}</td>
-        <td class="n cost">${ph && ph.src ? esc(money(ph.kwh * rate, cur)) : "–"}</td>
+        <td class="n cost">${ph && ph.src ? esc(money(ph.cost, cur)) : "–"}</td>
         <td class="n">${isNum(r.lf) ? pct(r.lf) : "–"}</td>
-        <td>${r.topBk ? esc(r.topBk.b.label) + "<br><small style=\"color:var(--muted)\">" + fmtKwh(r.topBk.kwh) + " kWh, " + esc(money(r.topBk.kwh * rate, cur)) + "</small>" : "–"}</td></tr>`;
+        <td>${r.topBk ? esc(r.topBk.b.label) + "<br><small style=\"color:var(--muted)\">" + fmtKwh(r.topBk.kwh) + " kWh, " + esc(money(r.topBk.cost, cur)) + "</small>" : "–"}</td></tr>`;
     }).join("");
     return `<div class="card" style="margin-top:16px"><h2>SIDE-BY-SIDE COMPARISON</h2>
       <p class="sub">“× lowest” shows how many times more energy than the lowest machine. Load factor = average ÷ highest power. Peak hour = the clock hour of the highest reading.</p>
       <div class="tablebox" style="margin-top:0"><table>
-        <thead><tr><th>Machine</th><th class="n">Energy (kWh)</th><th class="n">Cost (${esc(cur)})</th><th class="n">Share</th><th class="n">× lowest</th>
+        <thead><tr><th>Machine</th><th class="n">Energy (kWh)</th><th class="n">Cost (${esc(cur)})</th><th class="n">Per kWh</th><th class="n">Energy share</th><th class="n">× lowest</th>
           <th class="n">Average power (kW)</th><th class="n">Highest power (kW)</th><th>Time of highest</th>
           <th class="n">kWh in peak hour</th><th class="n">Cost in peak hour</th><th class="n">Load factor</th><th>Highest-cost ${gw}</th></tr></thead>
-        <tbody>${rows}<tr class="sum"><td>Total</td><td class="n">${fmtKwh(C.total)}</td><td class="n">${esc(money(C.cost, cur))}</td><td class="n">100%</td><td colspan="8"></td></tr></tbody>
+        <tbody>${rows}<tr class="sum"><td>Total</td><td class="n">${fmtKwh(C.total)}</td><td class="n">${esc(money(C.cost, cur))}</td><td class="n">${esc(avgRate(C.cost, C.total, cur))}</td><td class="n">100%</td><td colspan="8"></td></tr></tbody>
       </table></div></div>`;
   }
 
   function periodTable(C) {
-    const { cur, rate, group } = state, gw = GROUP_WORD[group];
-    const rows = C.bks.map(b => `<tr><td>${esc(b.label)}</td>
-      ${C.list.map((r, i) => { const v = r.bk[C.bks.indexOf(b)];
-        return `<td class="n${i === b.leader ? " lead" : ""}">${v === null ? "–" : fmtKwh(v) + "<br><small>" + esc(money(v * rate, cur)) + "</small>"}</td>`; }).join("")}
-      <td class="n kwh">${b.has ? fmtKwh(b.total) + "<br><small>" + esc(money(b.total * rate, cur)) + "</small>" : "–"}</td>
+    const { cur, group } = state, gw = GROUP_WORD[group];
+    const rows = C.bks.map((b, bi) => `<tr><td>${esc(b.label)}</td>
+      ${C.list.map((r, i) => { const v = r.bk[bi];
+        return `<td class="n${i === b.leader ? " lead" : ""}">${v === null ? "–" : fmtKwh(v) + "<br><small>" + esc(money(r.bkCost[bi], cur)) + "</small>"}</td>`; }).join("")}
+      <td class="n kwh">${b.has ? fmtKwh(b.total) + "<br><small>" + esc(money(b.totalCost, cur)) + "</small>" : "–"}</td>
       <td>${b.leader >= 0 ? esc(C.list[b.leader].m.label) : "–"}</td></tr>`).join("");
     return `<div class="card" style="margin-top:16px"><h2>MACHINE BY MACHINE, PER ${gw.toUpperCase()}</h2>
       <p class="sub">kWh with cost below. The machine that used the most in each ${gw} is highlighted.</p>
@@ -1662,9 +1975,12 @@ function buildCompare() {
   }
 
   function summary(C) {
-    const { cur, rate, range, group } = state, gw = GROUP_WORD[group];
+    const { cur, T, range, group } = state, gw = GROUP_WORD[group];
     const out = [];
-    out.push(`From ${esc(fmtRange(range))} the ${C.list.length} compared machines used <b>${fmtKwh(C.total)} kWh</b> together, costing <b>${esc(money(C.cost, cur))}</b> at ${esc(cur)} ${fmt(rate, 2)} per kWh.`);
+    out.push(`From ${esc(fmtRange(range))} the ${C.list.length} compared machines used <b>${fmtKwh(C.total)} kWh</b> together, costing <b>${esc(money(C.cost, cur))}</b> (average ${esc(avgRate(C.cost, C.total, cur))} per kWh).`);
+    tariffSentences(C.cats, T, cur, state.meters, state.mix, C.gaps).forEach(s => out.push(s));
+    const byCost = [...C.withData].sort((a, b) => b.cost - a.cost);
+    if (byCost.length > 1 && C.byEnergy.length > 1 && byCost[0] !== C.byEnergy[0]) out.push(`<span class="warn">Because of the tariffs, ${esc(byCost[0].m.label)} cost the most (${esc(money(byCost[0].cost, cur))}) although ${esc(C.byEnergy[0].m.label)} used more energy.</span>`);
     const E = C.byEnergy;
     if (E.length > 1) {
       const top = E[0], low = E[E.length - 1];
@@ -1677,7 +1993,7 @@ function buildCompare() {
     if (P.length) {
       const t = P[0], ph = t.peakHour, hs = Math.floor(t.peak.t / HOUR) * HOUR;
       let s = `The highest active power peak was <b>${fmt(t.peak.v, 2)} kW on ${esc(t.m.label)}</b>, on ${esc(fmtDate(t.peak.t))} at ${fmtTime(t.peak.t)} PKT.`;
-      if (ph && ph.src) s += ` In that hour (${fmtTime(hs)}–${endTime(hs + HOUR)}) ${esc(t.m.label)} used ${fmtKwh(ph.kwh)} kWh, costing ${esc(money(ph.kwh * rate, cur))}.`;
+      if (ph && ph.src) s += ` In that hour (${fmtTime(hs)}–${endTime(hs + HOUR)}) ${esc(t.m.label)} used ${fmtKwh(ph.kwh)} kWh, costing ${esc(money(ph.cost, cur))}${T.mode === "tou" && peakFraction(T, hs) > 0 ? " (on-peak)" : ""}.`;
       if (P.length > 1) s += ` The lowest peak was on ${esc(P[P.length - 1].m.label)} (${fmt(P[P.length - 1].peak.v, 2)} kW).`;
       out.push(s);
       const sameHour = P.filter(r => Math.floor(r.peak.t / HOUR) === Math.floor(t.peak.t / HOUR));
@@ -1697,27 +2013,30 @@ function buildCompare() {
   }
 
   function explanation() {
-    const { cur, rate, group } = state, gw = GROUP_WORD[group];
+    const { group } = state, gw = GROUP_WORD[group];
     return `
-      <p><b>Energy and cost.</b> Each machine's energy comes from the hourly increase of its kWh counter. Where the counter does not count or a reading is clearly wrong, that hour is calculated from the average active power. Cost = kWh × ${esc(cur)} ${fmt(rate, 2)}. Every machine uses the same rate, so the cost ranking is the same as the energy ranking.</p>
+      <p><b>Energy.</b> Each machine's energy comes from the hourly increase of its kWh counter. Where the counter does not count or a reading is clearly wrong, that hour is calculated from the average active power.</p>
+      ${costExplain(state.T, state.meters)}
       <p><b>Active power.</b> “Average power” is the average of the hourly averages over the period. “Highest power” is the single highest reading the logger stored, with its exact time. If a meter's CT is reversed, its load shows as negative power; the comparison uses the size of the reading and marks it “reverse”. The peak hour's kWh and cost are that machine's energy in the clock hour of its peak.</p>
       <p><b>Load factor</b> is average power ÷ highest power. Near 100% means the machine runs at a steady load. A low value means short, high peaks compared with its normal running.</p>
       <p><b>Per ${gw}.</b> The hourly energy of each machine is added up for each ${gw} by Pakistan time. Hours without readings are left empty; with counter meters, energy used during a gap appears in the next hour with readings.</p>`;
   }
 
   function downloadCsv() {
-    const { range, cur, rate, group } = state, C = state.c;
+    const { range, cur, T, group } = state, C = state.c;
     const q = s => '"' + String(s).replace(/"/g, '""') + '"', line = a => a.map(q).join(",");
-    const L = [line(["Toyo Packaging", "Machine comparison"]), line(["Period", fmtRange(range)]), line(["Per unit cost", cur + " " + rate.toFixed(2) + " per kWh"]),
+    const L = [line(["Toyo Packaging", "Machine comparison"]), line(["Period", fmtRange(range)]), line(["Tariff", tariffText(T)]),
+      line(["Distribution priced by", T.basis === "mix" ? "Source mix of each hour" : "KE tariff only"]),
       line(["Generated", fmtDateTime(state.generated) + " PKT"]), "",
-      line(["Machine", "Energy kWh", "Cost " + cur, "Share %", "Average power kW", "Highest power kW", "Time of highest", "kWh in peak hour", "Cost in peak hour", "Load factor %", "Highest-cost " + GROUP_WORD[group], "kWh in it"])];
-    [...C.ranked, ...C.missing].forEach(r => L.push(line([r.m.label, r.kwh.toFixed(2), r.cost.toFixed(2), (r.share * 100).toFixed(1),
+      line(["Machine", "Energy kWh", "Cost " + cur, "Average " + cur + " per kWh", "Energy share %", "Average power kW", "Highest power kW", "Time of highest", "kWh in peak hour", "Cost in peak hour", "Load factor %", "Highest-cost " + GROUP_WORD[group], "kWh in it", "Cost in it"])];
+    [...C.ranked, ...C.missing].forEach(r => L.push(line([r.m.label, r.kwh.toFixed(2), r.cost.toFixed(2), r.kwh > 0 ? (r.cost / r.kwh).toFixed(2) : "", (r.share * 100).toFixed(1),
       isNum(r.avg) ? r.avg.toFixed(2) : "", r.peak ? r.peak.v.toFixed(2) : "", r.peak ? fmtDateTime(r.peak.t) : "",
-      r.peakHour && r.peakHour.src ? r.peakHour.kwh.toFixed(2) : "", r.peakHour && r.peakHour.src ? (r.peakHour.kwh * rate).toFixed(2) : "",
-      isNum(r.lf) ? (r.lf * 100).toFixed(1) : "", r.topBk ? r.topBk.b.label : "", r.topBk ? r.topBk.kwh.toFixed(2) : ""])));
+      r.peakHour && r.peakHour.src ? r.peakHour.kwh.toFixed(2) : "", r.peakHour && r.peakHour.src ? r.peakHour.cost.toFixed(2) : "",
+      isNum(r.lf) ? (r.lf * 100).toFixed(1) : "", r.topBk ? r.topBk.b.label : "", r.topBk ? r.topBk.kwh.toFixed(2) : "", r.topBk ? r.topBk.cost.toFixed(2) : ""])));
+    L.push("", ...tariffCsv(C.cats, T, cur, line));
     L.push("", line([GROUP_WORD[group], ...C.list.flatMap(r => [r.m.label + " kWh", r.m.label + " " + cur]), "Total kWh", "Total " + cur]));
-    C.bks.forEach((b, i) => L.push(line([b.label, ...C.list.flatMap(r => r.bk[i] === null ? ["", ""] : [r.bk[i].toFixed(2), (r.bk[i] * rate).toFixed(2)]),
-      b.total.toFixed(2), (b.total * rate).toFixed(2)])));
+    C.bks.forEach((b, i) => L.push(line([b.label, ...C.list.flatMap(r => r.bk[i] === null ? ["", ""] : [r.bk[i].toFixed(2), r.bkCost[i].toFixed(2)]),
+      b.total.toFixed(2), b.totalCost.toFixed(2)])));
     const blob = new Blob(["\ufeff" + L.join("\r\n")], { type: "text/csv" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob); a.download = "Toyo machine comparison " + toDateStr(range.start) + ".csv";
